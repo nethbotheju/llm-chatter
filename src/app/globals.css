@@ -63,7 +63,7 @@ body {
 
 /* ── Glass-morphism input ── */
 .glass-input {
-  background: rgba(37, 38, 38, 0.7);
+  background: rgba(30, 30, 30, 0.98);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }

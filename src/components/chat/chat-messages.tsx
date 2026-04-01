@@ -30,22 +30,24 @@ export function ChatMessages({ messages, isLoading, onEditMessage, modelName }: 
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-y-auto custom-scrollbar">
-      <div className="mx-auto w-full max-w-4xl space-y-12 px-6 py-8 md:px-12">
-        {messages.map((message) => (
-          <ChatMessage
-            key={message.id}
-            id={message.id}
-            role={message.role}
-            content={message.content}
-            thinking={message.thinking}
-            thinkingDuration={message.thinkingDuration}
-            isStreaming={isLoading && message === messages[messages.length - 1]}
-            modelName={message.role === "assistant" ? modelName : undefined}
-            onEdit={message.role === "user" ? onEditMessage : undefined}
-          />
-        ))}
-        <div ref={bottomRef} />
+    <div className="flex flex-1 flex-col">
+      <div className="mx-auto w-full max-w-4xl px-6 py-8 md:px-12">
+        <div className="space-y-8">
+          {messages.map((message) => (
+            <ChatMessage
+              key={message.id}
+              id={message.id}
+              role={message.role}
+              content={message.content}
+              thinking={message.thinking}
+              thinkingDuration={message.thinkingDuration}
+              isStreaming={isLoading && message === messages[messages.length - 1]}
+              modelName={message.role === "assistant" ? modelName : undefined}
+              onEdit={message.role === "user" ? onEditMessage : undefined}
+            />
+          ))}
+        </div>
+        <div ref={bottomRef} className="h-4" />
       </div>
     </div>
   );

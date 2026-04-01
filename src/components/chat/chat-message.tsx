@@ -151,7 +151,7 @@ export function ChatMessage({
 
           {/* Action buttons */}
           {!isStreaming && content && (
-            <div className="mt-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+            <div className="absolute -bottom-8 left-0 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
               <button
                 onClick={handleCopy}
                 className="rounded-md p-1.5 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-white"

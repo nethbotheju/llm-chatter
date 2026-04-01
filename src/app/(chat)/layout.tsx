@@ -432,7 +432,7 @@ export default function ChatLayout({
       />
 
       {/* Main content canvas */}
-      <main className="relative ml-64 flex flex-1 flex-col min-h-screen">
+      <main className="relative ml-64 flex flex-1 flex-col h-screen overflow-y-auto overflow-x-hidden custom-scrollbar scroll-smooth scroll-pb-28">
         {/* TopAppBar */}
         <TopAppBar
           assistantName={currentAssistant?.name || null}
@@ -472,7 +472,7 @@ export default function ChatLayout({
         )}
 
         {/* Fixed floating chat input */}
-        <footer className="pointer-events-none fixed bottom-0 left-0 right-0 z-30 pb-6 md:left-64">
+        <footer className="pointer-events-none sticky bottom-0 z-30 pb-6 mt-auto">
           <div className="pointer-events-auto mx-auto max-w-4xl px-6 md:px-12">
             <ChatInput
               onSend={handleSendMessage}
