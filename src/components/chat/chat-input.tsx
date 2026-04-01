@@ -108,7 +108,7 @@ export function ChatInput({
   return (
     <div className="w-full">
       {attachments.length > 0 && (
-        <div className="mx-auto mb-2 flex max-w-4xl flex-wrap gap-2 px-2">
+        <div className="mb-2 flex flex-wrap gap-2 px-2">
           {attachments.map((att) => (
             <div key={att.id} className="relative">
               <img
@@ -128,8 +128,7 @@ export function ChatInput({
         </div>
       )}
 
-      <div className="mx-auto max-w-4xl">
-        <div className="glass-input rounded-[32px] border border-white/10 shadow-2xl">
+      <div className="glass-input rounded-[32px] border border-white/10 shadow-2xl">
           {/* Quick Actions */}
           {!compact && (
             <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap px-3 pt-2 pb-1 custom-scrollbar">
@@ -216,7 +215,6 @@ export function ChatInput({
             </div>
           </div>
         </div>
-      </div>
     </div>
   );
 }

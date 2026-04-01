@@ -472,8 +472,8 @@ export default function ChatLayout({
         )}
 
         {/* Fixed floating chat input */}
-        <footer className="pointer-events-none fixed bottom-0 right-0 z-30 w-full p-6 md:left-64">
-          <div className="pointer-events-auto mx-auto max-w-4xl">
+        <footer className="pointer-events-none fixed bottom-0 left-0 right-0 z-30 pb-6 md:left-64">
+          <div className="pointer-events-auto mx-auto max-w-4xl px-6 md:px-12">
             <ChatInput
               onSend={handleSendMessage}
               onStop={handleStop}
