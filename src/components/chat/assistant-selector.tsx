@@ -33,7 +33,7 @@ export function AssistantSelector({
 
   return (
     <div className="mb-8 w-full max-w-2xl mx-auto">
-      <h2 className="mb-4 text-center text-lg font-medium text-muted-foreground">
+      <h2 className="mb-4 text-center text-lg font-medium text-[var(--on-surface-variant)]">
         Choose an assistant to begin
       </h2>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -42,18 +42,18 @@ export function AssistantSelector({
             key={assistant.id}
             onClick={() => onSelect(assistant)}
             className={cn(
-              "group relative flex flex-col items-center rounded-lg border p-4 text-center transition-all hover:border-primary/50",
+              "group relative flex flex-col items-center rounded-2xl border p-4 text-center transition-all hover:border-[var(--primary)]/50",
               selectedAssistant?.id === assistant.id
-                ? "border-primary bg-primary/5"
-                : "border-border hover:bg-muted/50"
+                ? "border-[var(--primary)] bg-[var(--primary)]/5"
+                : "border-[var(--outline-variant)]/20 bg-[var(--surface-container-low)] hover:bg-[var(--surface-container)]"
             )}
           >
             {assistant.isDefault && (
               <div className="absolute right-1 top-1">
-                <Star className="h-3 w-3 fill-primary text-primary" />
+                <Star className="h-3 w-3 fill-[var(--primary)] text-[var(--primary)]" />
               </div>
             )}
-            <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+            <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--surface-container-high)]">
               {assistant.image ? (
                 <img
                   src={assistant.image}
@@ -61,11 +61,11 @@ export function AssistantSelector({
                   className="h-full w-full rounded-full object-cover"
                 />
               ) : (
-                <Bot className="h-6 w-6 text-muted-foreground" />
+                <Bot className="h-6 w-6 text-[var(--on-surface-variant)]" />
               )}
             </div>
-            <span className="text-sm font-medium">{assistant.name}</span>
-            <span className="mt-1 text-xs text-muted-foreground">
+            <span className="text-sm font-medium text-[var(--on-surface)]">{assistant.name}</span>
+            <span className="mt-1 text-xs text-[var(--on-surface-variant)]">
               T: {assistant.temperature}
             </span>
           </button>

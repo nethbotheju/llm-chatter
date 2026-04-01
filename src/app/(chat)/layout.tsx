@@ -7,6 +7,7 @@ import { ChatMessages, Message } from "@/components/chat/chat-messages";
 import { ChatInput, Attachment } from "@/components/chat/chat-input";
 import { ModelSelector } from "@/components/chat/model-selector";
 import { AssistantSelector } from "@/components/chat/assistant-selector";
+import { TopAppBar } from "@/components/layout/top-app-bar";
 
 interface Model {
   id: string;
@@ -65,11 +66,9 @@ export default function ChatLayout({
   const [isLoading, setIsLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Extract conversation ID from path
   const pathConversationId = pathname.match(/\/c\/([^/]+)/)?.[1] || null;
   const isNewChat = pathname === "/" && !currentConversationId;
 
-  // Check if selected model supports vision
   const selectedModel = models.find((m) => m.id === selectedModelId);
   const hasVisionModel = selectedModel
     ? parseModelCapabilities(selectedModel.capabilities).includes("vision")
@@ -103,7 +102,6 @@ export default function ChatLayout({
       const res = await fetch("/api/assistants");
       const data = await res.json();
       setAssistants(data);
-      // Set default assistant for new chats
       if (!currentConversationId) {
         const defaultAssistant = data.find((a: Assistant) => a.isDefault) || data[0];
         if (defaultAssistant) {
@@ -150,15 +148,12 @@ export default function ChatLayout({
     }
   }, [pathConversationId, currentConversationId, fetchConversationMessages]);
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd/Ctrl + N for new chat
       if ((e.metaKey || e.ctrlKey) && e.key === "n") {
         e.preventDefault();
         handleNewChat();
       }
-      // Cmd/Ctrl + , for settings
       if ((e.metaKey || e.ctrlKey) && e.key === ",") {
         e.preventDefault();
         router.push("/settings");
@@ -173,7 +168,6 @@ export default function ChatLayout({
     setMessages([]);
     setCurrentConversationId(null);
     router.push("/");
-    // Reset to default assistant
     const defaultAssistant = assistants.find((a) => a.isDefault) || assistants[0];
     if (defaultAssistant) {
       setCurrentAssistant(defaultAssistant);
@@ -205,7 +199,6 @@ export default function ChatLayout({
   }, []);
 
   const handleSelectAssistant = useCallback((assistant: Assistant) => {
-    // Only allow changing assistant for new chats
     if (!currentConversationId) {
       setCurrentAssistant(assistant);
     }
@@ -214,18 +207,15 @@ export default function ChatLayout({
   const handleEditMessage = useCallback(async (messageId: string, newContent: string) => {
     if (!currentConversationId || !selectedModelId || !currentAssistant) return;
 
-    // Find the message index
     const messageIndex = messages.findIndex((m) => m.id === messageId);
     if (messageIndex === -1 || messages[messageIndex].role !== "user") return;
 
-    // Keep messages up to and including the edited one, then update the content
     const messagesToKeep = messages.slice(0, messageIndex);
     const editedMessage: Message = {
       ...messages[messageIndex],
       content: newContent,
     };
 
-    // Update the message in the database
     try {
       await fetch(`/api/conversations/${currentConversationId}/messages`, {
         method: "PATCH",
@@ -237,7 +227,6 @@ export default function ChatLayout({
       return;
     }
 
-    // Delete all messages after the edited one
     const messagesToDelete = messages.slice(messageIndex + 1);
     for (const msg of messagesToDelete) {
       try {
@@ -249,16 +238,13 @@ export default function ChatLayout({
       }
     }
 
-    // Update local state
     setMessages([...messagesToKeep, editedMessage]);
 
-    // Regenerate response
     const messagesForApi = [...messagesToKeep, editedMessage].map((m) => ({
       role: m.role,
       content: m.content,
     }));
 
-    // Add assistant placeholder
     const assistantMessage: Message = {
       id: `assistant-${Date.now()}`,
       role: "assistant",
@@ -266,7 +252,6 @@ export default function ChatLayout({
     };
     setMessages((prev) => [...prev, assistantMessage]);
 
-    // Stream response
     setIsLoading(true);
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
@@ -283,9 +268,7 @@ export default function ChatLayout({
         signal: abortController.signal,
       });
 
-      if (!res.ok) {
-        throw new Error("Chat request failed");
-      }
+      if (!res.ok) throw new Error("Chat request failed");
 
       const reader = res.body?.getReader();
       if (!reader) throw new Error("No reader available");
@@ -322,7 +305,6 @@ export default function ChatLayout({
   const handleSendMessage = useCallback(async (message: string, attachments?: Attachment[]) => {
     if (!selectedModelId || !currentAssistant) return;
 
-    // Create conversation if needed
     let convId = currentConversationId;
     if (!convId) {
       const res = await fetch("/api/conversations", {
@@ -336,14 +318,11 @@ export default function ChatLayout({
       router.push(`/c/${convId}`, { scroll: false });
     }
 
-    // Build message content with attachments
-    let messageContent = message;
     const attachmentData = attachments?.map((a) => ({
       type: a.type,
       url: a.url,
     }));
 
-    // Add user message
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: "user",
@@ -352,7 +331,6 @@ export default function ChatLayout({
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
 
-    // Save user message to DB
     await fetch(`/api/conversations/${convId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -363,7 +341,6 @@ export default function ChatLayout({
       }),
     });
 
-    // Update conversation title if it's the first message
     if (messages.length === 0) {
       const title = message.slice(0, 50) + (message.length > 50 ? "..." : "");
       await fetch("/api/conversations", {
@@ -374,13 +351,11 @@ export default function ChatLayout({
       fetchConversations();
     }
 
-    // Build messages for API (with image content for vision models)
     const messagesForApi = updatedMessages.map((m) => ({
       role: m.role,
       content: m.content,
     }));
 
-    // Add assistant placeholder
     const assistantMessage: Message = {
       id: `assistant-${Date.now()}`,
       role: "assistant",
@@ -388,7 +363,6 @@ export default function ChatLayout({
     };
     setMessages([...updatedMessages, assistantMessage]);
 
-    // Stream response
     setIsLoading(true);
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
@@ -406,9 +380,7 @@ export default function ChatLayout({
         signal: abortController.signal,
       });
 
-      if (!res.ok) {
-        throw new Error("Chat request failed");
-      }
+      if (!res.ok) throw new Error("Chat request failed");
 
       const reader = res.body?.getReader();
       if (!reader) throw new Error("No reader available");
@@ -444,8 +416,10 @@ export default function ChatLayout({
     }
   }, [currentConversationId, messages, selectedModelId, currentAssistant, router, fetchConversations]);
 
+  const modelName = selectedModel?.name || null;
+
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen overflow-hidden bg-[var(--surface)]">
       <Sidebar
         conversations={conversations.map((c) => ({
           ...c,
@@ -456,22 +430,30 @@ export default function ChatLayout({
         onSelectConversation={handleSelectConversation}
         onDeleteConversation={handleDeleteConversation}
       />
-      <div className="flex flex-1 flex-col">
-        <div className="flex items-center justify-between border-b px-4 py-2">
-          <div className="flex items-center gap-4">
-            {currentAssistant && (
-              <span className="text-sm text-muted-foreground">
-                {currentAssistant.name}
-              </span>
-            )}
-          </div>
-          <ModelSelector
-            models={models}
-            selectedModelId={selectedModelId}
-            onSelectModel={setSelectedModelId}
-            disabled={isLoading}
-          />
-        </div>
+
+      {/* Main content canvas */}
+      <main className="relative ml-64 flex flex-1 flex-col min-h-screen">
+        {/* TopAppBar */}
+        <TopAppBar
+          assistantName={currentAssistant?.name || null}
+          modelName={modelName}
+          assistantDropdown={
+            <button className="flex items-center gap-1 text-sm font-semibold text-white">
+              {currentAssistant?.name || "Select"}
+            </button>
+          }
+          modelDropdown={
+            <ModelSelector
+              models={models}
+              selectedModelId={selectedModelId}
+              onSelectModel={setSelectedModelId}
+              disabled={isLoading}
+              compact
+            />
+          }
+        />
+
+        {/* Chat area */}
         {isNewChat && messages.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center p-4">
             <AssistantSelector
@@ -479,6 +461,19 @@ export default function ChatLayout({
               selectedAssistant={currentAssistant}
               onSelect={handleSelectAssistant}
             />
+          </div>
+        ) : (
+          <ChatMessages
+            messages={messages}
+            isLoading={isLoading}
+            onEditMessage={handleEditMessage}
+            modelName={modelName ?? undefined}
+          />
+        )}
+
+        {/* Fixed floating chat input */}
+        <footer className="pointer-events-none fixed bottom-0 right-0 z-30 w-full p-6 md:left-64">
+          <div className="pointer-events-auto mx-auto max-w-4xl">
             <ChatInput
               onSend={handleSendMessage}
               onStop={handleStop}
@@ -487,23 +482,9 @@ export default function ChatLayout({
               hasVisionModel={hasVisionModel}
             />
           </div>
-        ) : (
-          <>
-            <ChatMessages
-              messages={messages}
-              isLoading={isLoading}
-              onEditMessage={handleEditMessage}
-            />
-            <ChatInput
-              onSend={handleSendMessage}
-              onStop={handleStop}
-              isLoading={isLoading}
-              disabled={models.length === 0 || !currentAssistant}
-              hasVisionModel={hasVisionModel}
-            />
-          </>
-        )}
-      </div>
+        </footer>
+      </main>
+
       {children}
     </div>
   );

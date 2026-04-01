@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Square, ImagePlus, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { ArrowUp, Square, Plus, Mic, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface Attachment {
@@ -13,15 +11,23 @@ export interface Attachment {
   file?: File;
 }
 
+const QUICK_ACTIONS = [
+  { label: "Improve Code", action: "improve-code" },
+  { label: "Summarize", action: "summarize" },
+  { label: "Analyze Math", action: "analyze-math" },
+  { label: "Debug Trace", action: "debug-trace" },
+];
+
 interface ChatInputProps {
   onSend: (message: string, attachments?: Attachment[]) => void;
   onStop?: () => void;
   isLoading?: boolean;
   disabled?: boolean;
   hasVisionModel?: boolean;
+  compact?: boolean;
 }
 
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
 export function ChatInput({
   onSend,
@@ -29,6 +35,7 @@ export function ChatInput({
   isLoading,
   disabled,
   hasVisionModel = true,
+  compact = false,
 }: ChatInputProps) {
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -56,6 +63,11 @@ export function ChatInput({
       e.preventDefault();
       handleSubmit();
     }
+  };
+
+  const handleQuickAction = (label: string) => {
+    setInput((prev) => (prev ? `${prev} ${label}` : label));
+    textareaRef.current?.focus();
   };
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,10 +103,12 @@ export function ChatInput({
     setAttachments((prev) => prev.filter((a) => a.id !== id));
   };
 
+  const canSend = (input.trim() || attachments.length > 0) && !disabled;
+
   return (
-    <div className="border-t bg-background p-4">
+    <div className="w-full">
       {attachments.length > 0 && (
-        <div className="mb-2 flex flex-wrap gap-2">
+        <div className="mx-auto mb-2 flex max-w-4xl flex-wrap gap-2 px-2">
           {attachments.map((att) => (
             <div key={att.id} className="relative">
               <img
@@ -105,7 +119,7 @@ export function ChatInput({
               <button
                 type="button"
                 onClick={() => handleRemoveAttachment(att.id)}
-                className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90"
+                className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--destructive)] text-white shadow-sm hover:opacity-90"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -113,60 +127,95 @@ export function ChatInput({
           ))}
         </div>
       )}
-      <div className="flex items-end gap-2">
-        {hasVisionModel && (
-          <>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleImageSelect}
-              className="hidden"
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={disabled || isLoading}
-              className="shrink-0"
-            >
-              <ImagePlus className="h-5 w-5" />
-            </Button>
-          </>
-        )}
-        <Textarea
-          ref={textareaRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={hasVisionModel ? "Send a message or attach an image..." : "Send a message..."}
-          disabled={disabled}
-          className="max-h-48 min-h-[44px] flex-1 resize-none"
-          rows={1}
-        />
-        {isLoading ? (
-          <Button
-            type="button"
-            size="icon"
-            variant="destructive"
-            onClick={onStop}
-            className="shrink-0"
-          >
-            <Square className="h-4 w-4" />
-          </Button>
-        ) : (
-          <Button
-            type="button"
-            size="icon"
-            onClick={handleSubmit}
-            disabled={(!input.trim() && attachments.length === 0) || disabled}
-            className="shrink-0"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
-        )}
+
+      <div className="mx-auto max-w-4xl">
+        <div className="glass-input rounded-[32px] border border-white/10 shadow-2xl">
+          {/* Quick Actions */}
+          {!compact && (
+            <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap px-3 pt-2 pb-1 custom-scrollbar">
+              {QUICK_ACTIONS.map((qa) => (
+                <button
+                  key={qa.action}
+                  type="button"
+                  onClick={() => handleQuickAction(qa.label)}
+                  className="shrink-0 rounded-full border border-[var(--outline-variant)]/10 bg-[var(--surface-container-highest)] px-4 py-1.5 text-[10px] font-bold text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-bright)]"
+                >
+                  {qa.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Input row */}
+          <div className="flex items-center gap-2 p-2">
+            {hasVisionModel && (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageSelect}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={disabled || isLoading}
+                  className="p-3 text-[var(--on-surface-variant)] transition-colors hover:text-white disabled:opacity-50"
+                >
+                  <Plus className="h-6 w-6" />
+                </button>
+              </>
+            )}
+
+            <div className="flex flex-1 items-center px-4">
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Message Monolithic AI..."
+                disabled={disabled}
+                rows={1}
+                className="max-h-48 min-h-[44px] w-full resize-none border-none bg-transparent py-2 text-base text-[var(--on-surface)] placeholder:text-[var(--on-surface-variant)]/50 focus:outline-none focus:ring-0"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 pr-2">
+              <button
+                type="button"
+                className="p-2 text-[var(--on-surface-variant)] transition-colors hover:text-white"
+              >
+                <Mic className="h-5 w-5" />
+              </button>
+
+              {isLoading ? (
+                <button
+                  type="button"
+                  onClick={onStop}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--destructive)] text-white transition-all hover:opacity-90 active:scale-95"
+                >
+                  <Square className="h-4 w-4" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={!canSend}
+                  className={cn(
+                    "flex h-10 w-10 items-center justify-center rounded-full transition-all active:scale-95",
+                    canSend
+                      ? "bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90"
+                      : "bg-[var(--surface-container-highest)] text-[var(--on-surface-variant)] opacity-50"
+                  )}
+                >
+                  <ArrowUp className="h-5 w-5 font-bold" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
