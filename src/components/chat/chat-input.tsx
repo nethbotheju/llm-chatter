@@ -129,92 +129,92 @@ export function ChatInput({
       )}
 
       <div className="glass-input rounded-[32px] border border-white/10 shadow-2xl">
-          {/* Quick Actions */}
-          {!compact && (
-            <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap px-3 pt-2 pb-1 custom-scrollbar">
-              {QUICK_ACTIONS.map((qa) => (
-                <button
-                  key={qa.action}
-                  type="button"
-                  onClick={() => handleQuickAction(qa.label)}
-                  className="shrink-0 rounded-full border border-[var(--outline-variant)]/10 bg-[var(--surface-container-highest)] px-4 py-1.5 text-[10px] font-bold text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-bright)]"
-                >
-                  {qa.label}
-                </button>
-              ))}
-            </div>
-          )}
+        {/* Quick Actions */}
+        {!compact && (
+          <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pl-6 pr-3 pt-3 custom-scrollbar">
+            {QUICK_ACTIONS.map((qa) => (
+              <button
+                key={qa.action}
+                type="button"
+                onClick={() => handleQuickAction(qa.label)}
+                className="shrink-0 rounded-full border border-[var(--outline-variant)]/10 bg-[var(--surface-container-highest)] px-4 py-1.5 text-[10px] font-bold text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-bright)]"
+              >
+                {qa.label}
+              </button>
+            ))}
+          </div>
+        )}
 
-          {/* Input row */}
-          <div className="flex items-center gap-2 p-2">
-            {hasVisionModel && (
-              <>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageSelect}
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={disabled || isLoading}
-                  className="p-3 text-[var(--on-surface-variant)] transition-colors hover:text-white disabled:opacity-50"
-                >
-                  <Plus className="h-6 w-6" />
-                </button>
-              </>
-            )}
-
-            <div className="flex flex-1 items-center px-4">
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Message Monolithic AI..."
-                disabled={disabled}
-                rows={1}
-                className="max-h-48 min-h-[44px] w-full resize-none border-none bg-transparent py-2 text-base text-[var(--on-surface)] placeholder:text-[var(--on-surface-variant)]/50 focus:outline-none focus:ring-0"
+        {/* Input row */}
+        <div className="flex items-center p-2">
+          {hasVisionModel && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImageSelect}
+                className="hidden"
               />
-            </div>
-
-            <div className="flex items-center gap-2 pr-2">
               <button
                 type="button"
-                className="p-2 text-[var(--on-surface-variant)] transition-colors hover:text-white"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={disabled || isLoading}
+                className="ml-2 mr-0 rounded-full p-2 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-white disabled:opacity-50"
               >
-                <Mic className="h-5 w-5" />
+                <Plus className="h-5 w-5" />
               </button>
+            </>
+          )}
 
-              {isLoading ? (
-                <button
-                  type="button"
-                  onClick={onStop}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--destructive)] text-white transition-all hover:opacity-90 active:scale-95"
-                >
-                  <Square className="h-4 w-4" />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={!canSend}
-                  className={cn(
-                    "flex h-10 w-10 items-center justify-center rounded-full transition-all active:scale-95",
-                    canSend
-                      ? "bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90"
-                      : "bg-[var(--surface-container-highest)] text-[var(--on-surface-variant)] opacity-50"
-                  )}
-                >
-                  <ArrowUp className="h-5 w-5 font-bold" />
-                </button>
-              )}
-            </div>
+          <div className={cn("flex flex-1 items-center pr-4", hasVisionModel ? "pl-2" : "pl-6")}>
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Message Monolithic AI..."
+              disabled={disabled}
+              rows={1}
+              className="max-h-48 min-h-[44px] w-full resize-none border-none bg-transparent py-2 text-base text-[var(--on-surface)] placeholder:text-[var(--on-surface-variant)]/50 focus:outline-none focus:ring-0"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 pr-2">
+            <button
+              type="button"
+              className="p-2 text-[var(--on-surface-variant)] transition-colors hover:text-white"
+            >
+              <Mic className="h-5 w-5" />
+            </button>
+
+            {isLoading ? (
+              <button
+                type="button"
+                onClick={onStop}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--destructive)] text-white transition-all hover:opacity-90 active:scale-95"
+              >
+                <Square className="h-4 w-4" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={!canSend}
+                className={cn(
+                  "flex h-10 w-10 items-center justify-center rounded-full transition-all active:scale-95",
+                  canSend
+                    ? "bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90"
+                    : "bg-[var(--surface-container-highest)] text-[var(--on-surface-variant)] opacity-50"
+                )}
+              >
+                <ArrowUp className="h-5 w-5 font-bold" />
+              </button>
+            )}
           </div>
         </div>
+      </div>
     </div>
   );
 }
