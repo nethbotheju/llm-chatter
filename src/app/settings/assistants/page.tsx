@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, Plus, Star } from "lucide-react";
+import { Pencil, Trash2, Plus, Star, Bot, Sparkles } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { AssistantForm } from "@/components/settings/assistant-form";
+import { cn } from "@/lib/utils";
 
 interface Assistant {
   id: string;
@@ -120,20 +121,27 @@ export default function AssistantsSettingsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
+    <div className="space-y-8">
+      {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Assistants</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-bold tracking-tighter text-[var(--on-surface)]">
+            Assistants
+          </h1>
+          <p className="text-sm text-[var(--on-surface-variant)]">
             Create and manage custom AI assistants
           </p>
         </div>
-        <Button onClick={handleCreate}>
-          <Plus className="mr-2 h-4 w-4" />
+        <Button
+          onClick={handleCreate}
+          className="flex items-center gap-2 rounded-full bg-[var(--primary)] px-5 py-2.5 font-semibold text-[var(--primary-foreground)] transition-all hover:opacity-90 active:scale-95"
+        >
+          <Plus className="h-4 w-4" />
           Add Assistant
         </Button>
       </div>
 
+      {/* Assistant Form */}
       {showForm && (
         <AssistantForm
           assistant={editingAssistant}
@@ -146,85 +154,112 @@ export default function AssistantsSettingsPage() {
         />
       )}
 
+      {/* Assistant List */}
       <div className="space-y-4">
         {assistants.map((assistant) => (
           <div
             key={assistant.id}
-            className={`rounded-lg border p-4 ${!assistant.enabled ? "opacity-60" : ""}`}
+            className={cn(
+              "glass-card p-5 transition-opacity",
+              !assistant.enabled && "opacity-50"
+            )}
           >
             <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-medium">{assistant.name}</h3>
-                  {assistant.isDefault && (
-                    <span className="flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
-                      <Star className="h-3 w-3" />
-                      Default
-                    </span>
-                  )}
-                  {!assistant.enabled && (
-                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                      Disabled
-                    </span>
+              <div className="flex items-start gap-4">
+                {/* Avatar */}
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[var(--surface-container-high)]">
+                  {assistant.image ? (
+                    <img
+                      src={assistant.image}
+                      alt={assistant.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <Bot className="h-6 w-6 text-[var(--on-surface-variant)]" />
                   )}
                 </div>
-                <div className="mt-1 flex gap-4 text-sm text-muted-foreground">
-                  <span>Temp: {assistant.temperature}</span>
-                  <span>Top P: {assistant.topP}</span>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold tracking-tight text-[var(--on-surface)]">
+                      {assistant.name}
+                    </h3>
+                    {assistant.isDefault && (
+                      <span className="flex items-center gap-1 rounded-full bg-[var(--primary)]/15 px-2.5 py-0.5 text-[10px] font-bold text-[var(--primary)]">
+                        <Star className="h-3 w-3" />
+                        Default
+                      </span>
+                    )}
+                    {!assistant.enabled && (
+                      <span className="rounded-full bg-[var(--on-surface-variant)]/10 px-2.5 py-0.5 text-[10px] font-bold text-[var(--on-surface-variant)]">
+                        Disabled
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-1 flex gap-4 text-xs text-[var(--on-surface-variant)]">
+                    <span>Temp: {assistant.temperature}</span>
+                    <span>Top P: {assistant.topP}</span>
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-xs text-[var(--on-surface-variant)] opacity-70">
+                    {assistant.systemPrompt}
+                  </p>
                 </div>
-                <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
-                  {assistant.systemPrompt}
-                </p>
               </div>
               <div className="flex gap-1">
                 {!assistant.isDefault && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
+                  <button
+                    type="button"
                     onClick={() => handleSetDefault(assistant)}
                     title="Set as default"
+                    className="rounded-lg p-2 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--primary)]/10 hover:text-[var(--primary)]"
                   >
                     <Star className="h-4 w-4" />
-                  </Button>
+                  </button>
                 )}
-                <Button
-                  variant="ghost"
-                  size="icon"
+                <button
+                  type="button"
                   onClick={() => handleEdit(assistant)}
+                  className="rounded-lg p-2 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
                 >
                   <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
+                </button>
+                <button
+                  type="button"
                   onClick={() => setDeleteConfirm(assistant)}
                   disabled={assistants.length <= 1}
+                  className="rounded-lg p-2 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--destructive)]/10 hover:text-[var(--destructive)] disabled:opacity-30"
                 >
                   <Trash2 className="h-4 w-4" />
-                </Button>
+                </button>
               </div>
             </div>
           </div>
         ))}
       </div>
 
+      {/* Delete Confirmation Dialog */}
       <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
-        <DialogContent>
+        <DialogContent className="border-[var(--outline-variant)]/10 bg-[var(--surface-container)] sm:rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Delete Assistant</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="tracking-tight text-[var(--on-surface)]">
+              Delete Assistant
+            </DialogTitle>
+            <DialogDescription className="text-[var(--on-surface-variant)]">
               Are you sure you want to delete &quot;{deleteConfirm?.name}&quot;? This action
               cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteConfirm(null)}
+              className="border-[var(--outline-variant)]/15 text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
+            >
               Cancel
             </Button>
             <Button
-              variant="destructive"
               onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
               disabled={isLoading}
+              className="bg-[var(--destructive)] text-[var(--destructive-foreground)] hover:opacity-90"
             >
               Delete
             </Button>
