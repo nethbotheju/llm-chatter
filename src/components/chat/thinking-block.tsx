@@ -18,11 +18,11 @@ export function ThinkingBlock({
   const [expanded, setExpanded] = useState(defaultExpanded);
 
   return (
-    <div className="my-2 overflow-hidden rounded-lg border border-muted bg-muted/50">
+    <div className="overflow-hidden rounded-xl border border-[var(--outline-variant)]/10 bg-[var(--surface-container-low)]">
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
-        className="flex w-full items-center gap-2 p-3 text-sm text-muted-foreground transition-colors hover:bg-muted/80"
+        className="flex w-full items-center gap-2 p-3 text-sm text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container)]"
       >
         {expanded ? (
           <ChevronDown className="h-4 w-4 shrink-0" />
@@ -42,7 +42,7 @@ export function ThinkingBlock({
         )}
       >
         <div className="overflow-hidden">
-          <div className="border-t border-muted p-3 text-sm italic text-muted-foreground">
+          <div className="border-t border-[var(--outline-variant)]/10 p-3 text-sm italic text-[var(--on-surface-variant)]">
             <div className="whitespace-pre-wrap">{content}</div>
           </div>
         </div>

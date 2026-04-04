@@ -3,7 +3,6 @@
 import { MessageSquare, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { formatDistanceToNow } from "date-fns";
 
 interface ConversationItemProps {
   id: string;
@@ -25,24 +24,23 @@ export function ConversationItem({
   return (
     <div
       className={cn(
-        "group flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted",
-        isActive && "bg-muted"
+        "group flex cursor-pointer items-center gap-3 rounded-lg px-4 py-2 text-sm transition-colors",
+        isActive
+          ? "bg-[var(--surface-bright)] text-[var(--primary)]"
+          : "text-neutral-400 hover:bg-[var(--surface-container-high)] hover:text-neutral-100"
       )}
       onClick={onClick}
     >
-      <MessageSquare className="h-4 w-4 shrink-0 text-muted-foreground" />
+      <MessageSquare className="h-4 w-4 shrink-0" />
       <div className="flex-1 truncate">
-        <div className="truncate font-medium">
+        <span className="truncate font-medium">
           {title || "New conversation"}
-        </div>
-        <div className="text-xs text-muted-foreground">
-          {formatDistanceToNow(createdAt, { addSuffix: true })}
-        </div>
+        </span>
       </div>
       <Button
         variant="ghost"
         size="icon"
-        className="h-6 w-6 opacity-0 group-hover:opacity-100"
+        className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100"
         onClick={(e) => {
           e.stopPropagation();
           onDelete();

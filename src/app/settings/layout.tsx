@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { ArrowLeft, Settings, Server, Bot, Shield } from "lucide-react";
 
 const settingsNav = [
-  { href: "/settings/general", label: "General" },
-  { href: "/settings/providers", label: "Providers" },
-  { href: "/settings/assistants", label: "Assistants" },
-  { href: "/settings/privacy", label: "Privacy" },
+  { href: "/settings/general", label: "General", icon: Settings },
+  { href: "/settings/providers", label: "Providers", icon: Server },
+  { href: "/settings/assistants", label: "Assistants", icon: Bot },
+  { href: "/settings/privacy", label: "Privacy", icon: Shield },
 ];
 
 export default function SettingsLayout({
@@ -19,29 +20,61 @@ export default function SettingsLayout({
   const pathname = usePathname();
 
   return (
-    <div className="flex h-screen">
-      <div className="w-64 border-r bg-muted/30 p-4">
-        <div className="mb-6">
-          <Link href="/" className="text-lg font-semibold hover:underline">
-            ← Back to Chat
+    <div className="flex h-screen bg-[var(--surface)]">
+      {/* Settings Sidebar */}
+      <aside className="flex w-64 flex-col bg-[var(--surface-container-low)] tracking-tight">
+        {/* Header */}
+        <div className="p-6">
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-sm font-medium text-[var(--on-surface-variant)] transition-colors hover:text-[var(--on-surface)]"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Chat
           </Link>
+          <h1 className="mt-4 text-lg font-bold tracking-tighter text-[var(--on-surface)]">
+            Settings
+          </h1>
+          <p className="text-[10px] font-medium text-[var(--on-surface-variant)] opacity-60">
+            Manage your preferences
+          </p>
         </div>
-        <nav className="space-y-1">
-          {settingsNav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "block rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted",
-                pathname === item.href && "bg-muted font-medium"
-              )}
-            >
-              {item.label}
-            </Link>
-          ))}
+
+        {/* Navigation */}
+        <nav className="flex-1 space-y-1 px-3">
+          {settingsNav.map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "settings-nav-item flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium",
+                  isActive
+                    ? "bg-[var(--surface-container-highest)] text-[var(--on-surface)]"
+                    : "text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
-      </div>
-      <div className="flex-1 overflow-auto p-6">{children}</div>
+
+        {/* Footer */}
+        <div className="border-t border-[var(--outline-variant)]/10 p-4">
+          <p className="text-center text-[10px] font-medium text-[var(--on-surface-variant)] opacity-40">
+            Ilm Chatter v1.0
+          </p>
+        </div>
+      </aside>
+
+      {/* Content Area */}
+      <main className="flex-1 overflow-auto">
+        <div className="mx-auto max-w-3xl p-8">{children}</div>
+      </main>
     </div>
   );
 }
