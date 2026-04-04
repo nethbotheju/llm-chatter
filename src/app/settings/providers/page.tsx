@@ -12,7 +12,21 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Eye, EyeOff, Loader2, Pencil, Trash2, Plus, Check, X } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Loader2,
+  Pencil,
+  Trash2,
+  Plus,
+  Check,
+  X,
+  Server,
+  Cpu,
+  Key,
+  Globe,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Model {
   id: string;
@@ -257,51 +271,61 @@ export default function ProvidersSettingsPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--on-surface-variant)]" />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
+    <div className="space-y-8">
+      {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Providers</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-bold tracking-tighter text-[var(--on-surface)]">
+            Providers
+          </h1>
+          <p className="text-sm text-[var(--on-surface-variant)]">
             Configure AI providers and their models
           </p>
         </div>
-        <Button onClick={() => handleOpenForm()}>
-          <Plus className="mr-2 h-4 w-4" />
+        <Button
+          onClick={() => handleOpenForm()}
+          className="flex items-center gap-2 rounded-full bg-[var(--primary)] px-5 py-2.5 font-semibold text-[var(--primary-foreground)] transition-all hover:opacity-90 active:scale-95"
+        >
+          <Plus className="h-4 w-4" />
           Add Provider
         </Button>
       </div>
 
+      {/* Add/Edit Provider Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent>
+        <DialogContent className="border-[var(--outline-variant)]/10 bg-[var(--surface-container)] sm:rounded-2xl">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="tracking-tight text-[var(--on-surface)]">
               {editingProvider ? "Edit Provider" : "Add Provider"}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-[var(--on-surface-variant)] opacity-60">
+                Name
+              </Label>
               <Input
-                id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Provider name"
                 required
+                className="border-[var(--outline-variant)]/15 bg-[var(--surface-container-high)] text-[var(--on-surface)] placeholder:text-[var(--on-surface-variant)]/40 focus-visible:ring-[var(--primary)]/30"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="type">Type</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-[var(--on-surface-variant)] opacity-60">
+                Type
+              </Label>
               <select
-                id="type"
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="flex h-9 w-full rounded-lg border border-[var(--outline-variant)]/15 bg-[var(--surface-container-high)] px-3 py-1 text-sm text-[var(--on-surface)] shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--primary)]/30"
               >
                 {providerTypes.map((t) => (
                   <option key={t.value} value={t.value}>
@@ -312,21 +336,24 @@ export default function ProvidersSettingsPage() {
             </div>
             {isCompatible && (
               <div className="space-y-2">
-                <Label htmlFor="baseUrl">Base URL</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-[var(--on-surface-variant)] opacity-60">
+                  Base URL
+                </Label>
                 <Input
-                  id="baseUrl"
                   value={formData.baseUrl}
                   onChange={(e) => setFormData({ ...formData, baseUrl: e.target.value })}
                   placeholder="https://api.example.com/v1"
+                  className="border-[var(--outline-variant)]/15 bg-[var(--surface-container-high)] text-[var(--on-surface)] placeholder:text-[var(--on-surface-variant)]/40 focus-visible:ring-[var(--primary)]/30"
                 />
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="apiKey">API Key</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-[var(--on-surface-variant)] opacity-60">
+                API Key
+              </Label>
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Input
-                    id="apiKey"
                     type={showApiKey ? "text" : "password"}
                     value={formData.apiKey}
                     onChange={(e) => {
@@ -334,10 +361,11 @@ export default function ProvidersSettingsPage() {
                       setValidationResult(null);
                     }}
                     placeholder={editingProvider?.hasApiKey ? "Leave empty to keep existing" : "Enter your API key"}
+                    className="border-[var(--outline-variant)]/15 bg-[var(--surface-container-high)] pr-10 text-[var(--on-surface)] placeholder:text-[var(--on-surface-variant)]/40 focus-visible:ring-[var(--primary)]/30"
                   />
                   <button
                     type="button"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--on-surface-variant)] transition-colors hover:text-[var(--on-surface)]"
                     onClick={() => setShowApiKey(!showApiKey)}
                   >
                     {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -348,32 +376,41 @@ export default function ProvidersSettingsPage() {
                   variant="outline"
                   onClick={handleValidate}
                   disabled={validating || !formData.apiKey}
+                  className="border-[var(--outline-variant)]/15 text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
                 >
                   {validating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test"}
                 </Button>
               </div>
               {validationResult && (
-                <p className={`text-sm ${validationResult.valid ? "text-green-600" : "text-red-600"}`}>
+                <p className={cn("text-xs font-medium", validationResult.valid ? "text-[var(--tertiary)]" : "text-[var(--destructive)]")}>
                   {validationResult.valid ? (
-                    <span className="flex items-center gap-1"><Check className="h-4 w-4" /> Connection successful</span>
+                    <span className="flex items-center gap-1"><Check className="h-3 w-3" /> Connection successful</span>
                   ) : (
-                    <span className="flex items-center gap-1"><X className="h-4 w-4" /> {validationResult.error}</span>
+                    <span className="flex items-center gap-1"><X className="h-3 w-3" /> {validationResult.error}</span>
                   )}
                 </p>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <Switch
                 checked={formData.enabled}
                 onCheckedChange={(checked) => setFormData({ ...formData, enabled: checked })}
               />
-              <Label>Enabled</Label>
+              <Label className="text-sm text-[var(--on-surface)]">Enabled</Label>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleCloseForm}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCloseForm}
+                className="border-[var(--outline-variant)]/15 text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
+              >
                 Cancel
               </Button>
-              <Button type="submit">
+              <Button
+                type="submit"
+                className="bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90"
+              >
                 {editingProvider ? "Save Changes" : "Create Provider"}
               </Button>
             </DialogFooter>
@@ -381,105 +418,139 @@ export default function ProvidersSettingsPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Provider List */}
       <div className="space-y-4">
         {providers.length === 0 ? (
-          <div className="rounded-lg border border-dashed p-8 text-center">
-            <p className="text-muted-foreground">No providers configured yet.</p>
-            <Button className="mt-4" onClick={() => handleOpenForm()}>
+          <div className="glass-card flex flex-col items-center justify-center p-16 text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--surface-container-high)]">
+              <Server className="h-8 w-8 text-[var(--on-surface-variant)]" />
+            </div>
+            <p className="text-sm font-medium text-[var(--on-surface)]">
+              No providers configured yet
+            </p>
+            <p className="mt-1 text-xs text-[var(--on-surface-variant)]">
+              Add your first AI provider to start chatting
+            </p>
+            <Button
+              className="mt-6 rounded-full bg-[var(--primary)] px-6 py-2.5 font-semibold text-[var(--primary-foreground)] hover:opacity-90"
+              onClick={() => handleOpenForm()}
+            >
               Add your first provider
             </Button>
           </div>
         ) : (
           providers.map((provider) => (
-            <div key={provider.id} className="rounded-lg border">
-              <div className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-3">
-                  <Switch
-                    checked={provider.enabled}
-                    onCheckedChange={() => handleToggleEnabled(provider)}
-                  />
+            <div
+              key={provider.id}
+              className={cn(
+                "glass-card overflow-hidden transition-opacity",
+                !provider.enabled && "opacity-50"
+              )}
+            >
+              {/* Provider Header */}
+              <div className="flex items-center justify-between p-5">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--surface-container-high)]">
+                    <Globe className="h-5 w-5 text-[var(--on-surface-variant)]" />
+                  </div>
                   <div>
-                    <h3 className="font-medium">{provider.name}</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <h3 className="text-sm font-bold tracking-tight text-[var(--on-surface)]">
+                      {provider.name}
+                    </h3>
+                    <p className="text-xs text-[var(--on-surface-variant)]">
                       {provider.type}
-                      {provider.baseUrl && ` • ${provider.baseUrl}`}
+                      {provider.baseUrl && ` · ${provider.baseUrl}`}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span
-                    className={`text-xs ${provider.hasApiKey ? "text-green-600" : "text-yellow-600"}`}
+                  <div
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold",
+                      provider.hasApiKey
+                        ? "bg-[var(--tertiary)]/10 text-[var(--tertiary)]"
+                        : "bg-[var(--destructive)]/10 text-[var(--destructive)]"
+                    )}
                   >
-                    {provider.hasApiKey ? "API Key Set" : "No API Key"}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
+                    <Key className="h-3 w-3" />
+                    {provider.hasApiKey ? "Key Set" : "No Key"}
+                  </div>
+                  <Switch
+                    checked={provider.enabled}
+                    onCheckedChange={() => handleToggleEnabled(provider)}
+                  />
+                  <button
+                    type="button"
                     onClick={() =>
                       setExpandedProvider(expandedProvider === provider.id ? null : provider.id)
                     }
+                    className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
                   >
-                    {provider.models.length > 0 && (
-                      <span className="mr-1 text-xs">{provider.models.length}</span>
-                    )}
-                    Models
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleOpenForm(provider)}>
+                    <Cpu className="h-3.5 w-3.5" />
+                    {provider.models.length}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenForm(provider)}
+                    className="rounded-lg p-2 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
+                  >
                     <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => handleDelete(provider.id)}
+                    className="rounded-lg p-2 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--destructive)]/10 hover:text-[var(--destructive)]"
                   >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
 
+              {/* Expanded Models Section */}
               {expandedProvider === provider.id && (
-                <div className="border-t p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <h4 className="text-sm font-medium">Models</h4>
+                <div className="border-t border-[var(--outline-variant)]/10 p-5">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--on-surface-variant)] opacity-60">
+                      Models
+                    </h4>
                     {defaultModels[provider.type]?.length > 0 && provider.models.length === 0 && (
-                      <Button
-                        variant="outline"
-                        size="sm"
+                      <button
+                        type="button"
                         onClick={() => handleAddDefaultModels(provider)}
+                        className="rounded-lg px-3 py-1.5 text-xs font-semibold text-[var(--primary)] transition-colors hover:bg-[var(--primary)]/10"
                       >
-                        Add default models
-                      </Button>
+                        Add defaults
+                      </button>
                     )}
                   </div>
                   <div className="space-y-2">
                     {provider.models.map((model) => (
                       <div
                         key={model.id}
-                        className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2"
+                        className="flex items-center justify-between rounded-xl bg-[var(--surface-container)] px-4 py-2.5"
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
                           <Switch
                             checked={model.enabled}
                             onCheckedChange={() => handleToggleModel(model)}
                           />
-                          <span className="text-sm">{model.name}</span>
+                          <span className="text-sm text-[var(--on-surface)]">{model.name}</span>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
+                        <button
+                          type="button"
                           onClick={() => handleDeleteModel(model.id)}
+                          className="rounded-md p-1.5 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-[var(--destructive)]"
                         >
-                          <X className="h-3 w-3" />
-                        </Button>
+                          <X className="h-3.5 w-3.5" />
+                        </button>
                       </div>
                     ))}
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 pt-1">
                       <Input
                         value={newModelName}
                         onChange={(e) => setNewModelName(e.target.value)}
                         placeholder="Add new model..."
-                        className="h-8"
+                        className="h-9 border-[var(--outline-variant)]/15 bg-[var(--surface-container)] text-sm text-[var(--on-surface)] placeholder:text-[var(--on-surface-variant)]/40 focus-visible:ring-[var(--primary)]/30"
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             e.preventDefault();
@@ -488,9 +559,10 @@ export default function ProvidersSettingsPage() {
                         }}
                       />
                       <Button
-                        size="sm"
                         onClick={() => handleAddModel(provider.id)}
                         disabled={addingModel || !newModelName.trim()}
+                        className="rounded-xl bg-[var(--surface-container-high)] px-4 text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
+                        style={{ background: "var(--surface-container-high)" }}
                       >
                         {addingModel ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add"}
                       </Button>

@@ -15,9 +15,10 @@ interface ChatMessagesProps {
   messages: Message[];
   isLoading?: boolean;
   onEditMessage?: (id: string, newContent: string) => void;
+  modelName?: string;
 }
 
-export function ChatMessages({ messages, isLoading, onEditMessage }: ChatMessagesProps) {
+export function ChatMessages({ messages, isLoading, onEditMessage, modelName }: ChatMessagesProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -25,31 +26,29 @@ export function ChatMessages({ messages, isLoading, onEditMessage }: ChatMessage
   }, [messages]);
 
   if (messages.length === 0) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4">
-        <h1 className="text-2xl font-semibold">Start a conversation</h1>
-        <p className="text-muted-foreground">
-          Send a message to begin chatting with the AI.
-        </p>
-      </div>
-    );
+    return null;
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-y-auto">
-      {messages.map((message) => (
-        <ChatMessage
-          key={message.id}
-          id={message.id}
-          role={message.role}
-          content={message.content}
-          thinking={message.thinking}
-          thinkingDuration={message.thinkingDuration}
-          isStreaming={isLoading && message === messages[messages.length - 1]}
-          onEdit={onEditMessage}
-        />
-      ))}
-      <div ref={bottomRef} />
+    <div className="flex flex-1 flex-col">
+      <div className="mx-auto w-full max-w-4xl px-6 py-8 md:px-12">
+        <div className="space-y-8">
+          {messages.map((message) => (
+            <ChatMessage
+              key={message.id}
+              id={message.id}
+              role={message.role}
+              content={message.content}
+              thinking={message.thinking}
+              thinkingDuration={message.thinkingDuration}
+              isStreaming={isLoading && message === messages[messages.length - 1]}
+              modelName={message.role === "assistant" ? modelName : undefined}
+              onEdit={message.role === "user" ? onEditMessage : undefined}
+            />
+          ))}
+        </div>
+        <div ref={bottomRef} className="h-4" />
+      </div>
     </div>
   );
 }

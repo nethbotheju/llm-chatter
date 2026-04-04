@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Trash2, Download, AlertTriangle } from "lucide-react";
+import { Trash2, Download, AlertTriangle, Database, MessageSquare, HardDrive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,6 +11,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 interface StorageStats {
   conversations: number;
@@ -90,84 +91,106 @@ export default function PrivacySettingsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
+    <div className="space-y-8">
+      {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold">Privacy & Data</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl font-bold tracking-tighter text-[var(--on-surface)]">
+          Privacy & Data
+        </h1>
+        <p className="text-sm text-[var(--on-surface-variant)]">
           Manage your data and privacy settings
         </p>
       </div>
 
-      <div className="space-y-4">
-        <div className="rounded-lg border p-4">
-          <h2 className="font-medium">Storage Usage</h2>
-          <p className="text-sm text-muted-foreground">
-            View how much data is stored locally
-          </p>
-          {stats ? (
-            <div className="mt-4 space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>Conversations:</span>
-                <span>{stats.conversations}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Messages:</span>
-                <span>{stats.messages}</span>
-              </div>
-            </div>
-          ) : (
-            <p className="mt-4 text-sm text-muted-foreground">Loading...</p>
-          )}
+      {/* Storage Stats */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="glass-card flex items-center gap-4 p-5">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--primary)]/10">
+            <MessageSquare className="h-5 w-5 text-[var(--primary)]" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold tracking-tight text-[var(--on-surface)]">
+              {stats?.conversations ?? "—"}
+            </p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--on-surface-variant)] opacity-60">
+              Conversations
+            </p>
+          </div>
         </div>
-
-        <div className="rounded-lg border p-4">
-          <h2 className="font-medium">Export Data</h2>
-          <p className="text-sm text-muted-foreground">
-            Download all your conversations as JSON
-          </p>
-          <Button
-            variant="outline"
-            className="mt-4"
-            onClick={handleExport}
-            disabled={exporting}
-          >
-            <Download className="mr-2 h-4 w-4" />
-            {exporting ? "Exporting..." : "Export Conversations"}
-          </Button>
-        </div>
-
-        <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-4">
-          <h2 className="flex items-center gap-2 font-medium text-destructive">
-            <AlertTriangle className="h-4 w-4" />
-            Danger Zone
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            These actions are irreversible. Please be careful.
-          </p>
-          <div className="mt-4 flex gap-2">
-            <Button
-              variant="outline"
-              className="border-destructive/50 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-              onClick={() => setDeleteDialogOpen(true)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete All Conversations
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => setResetDialogOpen(true)}
-            >
-              Reset Application
-            </Button>
+        <div className="glass-card flex items-center gap-4 p-5">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--tertiary)]/10">
+            <Database className="h-5 w-5 text-[var(--tertiary)]" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold tracking-tight text-[var(--on-surface)]">
+              {stats?.messages ?? "—"}
+            </p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--on-surface-variant)] opacity-60">
+              Messages
+            </p>
           </div>
         </div>
       </div>
 
+      {/* Export Data */}
+      <div className="glass-card p-6">
+        <div className="mb-4">
+          <h2 className="text-sm font-bold tracking-tight text-[var(--on-surface)]">
+            Export Data
+          </h2>
+          <p className="text-xs text-[var(--on-surface-variant)]">
+            Download all your conversations as JSON
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={handleExport}
+          disabled={exporting}
+          className="rounded-xl border-[var(--outline-variant)]/15 text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
+        >
+          <Download className="mr-2 h-4 w-4" />
+          {exporting ? "Exporting..." : "Export Conversations"}
+        </Button>
+      </div>
+
+      {/* Danger Zone */}
+      <div className="rounded-2xl border border-[var(--destructive)]/20 bg-[var(--destructive)]/5 p-6">
+        <div className="mb-4">
+          <h2 className="flex items-center gap-2 text-sm font-bold tracking-tight text-[var(--destructive)]">
+            <AlertTriangle className="h-4 w-4" />
+            Danger Zone
+          </h2>
+          <p className="text-xs text-[var(--on-surface-variant)]">
+            These actions are irreversible. Please be careful.
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => setDeleteDialogOpen(true)}
+            className="flex items-center gap-2 rounded-xl border border-[var(--destructive)]/20 bg-transparent px-4 py-2.5 text-xs font-semibold text-[var(--destructive)] transition-colors hover:bg-[var(--destructive)] hover:text-white"
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete All Conversations
+          </button>
+          <button
+            type="button"
+            onClick={() => setResetDialogOpen(true)}
+            className="flex items-center gap-2 rounded-xl bg-[var(--destructive)] px-4 py-2.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            Reset Application
+          </button>
+        </div>
+      </div>
+
+      {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="border-[var(--outline-variant)]/10 bg-[var(--surface-container)] sm:rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Delete All Conversations?</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="tracking-tight text-[var(--on-surface)]">
+              Delete All Conversations?
+            </DialogTitle>
+            <DialogDescription className="text-[var(--on-surface-variant)]">
               This will permanently delete all your conversations and messages.
               This action cannot be undone.
             </DialogDescription>
@@ -176,13 +199,14 @@ export default function PrivacySettingsPage() {
             <Button
               variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
+              className="border-[var(--outline-variant)]/15 text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
             >
               Cancel
             </Button>
             <Button
-              variant="destructive"
               onClick={handleDeleteAllConversations}
               disabled={isLoading}
+              className="bg-[var(--destructive)] text-[var(--destructive-foreground)] hover:opacity-90"
             >
               {isLoading ? "Deleting..." : "Delete All"}
             </Button>
@@ -190,11 +214,14 @@ export default function PrivacySettingsPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Reset Confirmation Dialog */}
       <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
-        <DialogContent>
+        <DialogContent className="border-[var(--outline-variant)]/10 bg-[var(--surface-container)] sm:rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Reset Application?</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="tracking-tight text-[var(--on-surface)]">
+              Reset Application?
+            </DialogTitle>
+            <DialogDescription className="text-[var(--on-surface-variant)]">
               This will delete ALL data including conversations, providers,
               assistants, and models. The app will be restored to its initial
               state. This action cannot be undone.
@@ -204,13 +231,14 @@ export default function PrivacySettingsPage() {
             <Button
               variant="outline"
               onClick={() => setResetDialogOpen(false)}
+              className="border-[var(--outline-variant)]/15 text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
             >
               Cancel
             </Button>
             <Button
-              variant="destructive"
               onClick={handleResetApp}
               disabled={isLoading}
+              className="bg-[var(--destructive)] text-[var(--destructive-foreground)] hover:opacity-90"
             >
               {isLoading ? "Resetting..." : "Reset App"}
             </Button>

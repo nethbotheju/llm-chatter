@@ -95,21 +95,22 @@ export function AssistantForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 rounded-lg border p-6">
-      <div className="flex items-center gap-4">
+    <form onSubmit={handleSubmit} className="glass-card space-y-6 p-6">
+      {/* Avatar Upload */}
+      <div className="flex items-center gap-5">
         <div className="relative">
-          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-muted">
+          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-[var(--surface-container-high)]">
             {image ? (
               <img src={image} alt={name} className="h-full w-full object-cover" />
             ) : (
-              <Bot className="h-8 w-8 text-muted-foreground" />
+              <Bot className="h-8 w-8 text-[var(--on-surface-variant)]" />
             )}
           </div>
           {image && (
             <button
               type="button"
               onClick={handleRemoveImage}
-              className="absolute -right-1 -top-1 rounded-full bg-destructive p-1 text-destructive-foreground hover:bg-destructive/90"
+              className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--destructive)] text-white shadow-sm hover:opacity-90"
             >
               <X className="h-3 w-3" />
             </button>
@@ -117,7 +118,7 @@ export function AssistantForm({
         </div>
         <div>
           <Label htmlFor="image" className="cursor-pointer">
-            <div className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-muted">
+            <div className="flex items-center gap-2 rounded-xl border border-[var(--outline-variant)]/15 bg-[var(--surface-container-high)] px-4 py-2.5 text-xs font-semibold text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-bright)] hover:text-[var(--on-surface)]">
               <Upload className="h-4 w-4" />
               Upload Avatar
             </div>
@@ -130,30 +131,33 @@ export function AssistantForm({
             onChange={handleImageUpload}
             className="hidden"
           />
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-1.5 text-[10px] text-[var(--on-surface-variant)] opacity-50">
             Optional: JPG, PNG, max 2MB
           </p>
         </div>
       </div>
 
+      {/* Name */}
       <div className="space-y-2">
-        <Label htmlFor="name">Name</Label>
+        <Label className="text-xs font-bold uppercase tracking-wider text-[var(--on-surface-variant)] opacity-60">
+          Name
+        </Label>
         <Input
-          id="name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Assistant name"
           required
           maxLength={50}
+          className="border-[var(--outline-variant)]/15 bg-[var(--surface-container-high)] text-[var(--on-surface)] placeholder:text-[var(--on-surface-variant)]/40 focus-visible:ring-[var(--primary)]/30"
         />
       </div>
 
+      {/* System Prompt */}
       <div className="space-y-2">
-        <Label htmlFor="systemPrompt">
+        <Label className="text-xs font-bold uppercase tracking-wider text-[var(--on-surface-variant)] opacity-60">
           System Prompt ({systemPrompt.length}/4000)
         </Label>
         <Textarea
-          id="systemPrompt"
           value={systemPrompt}
           onChange={(e) => setSystemPrompt(e.target.value)}
           placeholder="Enter the system prompt for this assistant..."
@@ -161,14 +165,20 @@ export function AssistantForm({
           required
           minLength={10}
           maxLength={4000}
+          className="border-[var(--outline-variant)]/15 bg-[var(--surface-container-high)] text-[var(--on-surface)] placeholder:text-[var(--on-surface-variant)]/40 focus-visible:ring-[var(--primary)]/30"
         />
       </div>
 
-      <div className="space-y-4">
-        <div className="space-y-2">
+      {/* Sliders */}
+      <div className="space-y-5">
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <Label>Temperature</Label>
-            <span className="text-sm text-muted-foreground">{temperature.toFixed(1)}</span>
+            <Label className="text-xs font-bold uppercase tracking-wider text-[var(--on-surface-variant)] opacity-60">
+              Temperature
+            </Label>
+            <span className="rounded-lg bg-[var(--surface-container-high)] px-2.5 py-1 text-xs font-bold text-[var(--on-surface-variant)]">
+              {temperature.toFixed(1)}
+            </span>
           </div>
           <Slider
             value={[temperature]}
@@ -177,15 +187,19 @@ export function AssistantForm({
             max={2}
             step={0.1}
           />
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[10px] text-[var(--on-surface-variant)] opacity-50">
             Lower = more focused, Higher = more creative
           </p>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <Label>Top P</Label>
-            <span className="text-sm text-muted-foreground">{topP.toFixed(2)}</span>
+            <Label className="text-xs font-bold uppercase tracking-wider text-[var(--on-surface-variant)] opacity-60">
+              Top P
+            </Label>
+            <span className="rounded-lg bg-[var(--surface-container-high)] px-2.5 py-1 text-xs font-bold text-[var(--on-surface-variant)]">
+              {topP.toFixed(2)}
+            </span>
           </div>
           <Slider
             value={[topP]}
@@ -194,45 +208,56 @@ export function AssistantForm({
             max={1}
             step={0.05}
           />
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[10px] text-[var(--on-surface-variant)] opacity-50">
             Nucleus sampling threshold
           </p>
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="space-y-0.5">
-          <Label htmlFor="enabled">Enabled</Label>
-          <p className="text-xs text-muted-foreground">
-            Disabled assistants won&apos;t appear in selection
-          </p>
+      {/* Toggle Switches */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between rounded-xl bg-[var(--surface-container-high)] p-4">
+          <div className="space-y-0.5">
+            <Label className="text-sm font-medium text-[var(--on-surface)]">Enabled</Label>
+            <p className="text-[10px] text-[var(--on-surface-variant)] opacity-50">
+              Disabled assistants won&apos;t appear in selection
+            </p>
+          </div>
+          <Switch
+            checked={enabled}
+            onCheckedChange={setEnabled}
+          />
         </div>
-        <Switch
-          id="enabled"
-          checked={enabled}
-          onCheckedChange={setEnabled}
-        />
+
+        <div className="flex items-center justify-between rounded-xl bg-[var(--surface-container-high)] p-4">
+          <div className="space-y-0.5">
+            <Label className="text-sm font-medium text-[var(--on-surface)]">Default Assistant</Label>
+            <p className="text-[10px] text-[var(--on-surface-variant)] opacity-50">
+              Used for new conversations
+            </p>
+          </div>
+          <Switch
+            checked={isDefault}
+            onCheckedChange={setIsDefault}
+          />
+        </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="space-y-0.5">
-          <Label htmlFor="isDefault">Default Assistant</Label>
-          <p className="text-xs text-muted-foreground">
-            Used for new conversations
-          </p>
-        </div>
-        <Switch
-          id="isDefault"
-          checked={isDefault}
-          onCheckedChange={setIsDefault}
-        />
-      </div>
-
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
+      {/* Actions */}
+      <div className="flex justify-end gap-3 pt-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          className="rounded-xl border-[var(--outline-variant)]/15 text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
+        >
           Cancel
         </Button>
-        <Button type="submit" disabled={isLoading || !name || !systemPrompt}>
+        <Button
+          type="submit"
+          disabled={isLoading || !name || !systemPrompt}
+          className="rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 disabled:opacity-40"
+        >
           {isLoading ? "Saving..." : assistant ? "Update" : "Create"}
         </Button>
       </div>

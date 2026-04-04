@@ -25,23 +25,8 @@ interface ModelSelectorProps {
   onSelectModel: (modelId: string) => void;
   disabled?: boolean;
   className?: string;
+  compact?: boolean;
 }
-
-const providerTypeLabels: Record<string, string> = {
-  openai: "OpenAI",
-  anthropic: "Anthropic",
-  google: "Google",
-  "openai-compatible": "Custom",
-  "anthropic-compatible": "Custom",
-};
-
-const providerTypeColors: Record<string, string> = {
-  openai: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  anthropic: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
-  google: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  "openai-compatible": "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
-  "anthropic-compatible": "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
-};
 
 export function ModelSelector({
   models,
@@ -49,13 +34,13 @@ export function ModelSelector({
   onSelectModel,
   disabled,
   className,
+  compact = false,
 }: ModelSelectorProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   const selectedModel = models.find((m) => m.id === selectedModelId);
 
-  // Group models by provider
   const groupedModels = models.reduce(
     (acc, model) => {
       const providerKey = model.provider?.id || "unknown";
@@ -83,11 +68,11 @@ export function ModelSelector({
 
   if (models.length === 0) {
     return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="flex items-center gap-2 text-sm text-[var(--on-surface-variant)]">
         <span>No models available.</span>
         <Link
           href="/settings/providers"
-          className="inline-flex items-center text-primary hover:underline"
+          className="inline-flex items-center text-[var(--primary)] hover:underline"
         >
           <Settings className="mr-1 h-3 w-3" />
           Configure providers
@@ -96,6 +81,56 @@ export function ModelSelector({
     );
   }
 
+  if (compact) {
+    return (
+      <div ref={ref} className={cn("relative", className)}>
+        <button
+          type="button"
+          onClick={() => !disabled && setOpen(!open)}
+          disabled={disabled}
+          className="flex items-center gap-1 text-sm font-semibold text-white transition-colors hover:text-[var(--primary)] disabled:opacity-50"
+        >
+          {selectedModel ? selectedModel.name : "Select a model"}
+          <ChevronDown className={cn("h-4 w-4 text-neutral-500 transition-transform", open && "rotate-180")} />
+        </button>
+
+        {open && (
+          <div className="absolute left-0 top-full z-50 mt-2 min-w-[220px] overflow-auto rounded-xl border border-white/10 bg-[var(--surface-container-highest)] shadow-2xl">
+            {Object.entries(groupedModels).map(([providerId, { provider, models: providerModels }]) => (
+              <div key={providerId}>
+                <div className="sticky top-0 border-b border-white/5 bg-[var(--surface-container)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--on-surface-variant)]">
+                  {provider?.name || "Unknown"}
+                </div>
+                {providerModels.map((model) => (
+                  <button
+                    key={model.id}
+                    type="button"
+                    onClick={() => {
+                      onSelectModel(model.id);
+                      setOpen(false);
+                    }}
+                    className={cn(
+                      "flex w-full items-center justify-between px-4 py-2.5 text-sm transition-colors hover:bg-[var(--surface-container-high)]",
+                      model.id === selectedModelId
+                        ? "text-[var(--primary)]"
+                        : "text-[var(--on-surface)]"
+                    )}
+                  >
+                    <span>{model.name}</span>
+                    {model.id === selectedModelId && (
+                      <Check className="h-4 w-4" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Full dropdown (non-compact)
   return (
     <div ref={ref} className={cn("relative", className)}>
       <button
@@ -103,41 +138,31 @@ export function ModelSelector({
         onClick={() => !disabled && setOpen(!open)}
         disabled={disabled}
         className={cn(
-          "flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm",
-          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+          "flex h-9 w-full items-center justify-between rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm",
+          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--primary)]",
           "disabled:cursor-not-allowed disabled:opacity-50",
-          open && "ring-1 ring-ring"
+          open && "ring-1 ring-[var(--primary)]"
         )}
       >
-        <span className="truncate">
+        <span className="truncate text-[var(--on-surface)]">
           {selectedModel ? (
             <span>
-              <span className="text-muted-foreground">{selectedModel.provider?.name} / </span>
+              <span className="text-[var(--on-surface-variant)]">{selectedModel.provider?.name} / </span>
               {selectedModel.name}
             </span>
           ) : (
             "Select a model"
           )}
         </span>
-        <ChevronDown className={cn("ml-2 h-4 w-4 opacity-50", open && "rotate-180")} />
+        <ChevronDown className={cn("ml-2 h-4 w-4 text-[var(--on-surface-variant)]", open && "rotate-180")} />
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-1 max-h-80 w-full overflow-auto rounded-md border bg-popover shadow-lg">
+        <div className="absolute z-50 mt-1 max-h-80 w-full overflow-auto rounded-lg border border-white/10 bg-[var(--surface-container-highest)] shadow-2xl">
           {Object.entries(groupedModels).map(([providerId, { provider, models: providerModels }]) => (
             <div key={providerId}>
-              <div className="sticky top-0 flex items-center justify-between bg-muted/50 px-3 py-1.5 text-xs font-medium">
-                <span>{provider?.name || "Unknown Provider"}</span>
-                {provider?.type && (
-                  <span
-                    className={cn(
-                      "rounded px-1.5 py-0.5 text-[10px] font-medium",
-                      providerTypeColors[provider.type] || "bg-muted"
-                    )}
-                  >
-                    {providerTypeLabels[provider.type] || provider.type}
-                  </span>
-                )}
+              <div className="sticky top-0 border-b border-white/5 bg-[var(--surface-container)] px-3 py-1.5 text-xs font-medium text-[var(--on-surface-variant)]">
+                {provider?.name || "Unknown Provider"}
               </div>
               {providerModels.map((model) => (
                 <button
@@ -148,20 +173,13 @@ export function ModelSelector({
                     setOpen(false);
                   }}
                   className={cn(
-                    "flex w-full items-center justify-between px-3 py-2 text-sm hover:bg-muted",
-                    model.id === selectedModelId && "bg-muted"
+                    "flex w-full items-center justify-between px-3 py-2 text-sm transition-colors hover:bg-[var(--surface-container-high)]",
+                    model.id === selectedModelId && "bg-[var(--surface-container-high)] text-[var(--primary)]"
                   )}
                 >
-                  <span className="flex items-center gap-2">
-                    {model.name}
-                    {model.capabilities && (
-                      <span className="text-xs text-muted-foreground">
-                        {JSON.parse(model.capabilities).join(", ")}
-                      </span>
-                    )}
-                  </span>
+                  <span>{model.name}</span>
                   {model.id === selectedModelId && (
-                    <Check className="h-4 w-4 text-primary" />
+                    <Check className="h-4 w-4" />
                   )}
                 </button>
               ))}
