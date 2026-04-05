@@ -43,6 +43,7 @@ import {
   parseSearchResults,
   parseExportData,
   parseStats,
+  parseChatEvent,
 } from "@/lib/contracts";
 
 interface TauriConversationRow {
@@ -175,7 +176,7 @@ function mapConversationDetail(row: TauriConversationDetail): ConversationDetail
     assistantId: row.assistant_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    messages: row.messages.map(mapMessage),
+    messages: (row.messages || []).map(mapMessage),
     assistant,
   });
 }
@@ -303,6 +304,8 @@ class TauriMessageService implements IMessageService {
 
 class TauriChatService implements IChatService {
   private unlisten: UnlistenFn | null = null;
+  private unlistenError: UnlistenFn | null = null;
+  private unlistenDone: UnlistenFn | null = null;
 
   async send(
     messages: ChatMessageInput[],
@@ -313,12 +316,38 @@ class TauriChatService implements IChatService {
     onError: (error: string) => void,
   ): Promise<void> {
     let fullContent = "";
-    let didReceiveToken = false;
+    let doneText: string | null = null;
+    let runtimeError: string | null = null;
 
     this.unlisten = await listen<string>("chat-token", (event) => {
-      didReceiveToken = true;
-      fullContent += event.payload;
-      onToken(event.payload);
+      const parsed = parseChatEvent({ type: "token", token: event.payload });
+      if (parsed.type === "token") {
+        fullContent += parsed.token;
+        onToken(parsed.token);
+      }
+    });
+
+    this.unlistenDone = await listen<string>("chat-done", (event) => {
+      const parsed = parseChatEvent({ type: "done", text: event.payload, finishReason: "stop" });
+      if (parsed.type === "done") {
+        doneText = parsed.text;
+      }
+    });
+
+    this.unlistenError = await listen<string>("chat-error", (event) => {
+      const parsed = parseChatEvent({
+        type: "error",
+        error: {
+          code: "CHAT_RUNTIME_ERROR",
+          message: event.payload,
+          status: null,
+          retryable: false,
+          details: null,
+        },
+      });
+      if (parsed.type === "error") {
+        runtimeError = parsed.error.message;
+      }
     });
 
     try {
@@ -329,17 +358,33 @@ class TauriChatService implements IChatService {
           conversationId: conversationId || null,
         },
       });
-      if (!didReceiveToken && !fullContent.trim()) {
+
+      if (runtimeError) {
+        onError(runtimeError);
+        return;
+      }
+
+      const finalText = doneText ?? fullContent;
+      if (!finalText.trim()) {
         onError("No response from provider. Check model ID/provider compatibility and API key.");
         return;
       }
-      onDone(fullContent);
+
+      onDone(finalText);
     } catch (error) {
       onError(String(error));
     } finally {
       if (this.unlisten) {
         this.unlisten();
         this.unlisten = null;
+      }
+      if (this.unlistenDone) {
+        this.unlistenDone();
+        this.unlistenDone = null;
+      }
+      if (this.unlistenError) {
+        this.unlistenError();
+        this.unlistenError = null;
       }
     }
   }

@@ -49,7 +49,10 @@ pub struct ConversationDetail {
     pub assistant: serde_json::Value,
 }
 
-fn query_messages(conn: &rusqlite::Connection, conversation_id: &str) -> Result<Vec<Message>, String> {
+fn query_messages(
+    conn: &rusqlite::Connection,
+    conversation_id: &str,
+) -> Result<Vec<Message>, String> {
     let mut stmt = conn
         .prepare(
             "SELECT id, conversation_id, role, content, thinking, attachments, created_at \
@@ -76,7 +79,10 @@ fn query_messages(conn: &rusqlite::Connection, conversation_id: &str) -> Result<
     Ok(messages)
 }
 
-fn fetch_conversation_detail(conn: &rusqlite::Connection, id: &str) -> Result<ConversationDetail, String> {
+fn fetch_conversation_detail(
+    conn: &rusqlite::Connection,
+    id: &str,
+) -> Result<ConversationDetail, String> {
     let conv: Conversation = conn
         .query_row(
             "SELECT id, title, assistant_id, created_at, updated_at FROM conversation WHERE id = ?1",
@@ -132,7 +138,10 @@ pub struct CreateConversationInput {
 }
 
 #[tauri::command]
-pub fn create_conversation(input: CreateConversationInput, state: State<DbState>) -> Result<ConversationDetail, String> {
+pub fn create_conversation(
+    input: CreateConversationInput,
+    state: State<DbState>,
+) -> Result<ConversationDetail, String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
     let id = uuid::Uuid::new_v4().to_string();
 
@@ -164,7 +173,10 @@ pub struct UpdateConversationInput {
 }
 
 #[tauri::command]
-pub fn update_conversation(input: UpdateConversationInput, state: State<DbState>) -> Result<Conversation, String> {
+pub fn update_conversation(
+    input: UpdateConversationInput,
+    state: State<DbState>,
+) -> Result<ConversationDetail, String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
 
     if let Some(ref title) = input.title {
@@ -175,24 +187,15 @@ pub fn update_conversation(input: UpdateConversationInput, state: State<DbState>
         .map_err(|e| e.to_string())?;
     }
 
-    conn.query_row(
-        "SELECT id, title, assistant_id, created_at, updated_at FROM conversation WHERE id = ?1",
-        params![input.id],
-        |row| {
-            Ok(Conversation {
-                id: row.get(0)?,
-                title: row.get(1)?,
-                assistant_id: row.get(2)?,
-                created_at: row.get(3)?,
-                updated_at: row.get(4)?,
-            })
-        },
-    )
-    .map_err(|e| e.to_string())
+    fetch_conversation_detail(&conn, &input.id)
 }
 
 #[tauri::command]
-pub fn delete_conversations(id: Option<String>, all: Option<bool>, state: State<DbState>) -> Result<(), String> {
+pub fn delete_conversations(
+    id: Option<String>,
+    all: Option<bool>,
+    state: State<DbState>,
+) -> Result<(), String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
 
     if all == Some(true) {
@@ -211,7 +214,10 @@ pub fn delete_conversations(id: Option<String>, all: Option<bool>, state: State<
 }
 
 #[tauri::command]
-pub fn get_messages(conversation_id: String, state: State<DbState>) -> Result<Vec<Message>, String> {
+pub fn get_messages(
+    conversation_id: String,
+    state: State<DbState>,
+) -> Result<Vec<Message>, String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
     query_messages(&conn, &conversation_id)
 }
@@ -274,7 +280,11 @@ pub fn update_message(input: UpdateMessageInput, state: State<DbState>) -> Resul
 }
 
 #[tauri::command]
-pub fn delete_message(message_id: String, conversation_id: String, state: State<DbState>) -> Result<(), String> {
+pub fn delete_message(
+    message_id: String,
+    conversation_id: String,
+    state: State<DbState>,
+) -> Result<(), String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
     conn.execute(
         "DELETE FROM message WHERE id = ?1 AND conversation_id = ?2",

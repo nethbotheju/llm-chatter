@@ -1,6 +1,6 @@
 use crate::crypto;
 use crate::db::DbState;
-use futures_util::StreamExt;
+use crate::desktop_runtime;
 use rusqlite::params;
 use serde::Deserialize;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -11,6 +11,7 @@ static CHAT_ABORT: AtomicBool = AtomicBool::new(false);
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChatMessage {
+    pub id: String,
     pub role: String,
     pub content: String,
 }
@@ -27,12 +28,12 @@ pub struct SendChatInput {
 pub async fn send_chat(input: SendChatInput, app: AppHandle, state: State<'_, DbState>) -> Result<(), String> {
     CHAT_ABORT.store(false, Ordering::SeqCst);
 
-    // Extract all DB data in a scope to drop the MutexGuard before any .await
     let (model_name, provider_type, base_url, api_key, system_prompt, temperature, top_p) = {
         let conn = state.0.lock().map_err(|e| e.to_string())?;
 
-        let (model_name, provider_type, base_url, api_key_encrypted): (String, String, Option<String>, Option<String>) =
-            conn.query_row(
+        let (model_name, provider_type, base_url, api_key_encrypted):
+            (String, String, Option<String>, Option<String>) = conn
+            .query_row(
                 "SELECT m.name, p.type, p.base_url, p.api_key_encrypted FROM model m JOIN provider p ON m.provider_id = p.id WHERE m.id = ?1 AND m.enabled = 1 AND p.enabled = 1",
                 params![input.model_id],
                 |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
@@ -69,250 +70,85 @@ pub async fn send_chat(input: SendChatInput, app: AppHandle, state: State<'_, Db
             }
         }
 
-        (model_name, provider_type, base_url, api_key, system_prompt, temperature, top_p)
-    }; // conn is dropped here
+        (
+            model_name,
+            provider_type,
+            base_url,
+            api_key,
+            system_prompt,
+            temperature,
+            top_p,
+        )
+    };
 
-    // Build messages for API
-    let mut api_messages: Vec<serde_json::Value> = Vec::new();
-    if !system_prompt.is_empty() {
-        api_messages.push(serde_json::json!({
-            "role": "system",
-            "content": system_prompt
-        }));
-    }
-    for msg in &input.messages {
-        api_messages.push(serde_json::json!({
-            "role": msg.role,
-            "content": msg.content
-        }));
-    }
-
-    let client = reqwest::Client::new();
     let mut full_content = String::new();
 
-    match provider_type.as_str() {
-        "openai" | "openai-compatible" => {
-            let url = format!(
-                "{}/chat/completions",
-                base_url.unwrap_or_else(|| "https://api.openai.com/v1".to_string())
-            );
-
-            let body = serde_json::json!({
-                "model": model_name,
-                "messages": api_messages,
-                "stream": true,
-                "temperature": temperature,
-                "top_p": top_p,
-            });
-
-            let resp = client
-                .post(&url)
-                .header("Authorization", format!("Bearer {}", api_key))
-                .header("Content-Type", "application/json")
-                .json(&body)
-                .send()
-                .await
-                .map_err(|e| format!("Request failed: {}", e))?;
-
-            if !resp.status().is_success() {
-                let status = resp.status();
-                let body = resp.text().await.unwrap_or_default();
-                return Err(format!(
-                    "Provider request failed ({}): {}",
-                    status,
-                    body.chars().take(300).collect::<String>()
-                ));
-            }
-
-            let mut stream = resp.bytes_stream();
-            let mut buffer = String::new();
-
-            while let Some(chunk) = stream.next().await {
-                if CHAT_ABORT.load(Ordering::SeqCst) {
-                    app.emit("chat-abort", ()).ok();
-                    return Ok(());
-                }
-
-                let chunk = chunk.map_err(|e| format!("Stream error: {}", e))?;
-                buffer.push_str(&String::from_utf8_lossy(&chunk));
-
-                while let Some(pos) = buffer.find('\n') {
-                    let line = buffer[..pos].trim().to_string();
-                    buffer = buffer[pos + 1..].to_string();
-
-                    if let Some(data) = line.strip_prefix("data: ") {
-                        if data == "[DONE]" {
-                            break;
-                        }
-                        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(data) {
-                            if let Some(content) = parsed["choices"][0]["delta"]["content"].as_str() {
-                                full_content.push_str(content);
-                                app.emit("chat-token", content).ok();
-                            }
-                        }
-                    }
-                }
-            }
+    let body = serde_json::json!({
+        "messages": input
+            .messages
+            .iter()
+            .map(|m| serde_json::json!({
+                "id": m.id,
+                "role": m.role,
+                "content": m.content,
+            }))
+            .collect::<Vec<serde_json::Value>>(),
+        "model": model_name,
+        "provider": {
+            "type": provider_type,
+            "apiKey": api_key,
+            "baseUrl": base_url,
+        },
+        "assistantConfig": {
+            "systemPrompt": system_prompt,
+            "temperature": temperature,
+            "topP": top_p,
         }
-        "anthropic" | "anthropic-compatible" => {
-            let url = format!(
-                "{}/v1/messages",
-                base_url.unwrap_or_else(|| "https://api.anthropic.com".to_string())
-            );
+    });
 
-            let mut anthropic_messages: Vec<serde_json::Value> = Vec::new();
-            let mut system_msg = String::new();
-
-            for msg in &api_messages {
-                if msg["role"] == "system" {
-                    system_msg = msg["content"].as_str().unwrap_or("").to_string();
-                } else {
-                    anthropic_messages.push(msg.clone());
-                }
-            }
-
-            let body = serde_json::json!({
-                "model": model_name,
-                "messages": anthropic_messages,
-                "system": system_msg,
-                "stream": true,
-                "max_tokens": 4096,
-                "temperature": temperature,
-                "top_p": top_p,
-            });
-
-            let resp = client
-                .post(&url)
-                .header("x-api-key", &api_key)
-                .header("anthropic-version", "2023-06-01")
-                .header("Content-Type", "application/json")
-                .json(&body)
-                .send()
-                .await
-                .map_err(|e| format!("Request failed: {}", e))?;
-
-            if !resp.status().is_success() {
-                let status = resp.status();
-                let body = resp.text().await.unwrap_or_default();
-                return Err(format!(
-                    "Provider request failed ({}): {}",
-                    status,
-                    body.chars().take(300).collect::<String>()
-                ));
-            }
-
-            let mut stream = resp.bytes_stream();
-            let mut buffer = String::new();
-
-            while let Some(chunk) = stream.next().await {
-                if CHAT_ABORT.load(Ordering::SeqCst) {
-                    app.emit("chat-abort", ()).ok();
-                    return Ok(());
-                }
-
-                let chunk = chunk.map_err(|e| format!("Stream error: {}", e))?;
-                buffer.push_str(&String::from_utf8_lossy(&chunk));
-
-                while let Some(pos) = buffer.find('\n') {
-                    let line = buffer[..pos].trim().to_string();
-                    buffer = buffer[pos + 1..].to_string();
-
-                    if let Some(data) = line.strip_prefix("data: ") {
-                        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(data) {
-                            if parsed["type"] == "content_block_delta" {
-                                if let Some(text) = parsed["delta"]["text"].as_str() {
-                                    full_content.push_str(text);
-                                    app.emit("chat-token", text).ok();
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+    desktop_runtime::stream_chat_via_sidecar(&app, &body, |event| {
+        if CHAT_ABORT.load(Ordering::SeqCst) {
+            app.emit("chat-abort", ()).ok();
+            return Err("CHAT_ABORTED".to_string());
         }
-        "google" => {
-            let url = format!(
-                "{}/v1beta/models/{}:streamGenerateContent?alt=sse&key={}",
-                base_url.unwrap_or_else(|| "https://generativelanguage.googleapis.com".to_string()),
-                model_name,
-                api_key
-            );
 
-            let mut contents: Vec<serde_json::Value> = Vec::new();
-            for msg in &api_messages {
-                if msg["role"] != "system" {
-                    contents.push(serde_json::json!({
-                        "role": if msg["role"] == "assistant" { "model" } else { "user" },
-                        "parts": [{"text": msg["content"]}]
-                    }));
+        let event_type = event["type"].as_str().unwrap_or_default();
+        match event_type {
+            "token" => {
+                if let Some(token) = event["token"].as_str() {
+                    full_content.push_str(token);
+                    app.emit("chat-token", token).ok();
                 }
             }
-
-            let mut body = serde_json::json!({
-                "contents": contents,
-                "generationConfig": {
-                    "temperature": temperature,
-                    "topP": top_p,
-                }
-            });
-
-            if !system_prompt.is_empty() {
-                body["systemInstruction"] = serde_json::json!({
-                    "parts": [{"text": system_prompt}]
-                });
-            }
-
-            let resp = client
-                .post(&url)
-                .header("Content-Type", "application/json")
-                .json(&body)
-                .send()
-                .await
-                .map_err(|e| format!("Request failed: {}", e))?;
-
-            if !resp.status().is_success() {
-                let status = resp.status();
-                let body = resp.text().await.unwrap_or_default();
-                return Err(format!(
-                    "Provider request failed ({}): {}",
-                    status,
-                    body.chars().take(300).collect::<String>()
-                ));
-            }
-
-            let mut stream = resp.bytes_stream();
-            let mut buffer = String::new();
-
-            while let Some(chunk) = stream.next().await {
-                if CHAT_ABORT.load(Ordering::SeqCst) {
-                    app.emit("chat-abort", ()).ok();
-                    return Ok(());
-                }
-
-                let chunk = chunk.map_err(|e| format!("Stream error: {}", e))?;
-                buffer.push_str(&String::from_utf8_lossy(&chunk));
-
-                while let Some(pos) = buffer.find('\n') {
-                    let line = buffer[..pos].trim().to_string();
-                    buffer = buffer[pos + 1..].to_string();
-
-                    if let Some(data) = line.strip_prefix("data: ") {
-                        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(data) {
-                            if let Some(text) = parsed["candidates"][0]["content"]["parts"][0]["text"].as_str() {
-                                full_content.push_str(text);
-                                app.emit("chat-token", text).ok();
-                            }
-                        }
-                    }
+            "done" => {
+                if let Some(text) = event["text"].as_str() {
+                    full_content = text.to_string();
                 }
             }
+            "error" => {
+                let message = event["error"]["message"]
+                    .as_str()
+                    .unwrap_or("Unknown sidecar error")
+                    .to_string();
+                return Err(message);
+            }
+            "abort" => {
+                app.emit("chat-abort", ()).ok();
+            }
+            _ => {}
         }
-        _ => return Err(format!("Unknown provider type: {}", provider_type)),
+
+        Ok(())
+    })
+    .await
+    .or_else(|e| if e == "CHAT_ABORTED" { Ok(()) } else { Err(e) })?;
+
+    if CHAT_ABORT.load(Ordering::SeqCst) {
+        return Ok(());
     }
 
     app.emit("chat-done", &full_content).ok();
 
-    // Save assistant message (new scope for the lock)
     if let Some(ref conv_id) = input.conversation_id {
         let conn = state.0.lock().map_err(|e| e.to_string())?;
         let id = uuid::Uuid::new_v4().to_string();

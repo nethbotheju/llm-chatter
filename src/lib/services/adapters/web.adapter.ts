@@ -41,6 +41,7 @@ import {
   parseSearchResults,
   parseExportData,
   parseStats,
+  parseChatEvent,
 } from "@/lib/contracts";
 
 class WebProviderService implements IProviderService {
@@ -224,13 +225,39 @@ class WebChatService implements IChatService {
 
       let fullContent = "";
       const decoder = new TextDecoder();
+      let buffer = "";
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        const chunk = decoder.decode(value);
-        fullContent += chunk;
-        onToken(chunk);
+
+        buffer += decoder.decode(value, { stream: true });
+
+        while (true) {
+          const boundary = buffer.indexOf("\n\n");
+          if (boundary === -1) break;
+
+          const rawEvent = buffer.slice(0, boundary);
+          buffer = buffer.slice(boundary + 2);
+
+          const dataLine = rawEvent
+            .split("\n")
+            .find((line) => line.startsWith("data: "));
+
+          if (!dataLine) continue;
+
+          const payload = dataLine.slice(6);
+          const event = parseChatEvent(JSON.parse(payload));
+
+          if (event.type === "token") {
+            fullContent += event.token;
+            onToken(event.token);
+          } else if (event.type === "done") {
+            fullContent = event.text;
+          } else if (event.type === "error") {
+            throw new Error(event.error.message);
+          }
+        }
       }
 
       onDone(fullContent);

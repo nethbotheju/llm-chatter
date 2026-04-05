@@ -1,6 +1,7 @@
 mod commands;
 mod crypto;
 mod db;
+mod desktop_runtime;
 
 use commands::*;
 use tauri::Manager;
@@ -9,6 +10,7 @@ use tauri::Manager;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_log::Builder::default().build())
+        .plugin(tauri_plugin_shell::init())
         .setup(|app| {
             let app_handle = app.handle().clone();
             let app_data_dir = app_handle
@@ -32,6 +34,7 @@ pub fn run() {
             crypto::init_master_secret(secret.trim().to_string());
 
             db::init_database(&app_handle)?;
+            desktop_runtime::init_runtime_state(&app_handle);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
