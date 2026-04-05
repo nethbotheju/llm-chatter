@@ -2,17 +2,7 @@
 
 import { Star, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-interface Assistant {
-  id: string;
-  name: string;
-  image?: string | null;
-  systemPrompt: string;
-  temperature: number;
-  topP: number;
-  isDefault: boolean;
-  enabled: boolean;
-}
+import type { Assistant } from "@/lib/services";
 
 interface AssistantSelectorProps {
   assistants: Assistant[];

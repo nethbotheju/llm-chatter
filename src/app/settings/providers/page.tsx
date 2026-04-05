@@ -27,22 +27,15 @@ import {
   Globe,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  getProviderService,
+  getModelService,
+  ensureInit,
+} from "@/lib/services";
+import type { Provider, Model } from "@/lib/services";
+import type { CreateProviderInput, UpdateProviderInput, CreateModelInput, UpdateModelInput, ValidateProviderInput } from "@/lib/services";
 
-interface Model {
-  id: string;
-  name: string;
-  providerId: string;
-  capabilities: string;
-  enabled: boolean;
-}
-
-interface Provider {
-  id: string;
-  name: string;
-  type: string;
-  baseUrl: string | null;
-  hasApiKey: boolean;
-  enabled: boolean;
+interface ProviderWithModels extends Provider {
   models: Model[];
 }
 
@@ -63,7 +56,7 @@ const defaultModels: Record<string, string[]> = {
 };
 
 export default function ProvidersSettingsPage() {
-  const [providers, setProviders] = useState<Provider[]>([]);
+  const [providers, setProviders] = useState<ProviderWithModels[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingProvider, setEditingProvider] = useState<Provider | null>(null);
@@ -84,9 +77,28 @@ export default function ProvidersSettingsPage() {
   const fetchProviders = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/providers");
-      const data = await res.json();
-      setProviders(data);
+      await ensureInit();
+      const [providerData, modelData] = await Promise.all([
+        getProviderService().getAll(),
+        getModelService().getAll(undefined, true),
+      ]);
+
+      const modelsByProvider = new Map<string, Model[]>();
+      for (const model of modelData) {
+        const existing = modelsByProvider.get(model.providerId);
+        if (existing) {
+          existing.push(model);
+        } else {
+          modelsByProvider.set(model.providerId, [model]);
+        }
+      }
+
+      setProviders(
+        providerData.map((provider) => ({
+          ...provider,
+          models: modelsByProvider.get(provider.id) ?? [],
+        }))
+      );
     } catch (error) {
       console.error("Failed to fetch providers:", error);
     } finally {
@@ -130,18 +142,14 @@ export default function ProvidersSettingsPage() {
     setValidating(true);
     setValidationResult(null);
     try {
-      const res = await fetch("/api/providers/validate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          providerId: editingProvider?.id,
-          type: formData.type,
-          baseUrl: formData.baseUrl,
-          apiKey: formData.apiKey,
-        }),
-      });
-      const data = await res.json();
-      setValidationResult({ valid: data.valid, error: data.error });
+      await ensureInit();
+      const result = await getProviderService().validate({
+        providerId: editingProvider?.id,
+        type: formData.type,
+        baseUrl: formData.baseUrl,
+        apiKey: formData.apiKey,
+      } as ValidateProviderInput);
+      setValidationResult({ valid: result.valid, error: result.error });
     } catch {
       setValidationResult({ valid: false, error: "Validation failed" });
     } finally {
@@ -152,22 +160,41 @@ export default function ProvidersSettingsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const url = "/api/providers";
-      const method = editingProvider ? "PATCH" : "POST";
-      const body = editingProvider
-        ? { id: editingProvider.id, ...formData, apiKey: formData.apiKey || undefined }
-        : formData;
+      await ensureInit();
+      const service = getProviderService();
+      if (editingProvider) {
+        await service.update({
+          id: editingProvider.id,
+          name: formData.name,
+          type: formData.type,
+          baseUrl: formData.baseUrl,
+          apiKey: formData.apiKey || undefined,
+          enabled: formData.enabled,
+        } as UpdateProviderInput);
+      } else {
+        const createdProvider = await service.create({
+          name: formData.name,
+          type: formData.type,
+          baseUrl: formData.baseUrl,
+          apiKey: formData.apiKey,
+          enabled: formData.enabled,
+        } as CreateProviderInput);
 
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      if (res.ok) {
-        handleCloseForm();
-        fetchProviders();
+        const defaults = defaultModels[createdProvider.type] || [];
+        for (const modelName of defaults) {
+          try {
+            await getModelService().create({
+              name: modelName,
+              providerId: createdProvider.id,
+              capabilities: ["chat"],
+            } as CreateModelInput);
+          } catch (error) {
+            console.error(`Failed to add model ${modelName}:`, error);
+          }
+        }
       }
+      handleCloseForm();
+      fetchProviders();
     } catch (error) {
       console.error("Failed to save provider:", error);
     }
@@ -178,10 +205,9 @@ export default function ProvidersSettingsPage() {
       return;
     }
     try {
-      const res = await fetch(`/api/providers?id=${id}`, { method: "DELETE" });
-      if (res.ok) {
-        fetchProviders();
-      }
+      await ensureInit();
+      await getProviderService().delete(id);
+      fetchProviders();
     } catch (error) {
       console.error("Failed to delete provider:", error);
     }
@@ -189,11 +215,11 @@ export default function ProvidersSettingsPage() {
 
   const handleToggleEnabled = async (provider: Provider) => {
     try {
-      await fetch("/api/providers", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: provider.id, enabled: !provider.enabled }),
-      });
+      await ensureInit();
+      await getProviderService().update({
+        id: provider.id,
+        enabled: !provider.enabled,
+      } as UpdateProviderInput);
       fetchProviders();
     } catch (error) {
       console.error("Failed to toggle provider:", error);
@@ -204,19 +230,14 @@ export default function ProvidersSettingsPage() {
     if (!newModelName.trim()) return;
     setAddingModel(true);
     try {
-      const res = await fetch("/api/models", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: newModelName.trim(),
-          providerId,
-          capabilities: ["chat"],
-        }),
-      });
-      if (res.ok) {
-        setNewModelName("");
-        fetchProviders();
-      }
+      await ensureInit();
+      await getModelService().create({
+        name: newModelName.trim(),
+        providerId,
+        capabilities: ["chat"],
+      } as CreateModelInput);
+      setNewModelName("");
+      fetchProviders();
     } catch (error) {
       console.error("Failed to add model:", error);
     } finally {
@@ -226,7 +247,8 @@ export default function ProvidersSettingsPage() {
 
   const handleDeleteModel = async (modelId: string) => {
     try {
-      await fetch(`/api/models?id=${modelId}`, { method: "DELETE" });
+      await ensureInit();
+      await getModelService().delete(modelId);
       fetchProviders();
     } catch (error) {
       console.error("Failed to delete model:", error);
@@ -235,11 +257,11 @@ export default function ProvidersSettingsPage() {
 
   const handleToggleModel = async (model: Model) => {
     try {
-      await fetch("/api/models", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: model.id, enabled: !model.enabled }),
-      });
+      await ensureInit();
+      await getModelService().update({
+        id: model.id,
+        enabled: !model.enabled,
+      } as UpdateModelInput);
       fetchProviders();
     } catch (error) {
       console.error("Failed to toggle model:", error);
@@ -248,17 +270,14 @@ export default function ProvidersSettingsPage() {
 
   const handleAddDefaultModels = async (provider: Provider) => {
     const models = defaultModels[provider.type] || [];
+    await ensureInit();
     for (const modelName of models) {
       try {
-        await fetch("/api/models", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: modelName,
-            providerId: provider.id,
-            capabilities: ["chat"],
-          }),
-        });
+        await getModelService().create({
+          name: modelName,
+          providerId: provider.id,
+          capabilities: ["chat"],
+        } as CreateModelInput);
       } catch (error) {
         console.error(`Failed to add model ${modelName}:`, error);
       }

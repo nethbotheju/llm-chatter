@@ -8,36 +8,20 @@ import { ChatInput, Attachment } from "@/components/chat/chat-input";
 import { ModelSelector } from "@/components/chat/model-selector";
 import { AssistantSelector } from "@/components/chat/assistant-selector";
 import { TopAppBar } from "@/components/layout/top-app-bar";
-
-interface Model {
-  id: string;
-  name: string;
-  providerId: string;
-  capabilities: string;
-  enabled: boolean;
-  provider: {
-    id: string;
-    name: string;
-    type: string;
-    enabled: boolean;
-  };
-}
+import {
+  getConversationService,
+  getMessageService,
+  getModelService,
+  getAssistantService,
+  getChatService,
+  ensureInit,
+} from "@/lib/services";
+import type { Model, Assistant } from "@/lib/services";
 
 interface Conversation {
   id: string;
   title: string | null;
   createdAt: string;
-}
-
-interface Assistant {
-  id: string;
-  name: string;
-  image?: string | null;
-  systemPrompt: string;
-  temperature: number;
-  topP: number;
-  isDefault: boolean;
-  enabled: boolean;
 }
 
 function parseModelCapabilities(capabilities: string): string[] {
@@ -76,8 +60,8 @@ export default function ChatLayout({
 
   const fetchConversations = useCallback(async () => {
     try {
-      const res = await fetch("/api/conversations");
-      const data = await res.json();
+      await ensureInit();
+      const data = await getConversationService().getAll();
       setConversations(data);
     } catch (error) {
       console.error("Failed to fetch conversations:", error);
@@ -86,8 +70,8 @@ export default function ChatLayout({
 
   const fetchModels = useCallback(async () => {
     try {
-      const res = await fetch("/api/models");
-      const data = await res.json();
+      await ensureInit();
+      const data = await getModelService().getAll();
       setModels(data);
       if (data.length > 0 && !selectedModelId) {
         setSelectedModelId(data[0].id);
@@ -99,11 +83,28 @@ export default function ChatLayout({
 
   const fetchAssistants = useCallback(async () => {
     try {
-      const res = await fetch("/api/assistants");
-      const data = await res.json();
+      await ensureInit();
+      const service = getAssistantService();
+      let data = await service.getAll();
+
+      if (data.length === 0) {
+        await service.create({
+          name: "General",
+          systemPrompt:
+            "You are a helpful, harmless, and honest AI assistant. Provide clear, accurate, and thoughtful responses.",
+          temperature: 0.7,
+          topP: 1.0,
+          isDefault: true,
+          enabled: true,
+        });
+        data = await service.getAll();
+      }
+
       setAssistants(data);
       if (!currentConversationId) {
-        const defaultAssistant = data.find((a: Assistant) => a.isDefault) || data[0];
+        const enabledAssistants = data.filter((a: Assistant) => a.enabled);
+        const defaultAssistant =
+          enabledAssistants.find((a: Assistant) => a.isDefault) || enabledAssistants[0] || null;
         if (defaultAssistant) {
           setCurrentAssistant(defaultAssistant);
         }
@@ -115,11 +116,11 @@ export default function ChatLayout({
 
   const fetchConversationMessages = useCallback(async (id: string) => {
     try {
-      const res = await fetch(`/api/conversations?id=${id}`);
-      const data = await res.json();
+      await ensureInit();
+      const data = await getConversationService().get(id);
       if (data.messages) {
         setMessages(
-          data.messages.map((m: { id: string; role: string; content: string; thinking?: string | null }) => ({
+          data.messages.map((m) => ({
             id: m.id,
             role: m.role as "user" | "assistant" | "system",
             content: m.content,
@@ -168,7 +169,8 @@ export default function ChatLayout({
     setMessages([]);
     setCurrentConversationId(null);
     router.push("/");
-    const defaultAssistant = assistants.find((a) => a.isDefault) || assistants[0];
+    const enabledAssistants = assistants.filter((a) => a.enabled);
+    const defaultAssistant = enabledAssistants.find((a) => a.isDefault) || enabledAssistants[0];
     if (defaultAssistant) {
       setCurrentAssistant(defaultAssistant);
     }
@@ -180,7 +182,8 @@ export default function ChatLayout({
 
   const handleDeleteConversation = useCallback(async (id: string) => {
     try {
-      await fetch(`/api/conversations?id=${id}`, { method: "DELETE" });
+      await ensureInit();
+      await getConversationService().delete(id);
       setConversations((prev) => prev.filter((c) => c.id !== id));
       if (id === currentConversationId) {
         handleNewChat();
@@ -217,11 +220,8 @@ export default function ChatLayout({
     };
 
     try {
-      await fetch(`/api/conversations/${currentConversationId}/messages`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messageId, content: newContent }),
-      });
+      await ensureInit();
+      await getMessageService().update(currentConversationId, messageId, newContent);
     } catch (error) {
       console.error("Failed to update message:", error);
       return;
@@ -230,9 +230,7 @@ export default function ChatLayout({
     const messagesToDelete = messages.slice(messageIndex + 1);
     for (const msg of messagesToDelete) {
       try {
-        await fetch(`/api/conversations/${currentConversationId}/messages?messageId=${msg.id}`, {
-          method: "DELETE",
-        });
+        await getMessageService().delete(currentConversationId, msg.id);
       } catch (error) {
         console.error("Failed to delete message:", error);
       }
@@ -241,6 +239,7 @@ export default function ChatLayout({
     setMessages([...messagesToKeep, editedMessage]);
 
     const messagesForApi = [...messagesToKeep, editedMessage].map((m) => ({
+      id: m.id,
       role: m.role,
       content: m.content,
     }));
@@ -257,41 +256,36 @@ export default function ChatLayout({
     abortControllerRef.current = abortController;
 
     try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: messagesForApi,
-          modelId: selectedModelId,
-          conversationId: currentConversationId,
-        }),
-        signal: abortController.signal,
-      });
-
-      if (!res.ok) throw new Error("Chat request failed");
-
-      const reader = res.body?.getReader();
-      if (!reader) throw new Error("No reader available");
-
       let fullContent = "";
-      const decoder = new TextDecoder();
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        fullContent += chunk;
-
-        setMessages((prev) => {
-          const newMessages = [...prev];
-          const lastMessage = newMessages[newMessages.length - 1];
-          if (lastMessage.role === "assistant") {
-            lastMessage.content = fullContent;
-          }
-          return newMessages;
-        });
-      }
+      await getChatService().send(
+        messagesForApi,
+        selectedModelId,
+        currentConversationId,
+        (token) => {
+          fullContent += token;
+          setMessages((prev) => {
+            const newMessages = [...prev];
+            const lastMessage = newMessages[newMessages.length - 1];
+            if (lastMessage.role === "assistant") {
+              lastMessage.content = fullContent;
+            }
+            return newMessages;
+          });
+        },
+        () => {},
+        (error) => {
+          setMessages((prev) => {
+            const newMessages = [...prev];
+            const lastMessage = newMessages[newMessages.length - 1];
+            if (lastMessage && lastMessage.role === "assistant" && !lastMessage.content.trim()) {
+              lastMessage.content = `Error: ${error}`;
+            }
+            return newMessages;
+          });
+          console.error("Chat error:", error);
+        },
+        abortController.signal
+      );
     } catch (error) {
       if ((error as Error).name !== "AbortError") {
         console.error("Chat error:", error);
@@ -305,14 +299,10 @@ export default function ChatLayout({
   const handleSendMessage = useCallback(async (message: string, attachments?: Attachment[]) => {
     if (!selectedModelId || !currentAssistant) return;
 
+    await ensureInit();
     let convId = currentConversationId;
     if (!convId) {
-      const res = await fetch("/api/conversations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assistantId: currentAssistant.id }),
-      });
-      const data = await res.json();
+      const data = await getConversationService().create({ assistantId: currentAssistant.id });
       convId = data.id;
       setCurrentConversationId(convId);
       router.push(`/c/${convId}`, { scroll: false });
@@ -331,27 +321,22 @@ export default function ChatLayout({
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
 
-    await fetch(`/api/conversations/${convId}/messages`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        role: "user",
-        content: message,
-        attachments: attachmentData ? JSON.stringify(attachmentData) : undefined,
-      }),
-    });
+    await getMessageService().create(
+      convId,
+      "user",
+      message,
+      undefined,
+      attachmentData ? JSON.stringify(attachmentData) : undefined
+    );
 
     if (messages.length === 0) {
       const title = message.slice(0, 50) + (message.length > 50 ? "..." : "");
-      await fetch("/api/conversations", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: convId, title }),
-      });
+      await getConversationService().update(convId, title);
       fetchConversations();
     }
 
     const messagesForApi = updatedMessages.map((m) => ({
+      id: m.id,
       role: m.role,
       content: m.content,
     }));
@@ -368,44 +353,38 @@ export default function ChatLayout({
     abortControllerRef.current = abortController;
 
     try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: messagesForApi,
-          modelId: selectedModelId,
-          conversationId: convId,
-          attachments: attachmentData,
-        }),
-        signal: abortController.signal,
-      });
-
-      if (!res.ok) throw new Error("Chat request failed");
-
-      const reader = res.body?.getReader();
-      if (!reader) throw new Error("No reader available");
-
       let fullContent = "";
-      const decoder = new TextDecoder();
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        fullContent += chunk;
-
-        setMessages((prev) => {
-          const newMessages = [...prev];
-          const lastMessage = newMessages[newMessages.length - 1];
-          if (lastMessage.role === "assistant") {
-            lastMessage.content = fullContent;
-          }
-          return newMessages;
-        });
-      }
-
-      fetchConversations();
+      await getChatService().send(
+        messagesForApi,
+        selectedModelId,
+        convId,
+        (token) => {
+          fullContent += token;
+          setMessages((prev) => {
+            const newMessages = [...prev];
+            const lastMessage = newMessages[newMessages.length - 1];
+            if (lastMessage.role === "assistant") {
+              lastMessage.content = fullContent;
+            }
+            return newMessages;
+          });
+        },
+        () => {
+          fetchConversations();
+        },
+        (error) => {
+          setMessages((prev) => {
+            const newMessages = [...prev];
+            const lastMessage = newMessages[newMessages.length - 1];
+            if (lastMessage && lastMessage.role === "assistant" && !lastMessage.content.trim()) {
+              lastMessage.content = `Error: ${error}`;
+            }
+            return newMessages;
+          });
+          console.error("Chat error:", error);
+        },
+        abortController.signal
+      );
     } catch (error) {
       if ((error as Error).name !== "AbortError") {
         console.error("Chat error:", error);

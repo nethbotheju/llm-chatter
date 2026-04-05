@@ -13,17 +13,8 @@ import {
 } from "@/components/ui/dialog";
 import { AssistantForm } from "@/components/settings/assistant-form";
 import { cn } from "@/lib/utils";
-
-interface Assistant {
-  id: string;
-  name: string;
-  image?: string | null;
-  systemPrompt: string;
-  temperature: number;
-  topP: number;
-  isDefault: boolean;
-  enabled: boolean;
-}
+import { getAssistantService, ensureInit } from "@/lib/services";
+import type { Assistant } from "@/lib/services";
 
 export default function AssistantsSettingsPage() {
   const [assistants, setAssistants] = useState<Assistant[]>([]);
@@ -34,8 +25,23 @@ export default function AssistantsSettingsPage() {
 
   const fetchAssistants = async () => {
     try {
-      const res = await fetch("/api/assistants");
-      const data = await res.json();
+      await ensureInit();
+      const service = getAssistantService();
+      let data = await service.getAll();
+
+      if (data.length === 0) {
+        await service.create({
+          name: "General",
+          systemPrompt:
+            "You are a helpful, harmless, and honest AI assistant. Provide clear, accurate, and thoughtful responses.",
+          temperature: 0.7,
+          topP: 1.0,
+          isDefault: true,
+          enabled: true,
+        });
+        data = await service.getAll();
+      }
+
       setAssistants(data);
     } catch (error) {
       console.error("Failed to fetch assistants:", error);
@@ -59,16 +65,13 @@ export default function AssistantsSettingsPage() {
   const handleFormSubmit = async (data: Partial<Assistant>) => {
     setIsLoading(true);
     try {
+      await ensureInit();
+      const service = getAssistantService();
       const isEdit = !!data.id;
-      const res = await fetch("/api/assistants", {
-        method: isEdit ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to save assistant");
+      if (isEdit) {
+        await service.update(data as import("@/lib/services").UpdateAssistantInput);
+      } else {
+        await service.create(data as import("@/lib/services").CreateAssistantInput);
       }
 
       setShowForm(false);
@@ -85,14 +88,8 @@ export default function AssistantsSettingsPage() {
   const handleDelete = async (assistant: Assistant) => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/assistants?id=${assistant.id}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Failed to delete assistant");
-      }
+      await ensureInit();
+      await getAssistantService().delete(assistant.id);
 
       setDeleteConfirm(null);
       fetchAssistants();
@@ -107,11 +104,8 @@ export default function AssistantsSettingsPage() {
   const handleSetDefault = async (assistant: Assistant) => {
     setIsLoading(true);
     try {
-      await fetch("/api/assistants", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...assistant, isDefault: true }),
-      });
+      await ensureInit();
+      await getAssistantService().update({ ...assistant, isDefault: true });
       fetchAssistants();
     } catch (error) {
       console.error("Failed to set default:", error);
