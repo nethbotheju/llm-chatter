@@ -30,11 +30,24 @@ import type {
   CreateConversationInput,
   ValidateProviderInput,
 } from "../types";
+import {
+  parseProvider,
+  parseModel,
+  parseAssistant,
+  parseConversationDetail,
+  parseConversationsWithCount,
+  parseMessage,
+  parseMessages,
+  parseSearchResults,
+  parseExportData,
+  parseStats,
+} from "@/lib/contracts";
 
 class WebProviderService implements IProviderService {
   async getAll(): Promise<Provider[]> {
     const res = await fetch("/api/providers");
-    return res.json();
+    const data = await res.json();
+    return data.map(parseProvider);
   }
   async create(input: CreateProviderInput): Promise<Provider> {
     const res = await fetch("/api/providers", {
@@ -42,7 +55,7 @@ class WebProviderService implements IProviderService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
-    return res.json();
+    return parseProvider(await res.json());
   }
   async update(input: UpdateProviderInput): Promise<Provider> {
     const res = await fetch("/api/providers", {
@@ -50,7 +63,7 @@ class WebProviderService implements IProviderService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
-    return res.json();
+    return parseProvider(await res.json());
   }
   async delete(id: string): Promise<void> {
     await fetch(`/api/providers?id=${id}`, { method: "DELETE" });
@@ -71,7 +84,8 @@ class WebModelService implements IModelService {
     if (providerId) params.set("providerId", providerId);
     if (includeDisabled) params.set("all", "true");
     const res = await fetch(`/api/models?${params}`);
-    return res.json();
+    const data = await res.json();
+    return data.map(parseModel);
   }
   async create(input: CreateModelInput): Promise<Model> {
     const res = await fetch("/api/models", {
@@ -79,7 +93,7 @@ class WebModelService implements IModelService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
-    return res.json();
+    return parseModel(await res.json());
   }
   async update(input: UpdateModelInput): Promise<Model> {
     const res = await fetch("/api/models", {
@@ -87,7 +101,7 @@ class WebModelService implements IModelService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
-    return res.json();
+    return parseModel(await res.json());
   }
   async delete(id: string): Promise<void> {
     await fetch(`/api/models?id=${id}`, { method: "DELETE" });
@@ -97,11 +111,12 @@ class WebModelService implements IModelService {
 class WebAssistantService implements IAssistantService {
   async getAll(): Promise<Assistant[]> {
     const res = await fetch("/api/assistants");
-    return res.json();
+    const data = await res.json();
+    return data.map(parseAssistant);
   }
   async get(id: string): Promise<Assistant> {
     const res = await fetch(`/api/assistants?id=${id}`);
-    return res.json();
+    return parseAssistant(await res.json());
   }
   async create(input: CreateAssistantInput): Promise<Assistant> {
     const res = await fetch("/api/assistants", {
@@ -109,7 +124,7 @@ class WebAssistantService implements IAssistantService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
-    return res.json();
+    return parseAssistant(await res.json());
   }
   async update(input: UpdateAssistantInput): Promise<Assistant> {
     const res = await fetch("/api/assistants", {
@@ -117,7 +132,7 @@ class WebAssistantService implements IAssistantService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
-    return res.json();
+    return parseAssistant(await res.json());
   }
   async delete(id: string): Promise<void> {
     await fetch(`/api/assistants?id=${id}`, { method: "DELETE" });
@@ -127,11 +142,11 @@ class WebAssistantService implements IAssistantService {
 class WebConversationService implements IConversationService {
   async getAll(): Promise<ConversationWithCount[]> {
     const res = await fetch("/api/conversations");
-    return res.json();
+    return parseConversationsWithCount(await res.json());
   }
   async get(id: string): Promise<ConversationDetail> {
     const res = await fetch(`/api/conversations?id=${id}`);
-    return res.json();
+    return parseConversationDetail(await res.json());
   }
   async create(input: CreateConversationInput): Promise<ConversationDetail> {
     const res = await fetch("/api/conversations", {
@@ -139,7 +154,7 @@ class WebConversationService implements IConversationService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
-    return res.json();
+    return parseConversationDetail(await res.json());
   }
   async update(id: string, title: string): Promise<ConversationDetail> {
     const res = await fetch("/api/conversations", {
@@ -147,7 +162,7 @@ class WebConversationService implements IConversationService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, title }),
     });
-    return res.json();
+    return parseConversationDetail(await res.json());
   }
   async delete(id: string): Promise<void> {
     await fetch(`/api/conversations?id=${id}`, { method: "DELETE" });
@@ -160,7 +175,7 @@ class WebConversationService implements IConversationService {
 class WebMessageService implements IMessageService {
   async get(conversationId: string): Promise<Message[]> {
     const conv = await fetch(`/api/conversations?id=${conversationId}`).then((r) => r.json());
-    return conv.messages || [];
+    return parseMessages(conv.messages || []);
   }
   async create(conversationId: string, role: string, content: string, thinking?: string, attachments?: string): Promise<Message> {
     const res = await fetch(`/api/conversations/${conversationId}/messages`, {
@@ -168,7 +183,7 @@ class WebMessageService implements IMessageService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ role, content, thinking, attachments }),
     });
-    return res.json();
+    return parseMessage(await res.json());
   }
   async update(conversationId: string, messageId: string, content: string): Promise<void> {
     await fetch(`/api/conversations/${conversationId}/messages`, {
@@ -233,21 +248,21 @@ class WebSearchService implements ISearchService {
   async search(query: string): Promise<SearchResult[]> {
     const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
     const data = await res.json();
-    return data.results || [];
+    return parseSearchResults(data.results || []);
   }
 }
 
 class WebExportService implements IExportService {
   async export(): Promise<ExportData> {
     const res = await fetch("/api/export");
-    return res.json();
+    return parseExportData(await res.json());
   }
 }
 
 class WebStatsService implements IStatsService {
   async get(): Promise<Stats> {
     const res = await fetch("/api/stats");
-    return res.json();
+    return parseStats(await res.json());
   }
 }
 

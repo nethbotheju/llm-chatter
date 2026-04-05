@@ -32,6 +32,18 @@ import type {
   CreateConversationInput,
   ValidateProviderInput,
 } from "../types";
+import {
+  parseProvider,
+  parseModel,
+  parseAssistant,
+  parseConversationDetail,
+  parseConversationsWithCount,
+  parseMessage,
+  parseMessages,
+  parseSearchResults,
+  parseExportData,
+  parseStats,
+} from "@/lib/contracts";
 
 interface TauriConversationRow {
   id: string;
@@ -103,7 +115,7 @@ function mapConversation(row: TauriConversationRow): ConversationWithCount {
 }
 
 function mapMessage(row: TauriMessageRow): Message {
-  return {
+  return parseMessage({
     id: row.id,
     conversationId: row.conversation_id,
     role: row.role as Message["role"],
@@ -111,11 +123,11 @@ function mapMessage(row: TauriMessageRow): Message {
     thinking: row.thinking,
     attachments: row.attachments,
     createdAt: row.created_at,
-  };
+  });
 }
 
 function mapModel(row: TauriModelRow): Model {
-  return {
+  return parseModel({
     id: row.id,
     name: row.name,
     providerId: row.provider_id,
@@ -124,11 +136,11 @@ function mapModel(row: TauriModelRow): Model {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     provider: row.provider,
-  };
+  });
 }
 
 function mapAssistant(row: TauriAssistantRow): Assistant {
-  return {
+  return parseAssistant({
     id: row.id,
     name: row.name,
     image: row.image,
@@ -139,7 +151,7 @@ function mapAssistant(row: TauriAssistantRow): Assistant {
     isDefault: row.is_default,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-  };
+  });
 }
 
 function mapConversationDetail(row: TauriConversationDetail): ConversationDetail {
@@ -157,7 +169,7 @@ function mapConversationDetail(row: TauriConversationDetail): ConversationDetail
       }
     : null;
 
-  return {
+  return parseConversationDetail({
     id: row.id,
     title: row.title,
     assistantId: row.assistant_id,
@@ -165,12 +177,12 @@ function mapConversationDetail(row: TauriConversationDetail): ConversationDetail
     updatedAt: row.updated_at,
     messages: row.messages.map(mapMessage),
     assistant,
-  };
+  });
 }
 
 class TauriProviderService implements IProviderService {
   private mapProvider(row: Record<string, unknown>): Provider {
-    return {
+    return parseProvider({
       id: String(row.id),
       name: String(row.name),
       type: String(row.provider_type ?? row.type) as Provider["type"],
@@ -179,7 +191,7 @@ class TauriProviderService implements IProviderService {
       enabled: Boolean(row.enabled),
       createdAt: String(row.created_at ?? row.createdAt ?? ""),
       updatedAt: String(row.updated_at ?? row.updatedAt ?? ""),
-    };
+    });
   }
 
   async getAll(): Promise<Provider[]> {
@@ -248,7 +260,7 @@ class TauriAssistantService implements IAssistantService {
 class TauriConversationService implements IConversationService {
   async getAll(): Promise<ConversationWithCount[]> {
     const rows = await invoke<TauriConversationRow[]>("get_conversations");
-    return rows.map(mapConversation);
+    return parseConversationsWithCount(rows.map(mapConversation));
   }
   async get(id: string): Promise<ConversationDetail> {
     const row = await invoke<TauriConversationDetail>("get_conversation", { id });
@@ -273,7 +285,7 @@ class TauriConversationService implements IConversationService {
 class TauriMessageService implements IMessageService {
   async get(conversationId: string): Promise<Message[]> {
     const rows = await invoke<TauriMessageRow[]>("get_messages", { conversationId });
-    return rows.map(mapMessage);
+    return parseMessages(rows.map(mapMessage));
   }
   async create(conversationId: string, role: string, content: string, thinking?: string, attachments?: string): Promise<Message> {
     const row = await invoke<TauriMessageRow>("create_message", {
@@ -340,19 +352,19 @@ class TauriChatService implements IChatService {
 class TauriSearchService implements ISearchService {
   async search(query: string): Promise<SearchResult[]> {
     const result = await invoke<{ results: SearchResult[] }>("search_messages", { query });
-    return result.results || [];
+    return parseSearchResults(result.results || []);
   }
 }
 
 class TauriExportService implements IExportService {
   async export(): Promise<ExportData> {
-    return invoke("export_data");
+    return parseExportData(await invoke("export_data"));
   }
 }
 
 class TauriStatsService implements IStatsService {
   async get(): Promise<Stats> {
-    return invoke("get_stats");
+    return parseStats(await invoke("get_stats"));
   }
 }
 

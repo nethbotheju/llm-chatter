@@ -1,165 +1,59 @@
-export interface Provider {
-  id: string;
-  name: string;
-  type: "openai" | "anthropic" | "google" | "openai-compatible" | "anthropic-compatible";
-  baseUrl?: string | null;
-  hasApiKey: boolean;
-  enabled: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+import type {
+  ProviderDTO,
+  ModelDTO,
+  AssistantDTO,
+  ConversationDTO,
+  ConversationDetailDTO,
+  ConversationWithCountDTO,
+  MessageDTO,
+  SearchResultDTO,
+  ExportDataDTO,
+  StatsDTO,
+  ChatMessageInputDTO,
+  CreateProviderInputDTO,
+  UpdateProviderInputDTO,
+  CreateModelInputDTO,
+  UpdateModelInputDTO,
+  CreateAssistantInputDTO,
+  UpdateAssistantInputDTO,
+  CreateConversationInputDTO,
+  ValidateProviderInputDTO,
+} from "@/lib/contracts";
 
-export interface Model {
-  id: string;
-  name: string;
-  providerId: string;
-  capabilities: string;
-  enabled: boolean;
-  createdAt: string;
-  updatedAt: string;
-  provider: {
-    id: string;
-    name: string;
-    type: string;
-    enabled: boolean;
-  };
-}
+export type Provider = ProviderDTO;
 
-export interface Assistant {
-  id: string;
-  name: string;
-  image?: string | null;
-  systemPrompt: string;
-  temperature: number;
-  topP: number;
-  enabled: boolean;
-  isDefault: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+export type Model = ModelDTO;
 
-export interface Conversation {
-  id: string;
-  title: string | null;
-  assistantId: string;
-  createdAt: string;
-  updatedAt: string;
-}
+export type Assistant = AssistantDTO;
 
-export interface ConversationDetail extends Conversation {
-  messages: Message[];
-  assistant: Assistant | null;
-}
+export type Conversation = ConversationDTO;
 
-export interface ConversationWithCount extends Conversation {
-  _count: { messages: number };
-}
+export type ConversationDetail = ConversationDetailDTO;
 
-export interface Message {
-  id: string;
-  conversationId: string;
-  role: "user" | "assistant" | "system";
-  content: string;
-  thinking?: string | null;
-  attachments?: string | null;
-  createdAt: string;
-}
+export type ConversationWithCount = ConversationWithCountDTO;
 
-export interface SearchResult {
-  conversationId: string;
-  conversationTitle: string;
-  messageId: string;
-  snippet: string;
-  createdAt: string;
-}
+export type Message = MessageDTO;
 
-export interface ExportData {
-  exportedAt: string;
-  conversations: Array<{
-    id: string;
-    title: string | null;
-    assistant: string;
-    createdAt: string;
-    messages: Array<{
-      role: string;
-      content: string;
-      thinking?: string | null;
-      createdAt: string;
-    }>;
-  }>;
-}
+export type SearchResult = SearchResultDTO;
 
-export interface Stats {
-  conversations: number;
-  messages: number;
-}
+export type ExportData = ExportDataDTO;
 
-export interface ChatMessageInput {
-  id: string;
-  role: "user" | "assistant" | "system";
-  content: string;
-}
+export type Stats = StatsDTO;
 
-export interface CreateProviderInput {
-  name: string;
-  type: string;
-  baseUrl?: string;
-  apiKey?: string;
-  enabled?: boolean;
-}
+export type ChatMessageInput = ChatMessageInputDTO;
 
-export interface UpdateProviderInput {
-  id: string;
-  name?: string;
-  type?: string;
-  baseUrl?: string;
-  apiKey?: string;
-  enabled?: boolean;
-}
+export type CreateProviderInput = CreateProviderInputDTO;
 
-export interface CreateModelInput {
-  name: string;
-  providerId: string;
-  capabilities?: string[];
-  enabled?: boolean;
-}
+export type UpdateProviderInput = UpdateProviderInputDTO;
 
-export interface UpdateModelInput {
-  id: string;
-  name?: string;
-  capabilities?: string[];
-  enabled?: boolean;
-}
+export type CreateModelInput = CreateModelInputDTO;
 
-export interface CreateAssistantInput {
-  name: string;
-  systemPrompt: string;
-  temperature?: number;
-  topP?: number;
-  isDefault?: boolean;
-  enabled?: boolean;
-}
+export type UpdateModelInput = UpdateModelInputDTO;
 
-export interface UpdateAssistantInput {
-  id: string;
-  name?: string;
-  systemPrompt?: string;
-  temperature?: number;
-  topP?: number;
-  isDefault?: boolean;
-  enabled?: boolean;
-  image?: string | null;
-}
+export type CreateAssistantInput = CreateAssistantInputDTO;
 
-export interface CreateConversationInput {
-  assistantId?: string;
-  title?: string;
-}
+export type UpdateAssistantInput = UpdateAssistantInputDTO;
 
-export interface ValidateProviderInput {
-  providerId?: string;
-  name?: string;
-  type?: string;
-  baseUrl?: string;
-  apiKey?: string;
-}
+export type CreateConversationInput = CreateConversationInputDTO;
+
+export type ValidateProviderInput = ValidateProviderInputDTO;
