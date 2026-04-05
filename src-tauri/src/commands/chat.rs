@@ -42,7 +42,11 @@ pub async fn send_chat(input: SendChatInput, app: AppHandle, state: State<'_, Db
         let api_key = api_key_encrypted
             .as_deref()
             .map(crypto::decrypt)
-            .transpose()?
+            .transpose()
+            .map_err(|_| {
+                "Stored API key could not be decrypted. Please open Settings -> Providers and re-save the API key for this provider."
+                    .to_string()
+            })?
             .ok_or("API key not configured")?;
 
         let mut system_prompt = String::new();
@@ -110,6 +114,16 @@ pub async fn send_chat(input: SendChatInput, app: AppHandle, state: State<'_, Db
                 .await
                 .map_err(|e| format!("Request failed: {}", e))?;
 
+            if !resp.status().is_success() {
+                let status = resp.status();
+                let body = resp.text().await.unwrap_or_default();
+                return Err(format!(
+                    "Provider request failed ({}): {}",
+                    status,
+                    body.chars().take(300).collect::<String>()
+                ));
+            }
+
             let mut stream = resp.bytes_stream();
             let mut buffer = String::new();
 
@@ -176,6 +190,16 @@ pub async fn send_chat(input: SendChatInput, app: AppHandle, state: State<'_, Db
                 .send()
                 .await
                 .map_err(|e| format!("Request failed: {}", e))?;
+
+            if !resp.status().is_success() {
+                let status = resp.status();
+                let body = resp.text().await.unwrap_or_default();
+                return Err(format!(
+                    "Provider request failed ({}): {}",
+                    status,
+                    body.chars().take(300).collect::<String>()
+                ));
+            }
 
             let mut stream = resp.bytes_stream();
             let mut buffer = String::new();
@@ -245,6 +269,16 @@ pub async fn send_chat(input: SendChatInput, app: AppHandle, state: State<'_, Db
                 .send()
                 .await
                 .map_err(|e| format!("Request failed: {}", e))?;
+
+            if !resp.status().is_success() {
+                let status = resp.status();
+                let body = resp.text().await.unwrap_or_default();
+                return Err(format!(
+                    "Provider request failed ({}): {}",
+                    status,
+                    body.chars().take(300).collect::<String>()
+                ));
+            }
 
             let mut stream = resp.bytes_stream();
             let mut buffer = String::new();

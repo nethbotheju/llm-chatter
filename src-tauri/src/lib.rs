@@ -3,6 +3,7 @@ mod crypto;
 mod db;
 
 use commands::*;
+use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -10,6 +11,26 @@ pub fn run() {
         .plugin(tauri_plugin_log::Builder::default().build())
         .setup(|app| {
             let app_handle = app.handle().clone();
+            let app_data_dir = app_handle
+                .path()
+                .app_data_dir()
+                .map_err(|e| format!("failed to resolve app data dir: {}", e))?;
+            std::fs::create_dir_all(&app_data_dir)
+                .map_err(|e| format!("failed to create app data dir: {}", e))?;
+
+            let secret_file = app_data_dir.join("master_secret");
+            let secret = if secret_file.exists() {
+                std::fs::read_to_string(&secret_file)
+                    .map_err(|e| format!("failed to read master secret: {}", e))?
+            } else {
+                let generated = uuid::Uuid::new_v4().to_string();
+                std::fs::write(&secret_file, &generated)
+                    .map_err(|e| format!("failed to persist master secret: {}", e))?;
+                generated
+            };
+
+            crypto::init_master_secret(secret.trim().to_string());
+
             db::init_database(&app_handle)?;
             Ok(())
         })

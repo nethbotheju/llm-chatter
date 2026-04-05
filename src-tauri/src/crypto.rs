@@ -8,14 +8,19 @@ use std::sync::OnceLock;
 const NONCE_SIZE: usize = 12;
 
 static MASTER_KEY: OnceLock<Vec<u8>> = OnceLock::new();
+static MASTER_SECRET_OVERRIDE: OnceLock<String> = OnceLock::new();
+
+pub fn init_master_secret(secret: String) {
+    let _ = MASTER_SECRET_OVERRIDE.set(secret);
+}
 
 fn get_or_create_master_key() -> &'static [u8] {
     MASTER_KEY.get_or_init(|| {
-        let secret = std::env::var("MASTER_SECRET").unwrap_or_else(|_| {
-            let mut key = vec![0u8; 32];
-            OsRng.fill_bytes(&mut key);
-            BASE64.encode(&key)
-        });
+        let secret = MASTER_SECRET_OVERRIDE
+            .get()
+            .cloned()
+            .or_else(|| std::env::var("MASTER_SECRET").ok())
+            .unwrap_or_else(|| "ilm-chatter-fallback-master-secret".to_string());
         let mut hasher = Sha256::new();
         hasher.update(secret.as_bytes());
         hasher.finalize().to_vec()

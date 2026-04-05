@@ -1,4 +1,4 @@
-use rusqlite::Connection;
+use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager};
@@ -64,9 +64,61 @@ pub struct Message {
 }
 
 fn get_db_path(app: &AppHandle) -> std::path::PathBuf {
-    let app_data_dir = app.path().app_data_dir().expect("failed to resolve app data dir");
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .expect("failed to resolve app data dir");
     std::fs::create_dir_all(&app_data_dir).ok();
     app_data_dir.join("ilm-chatter.db")
+}
+
+fn seed_default_assistants(conn: &Connection) -> Result<(), Box<dyn std::error::Error>> {
+    let existing_count: i64 =
+        conn.query_row("SELECT COUNT(*) FROM assistant", [], |row| row.get(0))?;
+
+    if existing_count > 0 {
+        return Ok(());
+    }
+
+    let defaults = [
+        (
+            "General",
+            "You are a helpful, harmless, and honest AI assistant. Provide clear, accurate, and thoughtful responses.",
+            0.7_f64,
+            1.0_f64,
+            true,
+        ),
+        (
+            "Code Expert",
+            "You are an expert software developer. Provide clean, efficient, and well-documented code. Explain your reasoning and consider edge cases.",
+            0.3_f64,
+            0.95_f64,
+            false,
+        ),
+        (
+            "Creative Writer",
+            "You are a creative writing assistant. Be imaginative, expressive, and help craft engaging content. Think outside the box.",
+            0.9_f64,
+            1.0_f64,
+            false,
+        ),
+        (
+            "Analyst",
+            "You are a data analyst and critical thinker. Provide structured, logical analysis. Be thorough and consider multiple perspectives.",
+            0.5_f64,
+            0.9_f64,
+            false,
+        ),
+    ];
+
+    for (name, system_prompt, temperature, top_p, is_default) in defaults {
+        conn.execute(
+            "INSERT INTO assistant (id, name, system_prompt, temperature, top_p, is_default, enabled) VALUES (?1, ?2, ?3, ?4, ?5, ?6, 1)",
+            params![uuid::Uuid::new_v4().to_string(), name, system_prompt, temperature, top_p, is_default],
+        )?;
+    }
+
+    Ok(())
 }
 
 pub fn init_database(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
@@ -135,6 +187,8 @@ pub fn init_database(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> 
         CREATE INDEX IF NOT EXISTS idx_message_conversation_id ON message(conversation_id);
         CREATE INDEX IF NOT EXISTS idx_message_created_at ON message(created_at);",
     )?;
+
+    seed_default_assistants(&conn)?;
 
     let conn = Mutex::new(conn);
     app.manage(DbState(conn));
