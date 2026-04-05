@@ -1,0 +1,88 @@
+import type {
+  Provider,
+  Model,
+  Assistant,
+  ConversationWithCount,
+  ConversationDetail,
+  Message,
+  SearchResult,
+  ExportData,
+  Stats,
+  ChatMessageInput,
+  CreateProviderInput,
+  UpdateProviderInput,
+  CreateModelInput,
+  UpdateModelInput,
+  CreateAssistantInput,
+  UpdateAssistantInput,
+  CreateConversationInput,
+  ValidateProviderInput,
+} from "./types";
+
+export interface IProviderService {
+  getAll(): Promise<Provider[]>;
+  create(input: CreateProviderInput): Promise<Provider>;
+  update(input: UpdateProviderInput): Promise<Provider>;
+  delete(id: string): Promise<void>;
+  validate(input: ValidateProviderInput): Promise<{ valid: boolean; error?: string }>;
+}
+
+export interface IModelService {
+  getAll(providerId?: string, includeDisabled?: boolean): Promise<Model[]>;
+  create(input: CreateModelInput): Promise<Model>;
+  update(input: UpdateModelInput): Promise<Model>;
+  delete(id: string): Promise<void>;
+}
+
+export interface IAssistantService {
+  getAll(): Promise<Assistant[]>;
+  get(id: string): Promise<Assistant>;
+  create(input: CreateAssistantInput): Promise<Assistant>;
+  update(input: UpdateAssistantInput): Promise<Assistant>;
+  delete(id: string): Promise<void>;
+}
+
+export interface IConversationService {
+  getAll(): Promise<ConversationWithCount[]>;
+  get(id: string): Promise<ConversationDetail>;
+  create(input: CreateConversationInput): Promise<ConversationDetail>;
+  update(id: string, title: string): Promise<ConversationDetail>;
+  delete(id: string): Promise<void>;
+  deleteAll(): Promise<void>;
+}
+
+export interface IMessageService {
+  get(conversationId: string): Promise<Message[]>;
+  create(conversationId: string, role: string, content: string, thinking?: string, attachments?: string): Promise<Message>;
+  update(conversationId: string, messageId: string, content: string): Promise<void>;
+  delete(conversationId: string, messageId: string): Promise<void>;
+}
+
+export interface IChatService {
+  send(
+    messages: ChatMessageInput[],
+    modelId: string,
+    conversationId: string | null,
+    onToken: (token: string) => void,
+    onDone: (fullContent: string) => void,
+    onError: (error: string) => void,
+    signal?: AbortSignal
+  ): Promise<void>;
+  abort(): void;
+}
+
+export interface ISearchService {
+  search(query: string): Promise<SearchResult[]>;
+}
+
+export interface IExportService {
+  export(): Promise<ExportData>;
+}
+
+export interface IStatsService {
+  get(): Promise<Stats>;
+}
+
+export interface IResetService {
+  reset(): Promise<void>;
+}
