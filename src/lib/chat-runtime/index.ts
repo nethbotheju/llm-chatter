@@ -6,7 +6,6 @@ import {
 } from "../contracts";
 import { ChatError, toChatError } from "./errors";
 import { getRuntimeModel } from "./provider-client";
-import { buildRuntimeMessages } from "./stream";
 import type {
   ChatRuntimeEventStream,
   ChatRuntimeInput,
@@ -30,13 +29,18 @@ export async function runChatRuntime(
       provider: normalized.provider,
     });
 
-    const formattedMessages = buildRuntimeMessages(normalized);
+    const messages = normalized.messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+    const system = normalized.assistantConfig?.systemPrompt || undefined;
     const temperature = normalized.assistantConfig?.temperature ?? 0.7;
     const topP = normalized.assistantConfig?.topP ?? 1;
 
     const result = streamText({
       model,
-      messages: formattedMessages,
+      system,
+      messages,
       temperature,
       topP,
       abortSignal: options?.signal,
@@ -75,13 +79,18 @@ export async function* streamChatRuntimeEvents(
       provider: normalized.provider,
     });
 
-    const formattedMessages = buildRuntimeMessages(normalized);
+    const messages = normalized.messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+    const system = normalized.assistantConfig?.systemPrompt || undefined;
     const temperature = normalized.assistantConfig?.temperature ?? 0.7;
     const topP = normalized.assistantConfig?.topP ?? 1;
 
     const result = streamText({
       model,
-      messages: formattedMessages,
+      system,
+      messages,
       temperature,
       topP,
       abortSignal: options?.signal,
