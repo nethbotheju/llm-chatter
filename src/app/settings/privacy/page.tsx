@@ -12,15 +12,17 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-
-interface StorageStats {
-  conversations: number;
-  messages: number;
-  totalSize: string;
-}
+import {
+  getStatsService,
+  getConversationService,
+  getResetService,
+  getExportService,
+  ensureInit,
+} from "@/lib/services";
+import type { Stats } from "@/lib/services";
 
 export default function PrivacySettingsPage() {
-  const [stats, setStats] = useState<StorageStats | null>(null);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
@@ -32,8 +34,8 @@ export default function PrivacySettingsPage() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch("/api/stats");
-      const data = await res.json();
+      await ensureInit();
+      const data = await getStatsService().get();
       setStats(data);
     } catch (error) {
       console.error("Failed to fetch stats:", error);
@@ -43,7 +45,8 @@ export default function PrivacySettingsPage() {
   const handleDeleteAllConversations = async () => {
     setIsLoading(true);
     try {
-      await fetch("/api/conversations?all=true", { method: "DELETE" });
+      await ensureInit();
+      await getConversationService().deleteAll();
       setDeleteDialogOpen(false);
       fetchStats();
     } catch (error) {
@@ -56,7 +59,8 @@ export default function PrivacySettingsPage() {
   const handleResetApp = async () => {
     setIsLoading(true);
     try {
-      await fetch("/api/reset", { method: "POST" });
+      await ensureInit();
+      await getResetService().reset();
       setResetDialogOpen(false);
       fetchStats();
       window.location.href = "/";
@@ -70,8 +74,8 @@ export default function PrivacySettingsPage() {
   const handleExport = async () => {
     setExporting(true);
     try {
-      const res = await fetch("/api/export");
-      const data = await res.json();
+      await ensureInit();
+      const data = await getExportService().export();
       const blob = new Blob([JSON.stringify(data, null, 2)], {
         type: "application/json",
       });

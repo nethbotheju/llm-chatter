@@ -63,6 +63,9 @@ export async function POST(request: NextRequest) {
       assistantId: finalAssistantId,
     },
     include: {
+      messages: {
+        orderBy: { createdAt: "asc" },
+      },
       assistant: true,
     },
   });
@@ -81,6 +84,12 @@ export async function PATCH(request: NextRequest) {
   const conversation = await prisma.conversation.update({
     where: { id },
     data: { title },
+    include: {
+      messages: {
+        orderBy: { createdAt: "asc" },
+      },
+      assistant: true,
+    },
   });
 
   return NextResponse.json(conversation);
