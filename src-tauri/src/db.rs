@@ -1,4 +1,4 @@
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, Row};
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager};
@@ -18,6 +18,21 @@ pub struct Provider {
     pub updated_at: String,
 }
 
+impl Provider {
+    pub fn from_row(row: &Row) -> Result<Self, rusqlite::Error> {
+        Ok(Self {
+            id: row.get("id")?,
+            name: row.get("name")?,
+            provider_type: row.get("type")?,
+            base_url: row.get("base_url")?,
+            api_key_encrypted: row.get("api_key_encrypted")?,
+            enabled: row.get("enabled")?,
+            created_at: row.get("created_at")?,
+            updated_at: row.get("updated_at")?,
+        })
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Model {
     pub id: String,
@@ -27,6 +42,20 @@ pub struct Model {
     pub enabled: bool,
     pub created_at: String,
     pub updated_at: String,
+}
+
+impl Model {
+    pub fn from_row(row: &Row) -> Result<Self, rusqlite::Error> {
+        Ok(Self {
+            id: row.get("id")?,
+            name: row.get("name")?,
+            provider_id: row.get("provider_id")?,
+            capabilities: row.get("capabilities")?,
+            enabled: row.get("enabled")?,
+            created_at: row.get("created_at")?,
+            updated_at: row.get("updated_at")?,
+        })
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -43,6 +72,23 @@ pub struct Assistant {
     pub updated_at: String,
 }
 
+impl Assistant {
+    pub fn from_row(row: &Row) -> Result<Self, rusqlite::Error> {
+        Ok(Self {
+            id: row.get("id")?,
+            name: row.get("name")?,
+            image: row.get("image")?,
+            system_prompt: row.get("system_prompt")?,
+            temperature: row.get("temperature")?,
+            top_p: row.get("top_p")?,
+            enabled: row.get("enabled")?,
+            is_default: row.get("is_default")?,
+            created_at: row.get("created_at")?,
+            updated_at: row.get("updated_at")?,
+        })
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Conversation {
     pub id: String,
@@ -50,6 +96,18 @@ pub struct Conversation {
     pub assistant_id: String,
     pub created_at: String,
     pub updated_at: String,
+}
+
+impl Conversation {
+    pub fn from_row(row: &Row) -> Result<Self, rusqlite::Error> {
+        Ok(Self {
+            id: row.get("id")?,
+            title: row.get("title")?,
+            assistant_id: row.get("assistant_id")?,
+            created_at: row.get("created_at")?,
+            updated_at: row.get("updated_at")?,
+        })
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -61,6 +119,20 @@ pub struct Message {
     pub thinking: Option<String>,
     pub attachments: Option<String>,
     pub created_at: String,
+}
+
+impl Message {
+    pub fn from_row(row: &Row) -> Result<Self, rusqlite::Error> {
+        Ok(Self {
+            id: row.get("id")?,
+            conversation_id: row.get("conversation_id")?,
+            role: row.get("role")?,
+            content: row.get("content")?,
+            thinking: row.get("thinking")?,
+            attachments: row.get("attachments")?,
+            created_at: row.get("created_at")?,
+        })
+    }
 }
 
 fn get_db_path(app: &AppHandle) -> std::path::PathBuf {

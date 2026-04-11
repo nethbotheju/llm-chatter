@@ -32,18 +32,7 @@ pub fn get_providers(state: State<DbState>) -> Result<Vec<ProviderView>, String>
         .map_err(|e| e.to_string())?;
 
     let providers = stmt
-        .query_map([], |row| {
-            Ok(Provider {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                provider_type: row.get(2)?,
-                base_url: row.get(3)?,
-                api_key_encrypted: row.get(4)?,
-                enabled: row.get(5)?,
-                created_at: row.get(6)?,
-                updated_at: row.get(7)?,
-            })
-        })
+        .query_map([], |row| Provider::from_row(row))
         .map_err(|e| e.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())?;
@@ -150,18 +139,7 @@ pub fn update_provider(input: UpdateProviderInput, state: State<DbState>) -> Res
         .map_err(|e| e.to_string())?;
 
     let provider = stmt
-        .query_row(params![input.id], |row| {
-            Ok(Provider {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                provider_type: row.get(2)?,
-                base_url: row.get(3)?,
-                api_key_encrypted: row.get(4)?,
-                enabled: row.get(5)?,
-                created_at: row.get(6)?,
-                updated_at: row.get(7)?,
-            })
-        })
+        .query_row(params![input.id], |row| Provider::from_row(row))
         .map_err(|e| e.to_string())?;
 
     Ok(ProviderView::from_provider(provider))

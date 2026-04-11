@@ -13,20 +13,7 @@ pub fn get_assistants(id: Option<String>, state: State<DbState>) -> Result<serde
             .map_err(|e| e.to_string())?;
 
         let assistant = stmt
-            .query_row(params![id], |row| {
-                Ok(Assistant {
-                    id: row.get(0)?,
-                    name: row.get(1)?,
-                    image: row.get(2)?,
-                    system_prompt: row.get(3)?,
-                    temperature: row.get(4)?,
-                    top_p: row.get(5)?,
-                    enabled: row.get(6)?,
-                    is_default: row.get(7)?,
-                    created_at: row.get(8)?,
-                    updated_at: row.get(9)?,
-                })
-            })
+            .query_row(params![id], |row| Assistant::from_row(row))
             .map_err(|e| e.to_string())?;
 
         return Ok(serde_json::to_value(assistant).map_err(|e| e.to_string())?);
@@ -37,20 +24,7 @@ pub fn get_assistants(id: Option<String>, state: State<DbState>) -> Result<serde
         .map_err(|e| e.to_string())?;
 
     let assistants = stmt
-        .query_map([], |row| {
-            Ok(Assistant {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                image: row.get(2)?,
-                system_prompt: row.get(3)?,
-                temperature: row.get(4)?,
-                top_p: row.get(5)?,
-                enabled: row.get(6)?,
-                is_default: row.get(7)?,
-                created_at: row.get(8)?,
-                updated_at: row.get(9)?,
-            })
-        })
+        .query_map([], |row| Assistant::from_row(row))
         .map_err(|e| e.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())?;
@@ -91,21 +65,8 @@ pub fn create_assistant(input: CreateAssistantInput, state: State<DbState>) -> R
         .prepare("SELECT id, name, image, system_prompt, temperature, top_p, enabled, is_default, created_at, updated_at FROM assistant WHERE id = ?1")
         .map_err(|e| e.to_string())?;
 
-    stmt.query_row(params![id], |row| {
-        Ok(Assistant {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            image: row.get(2)?,
-            system_prompt: row.get(3)?,
-            temperature: row.get(4)?,
-            top_p: row.get(5)?,
-            enabled: row.get(6)?,
-            is_default: row.get(7)?,
-            created_at: row.get(8)?,
-            updated_at: row.get(9)?,
-        })
-    })
-    .map_err(|e| e.to_string())
+    stmt.query_row(params![id], |row| Assistant::from_row(row))
+        .map_err(|e| e.to_string())
 }
 
 #[derive(Deserialize)]
@@ -154,21 +115,8 @@ pub fn update_assistant(input: UpdateAssistantInput, state: State<DbState>) -> R
         .prepare("SELECT id, name, image, system_prompt, temperature, top_p, enabled, is_default, created_at, updated_at FROM assistant WHERE id = ?1")
         .map_err(|e| e.to_string())?;
 
-    stmt.query_row(params![input.id], |row| {
-        Ok(Assistant {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            image: row.get(2)?,
-            system_prompt: row.get(3)?,
-            temperature: row.get(4)?,
-            top_p: row.get(5)?,
-            enabled: row.get(6)?,
-            is_default: row.get(7)?,
-            created_at: row.get(8)?,
-            updated_at: row.get(9)?,
-        })
-    })
-    .map_err(|e| e.to_string())
+    stmt.query_row(params![input.id], |row| Assistant::from_row(row))
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

@@ -24,14 +24,8 @@ pub fn get_conversations(state: State<DbState>) -> Result<Vec<ConversationWithCo
     let results = stmt
         .query_map([], |row| {
             Ok(ConversationWithCount {
-                conversation: Conversation {
-                    id: row.get(0)?,
-                    title: row.get(1)?,
-                    assistant_id: row.get(2)?,
-                    created_at: row.get(3)?,
-                    updated_at: row.get(4)?,
-                },
-                message_count: row.get(5)?,
+                conversation: Conversation::from_row(row)?,
+                message_count: row.get("msg_count")?,
             })
         })
         .map_err(|e| e.to_string())?
@@ -61,17 +55,7 @@ fn query_messages(
         .map_err(|e| e.to_string())?;
 
     let messages: Vec<Message> = stmt
-        .query_map(params![conversation_id], |row| {
-            Ok(Message {
-                id: row.get(0)?,
-                conversation_id: row.get(1)?,
-                role: row.get(2)?,
-                content: row.get(3)?,
-                thinking: row.get(4)?,
-                attachments: row.get(5)?,
-                created_at: row.get(6)?,
-            })
-        })
+        .query_map(params![conversation_id], |row| Message::from_row(row))
         .map_err(|e| e.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())?;
@@ -87,15 +71,7 @@ fn fetch_conversation_detail(
         .query_row(
             "SELECT id, title, assistant_id, created_at, updated_at FROM conversation WHERE id = ?1",
             params![id],
-            |row| {
-                Ok(Conversation {
-                    id: row.get(0)?,
-                    title: row.get(1)?,
-                    assistant_id: row.get(2)?,
-                    created_at: row.get(3)?,
-                    updated_at: row.get(4)?,
-                })
-            },
+            |row| Conversation::from_row(row),
         )
         .map_err(|e| e.to_string())?;
 

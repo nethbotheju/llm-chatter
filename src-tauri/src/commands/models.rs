@@ -1,5 +1,5 @@
 use crate::db::{DbState, Model};
-use rusqlite::params;
+use rusqlite::{params, Row};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
@@ -19,6 +19,30 @@ pub struct ProviderInfo {
     pub enabled: bool,
 }
 
+impl ProviderInfo {
+    fn from_row(row: &Row) -> Result<Self, rusqlite::Error> {
+        Ok(Self {
+            id: row.get("p_id")?,
+            name: row.get("p_name")?,
+            provider_type: row.get("p_type")?,
+            enabled: row.get("p_enabled")?,
+        })
+    }
+}
+
+/// Common SQL SELECT fragment for fetching a Model joined with its Provider.
+const MODEL_WITH_PROVIDER_SELECT: &str = "\
+    SELECT m.id, m.name, m.provider_id, m.capabilities, m.enabled, m.created_at, m.updated_at, \
+           p.id as p_id, p.name as p_name, p.type as p_type, p.enabled as p_enabled \
+    FROM model m JOIN provider p ON m.provider_id = p.id";
+
+fn model_with_provider_from_row(row: &Row) -> Result<ModelWithProvider, rusqlite::Error> {
+    Ok(ModelWithProvider {
+        model: Model::from_row(row)?,
+        provider: ProviderInfo::from_row(row)?,
+    })
+}
+
 #[tauri::command]
 pub fn get_models(
     provider_id: Option<String>,
@@ -27,11 +51,7 @@ pub fn get_models(
 ) -> Result<Vec<ModelWithProvider>, String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
 
-    let mut sql = String::from(
-        "SELECT m.id, m.name, m.provider_id, m.capabilities, m.enabled, m.created_at, m.updated_at, \
-         p.id, p.name, p.type, p.enabled \
-         FROM model m JOIN provider p ON m.provider_id = p.id WHERE 1=1"
-    );
+    let mut sql = format!("{} WHERE 1=1", MODEL_WITH_PROVIDER_SELECT);
 
     let mut param_values: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
 
@@ -51,25 +71,7 @@ pub fn get_models(
     let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
 
     let models = stmt
-        .query_map(params.as_slice(), |row| {
-            Ok(ModelWithProvider {
-                model: Model {
-                    id: row.get(0)?,
-                    name: row.get(1)?,
-                    provider_id: row.get(2)?,
-                    capabilities: row.get(3)?,
-                    enabled: row.get(4)?,
-                    created_at: row.get(5)?,
-                    updated_at: row.get(6)?,
-                },
-                provider: ProviderInfo {
-                    id: row.get(7)?,
-                    name: row.get(8)?,
-                    provider_type: row.get(9)?,
-                    enabled: row.get(10)?,
-                },
-            })
-        })
+        .query_map(params.as_slice(), |row| model_with_provider_from_row(row))
         .map_err(|e| e.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())?;
@@ -101,33 +103,11 @@ pub fn create_model(input: CreateModelInput, state: State<DbState>) -> Result<Mo
     .map_err(|e| e.to_string())?;
 
     let mut stmt = conn
-        .prepare(
-            "SELECT m.id, m.name, m.provider_id, m.capabilities, m.enabled, m.created_at, m.updated_at, \
-             p.id, p.name, p.type, p.enabled \
-             FROM model m JOIN provider p ON m.provider_id = p.id WHERE m.id = ?1",
-        )
+        .prepare(&format!("{} WHERE m.id = ?1", MODEL_WITH_PROVIDER_SELECT))
         .map_err(|e| e.to_string())?;
 
-    stmt.query_row(params![id], |row| {
-        Ok(ModelWithProvider {
-            model: Model {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                provider_id: row.get(2)?,
-                capabilities: row.get(3)?,
-                enabled: row.get(4)?,
-                created_at: row.get(5)?,
-                updated_at: row.get(6)?,
-            },
-            provider: ProviderInfo {
-                id: row.get(7)?,
-                name: row.get(8)?,
-                provider_type: row.get(9)?,
-                enabled: row.get(10)?,
-            },
-        })
-    })
-    .map_err(|e| e.to_string())
+    stmt.query_row(params![id], |row| model_with_provider_from_row(row))
+        .map_err(|e| e.to_string())
 }
 
 #[derive(Deserialize)]
@@ -171,33 +151,11 @@ pub fn update_model(input: UpdateModelInput, state: State<DbState>) -> Result<Mo
     conn.execute(&sql, params.as_slice()).map_err(|e| e.to_string())?;
 
     let mut stmt = conn
-        .prepare(
-            "SELECT m.id, m.name, m.provider_id, m.capabilities, m.enabled, m.created_at, m.updated_at, \
-             p.id, p.name, p.type, p.enabled \
-             FROM model m JOIN provider p ON m.provider_id = p.id WHERE m.id = ?1",
-        )
+        .prepare(&format!("{} WHERE m.id = ?1", MODEL_WITH_PROVIDER_SELECT))
         .map_err(|e| e.to_string())?;
 
-    stmt.query_row(params![input.id], |row| {
-        Ok(ModelWithProvider {
-            model: Model {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                provider_id: row.get(2)?,
-                capabilities: row.get(3)?,
-                enabled: row.get(4)?,
-                created_at: row.get(5)?,
-                updated_at: row.get(6)?,
-            },
-            provider: ProviderInfo {
-                id: row.get(7)?,
-                name: row.get(8)?,
-                provider_type: row.get(9)?,
-                enabled: row.get(10)?,
-            },
-        })
-    })
-    .map_err(|e| e.to_string())
+    stmt.query_row(params![input.id], |row| model_with_provider_from_row(row))
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
