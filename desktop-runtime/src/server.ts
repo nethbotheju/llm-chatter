@@ -81,7 +81,16 @@ async function run(): Promise<void> {
       res.end();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      sendJson(res, 500, { error: message });
+
+      if (res.headersSent) {
+        writeSseEvent(res, {
+          type: "error",
+          error: { code: "STREAM_ERROR", message, status: null, retryable: false, details: null },
+        });
+        res.end();
+      } else {
+        sendJson(res, 500, { error: message });
+      }
     }
   });
 

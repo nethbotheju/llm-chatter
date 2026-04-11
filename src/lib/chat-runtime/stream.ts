@@ -75,7 +75,5 @@ export async function* streamChatRuntimeEvents(
     };
     options?.onError?.(chatError.toDTO());
     yield errorEvent;
-
-    throw chatError;
   }
 }
