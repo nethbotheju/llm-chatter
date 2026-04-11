@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -7,15 +6,13 @@ use futures_util::{StreamExt, TryStreamExt};
 use reqwest::header::{HeaderMap, AUTHORIZATION};
 use serde_json::Value;
 use tauri::Manager;
-use tauri::path::BaseDirectory;
-
-const DESKTOP_RUNTIME_ENTRY_RELATIVE: &str = "desktop-runtime/dist/server.cjs";
+use tauri_plugin_shell::process::{CommandChild, CommandEvent};
+use tauri_plugin_shell::ShellExt;
 
 #[derive(Debug, Clone)]
 pub struct DesktopRuntimeConfig {
     pub port: u16,
     pub token: String,
-    pub pid: Option<u32>,
 }
 
 impl Default for DesktopRuntimeConfig {
@@ -23,94 +20,28 @@ impl Default for DesktopRuntimeConfig {
         Self {
             port: 0,
             token: String::new(),
-            pid: None,
         }
     }
 }
 
+struct SidecarProcess {
+    config: DesktopRuntimeConfig,
+    child: Option<CommandChild>,
+}
+
 pub struct DesktopRuntimeState {
-    pub config: Mutex<DesktopRuntimeConfig>,
-    pub http_client: reqwest::Client,
+    process: Mutex<SidecarProcess>,
+    http_client: reqwest::Client,
 }
 
 pub fn init_runtime_state(app: &impl Manager<tauri::Wry>) {
     app.manage(DesktopRuntimeState {
-        config: Mutex::new(DesktopRuntimeConfig::default()),
+        process: Mutex::new(SidecarProcess {
+            config: DesktopRuntimeConfig::default(),
+            child: None,
+        }),
         http_client: reqwest::Client::new(),
     });
-}
-
-fn find_workspace_root(start: &PathBuf) -> Option<PathBuf> {
-    let mut current = start.clone();
-    for _ in 0..10 {
-        let package_json = current.join("package.json");
-        let cjs_entry = current.join(DESKTOP_RUNTIME_ENTRY_RELATIVE);
-        let js_entry = current.join("desktop-runtime/dist/server.js");
-        if package_json.exists() && (cjs_entry.exists() || js_entry.exists()) {
-            return Some(current);
-        }
-        if !current.pop() {
-            break;
-        }
-    }
-    None
-}
-
-fn resolve_desktop_runtime_entry(app: &tauri::AppHandle) -> Option<PathBuf> {
-    // Dev mode: walk up from cwd
-    if let Ok(cwd) = std::env::current_dir() {
-        if let Some(root) = find_workspace_root(&cwd) {
-            let entry = root.join(DESKTOP_RUNTIME_ENTRY_RELATIVE);
-            if entry.exists() {
-                return Some(entry);
-            }
-        }
-    }
-
-    // Dev mode: walk up from executable directory
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(exe_dir) = exe.parent() {
-            if let Some(root) = find_workspace_root(&exe_dir.to_path_buf()) {
-                let entry = root.join(DESKTOP_RUNTIME_ENTRY_RELATIVE);
-                if entry.exists() {
-                    return Some(entry);
-                }
-            }
-        }
-    }
-
-    // Production: Tauri bundles "../desktop-runtime/dist" as a resource,
-    // replacing "../" with "_up_". resolve() handles this mapping.
-    if let Ok(resolved) = app.path().resolve("../desktop-runtime/dist/server.cjs", BaseDirectory::Resource) {
-        if resolved.exists() {
-            return Some(resolved);
-        }
-    }
-
-    None
-}
-
-fn resolve_node_runtime_path() -> Option<PathBuf> {
-    if let Ok(path) = which::which("node") {
-        return Some(path);
-    }
-
-    let candidates: &[&str] = if cfg!(target_os = "macos") {
-        &["/opt/homebrew/bin/node", "/usr/local/bin/node", "/usr/bin/node"]
-    } else if cfg!(target_os = "windows") {
-        &["C:\\Program Files\\nodejs\\node.exe", "C:\\Program Files (x86)\\nodejs\\node.exe"]
-    } else {
-        &["/usr/local/bin/node", "/usr/bin/node"]
-    };
-
-    for candidate in candidates {
-        let path = PathBuf::from(candidate);
-        if path.exists() {
-            return Some(path);
-        }
-    }
-
-    None
 }
 
 async fn is_sidecar_healthy(http_client: &reqwest::Client, port: u16, token: &str) -> bool {
@@ -134,9 +65,9 @@ pub async fn ensure_sidecar_started(app: &tauri::AppHandle) -> Result<DesktopRun
     let state = app.state::<DesktopRuntimeState>();
 
     let cached = {
-        let config = state.config.lock().map_err(|e| e.to_string())?;
-        if config.port > 0 && !config.token.is_empty() {
-            Some((config.port, config.token.clone()))
+        let proc = state.process.lock().map_err(|e| e.to_string())?;
+        if proc.config.port > 0 && !proc.config.token.is_empty() {
+            Some((proc.config.port, proc.config.token.clone()))
         } else {
             None
         }
@@ -144,49 +75,59 @@ pub async fn ensure_sidecar_started(app: &tauri::AppHandle) -> Result<DesktopRun
 
     if let Some((port, token)) = cached {
         if is_sidecar_healthy(&state.http_client, port, &token).await {
-            let config = state.config.lock().map_err(|e| e.to_string())?;
-            return Ok(config.clone());
+            let proc = state.process.lock().map_err(|e| e.to_string())?;
+            return Ok(proc.config.clone());
         }
     }
 
-    let entry_path = resolve_desktop_runtime_entry(app)
-        .ok_or("Could not find desktop-runtime entry (server.cjs/server.js)")?;
-
-    let node_path = resolve_node_runtime_path()
-        .ok_or("Could not find Node.js runtime. Please install Node.js.")?;
-
     let token = uuid::Uuid::new_v4().to_string();
 
-    let mut child = std::process::Command::new(&node_path)
-        .arg(&entry_path)
+    let sidecar_command = app
+        .shell()
+        .sidecar("desktop-runtime")
+        .map_err(|e| format!("Failed to create sidecar command: {}", e))?
         .env("DESKTOP_RUNTIME_TOKEN", &token)
-        .env("DESKTOP_RUNTIME_PORT", "0")
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
+        .env("DESKTOP_RUNTIME_PORT", "0");
+
+    let (mut rx, child) = sidecar_command
         .spawn()
         .map_err(|e| format!("Failed to spawn sidecar: {}", e))?;
 
-    let pid = child.id();
-
-    let stdout = child.stdout.take().ok_or("Failed to capture sidecar stdout")?;
-    let reader = std::io::BufReader::new(stdout);
     let mut resolved_port: Option<u16> = None;
     let mut diagnostics: Vec<String> = Vec::new();
 
-    use std::io::BufRead;
-    for line in reader.lines() {
-        let line = line.map_err(|e| format!("Failed to read sidecar output: {}", e))?;
-        let trimmed = line.trim().to_string();
-        if trimmed.is_empty() {
-            continue;
-        }
-        if let Some(port_str) = trimmed.strip_prefix("DESKTOP_RUNTIME_READY:") {
-            if let Ok(port) = port_str.parse::<u16>() {
-                resolved_port = Some(port);
-                break;
+    while let Some(event) = rx.recv().await {
+        match event {
+            CommandEvent::Stdout(line) => {
+                let line = String::from_utf8_lossy(&line);
+                let trimmed = line.trim().to_string();
+                if trimmed.is_empty() {
+                    continue;
+                }
+                if let Some(port_str) = trimmed.strip_prefix("DESKTOP_RUNTIME_READY:") {
+                    if let Ok(port) = port_str.parse::<u16>() {
+                        resolved_port = Some(port);
+                        break;
+                    }
+                }
+                diagnostics.push(trimmed);
             }
+            CommandEvent::Stderr(line) => {
+                let line = String::from_utf8_lossy(&line);
+                let trimmed = line.trim().to_string();
+                if !trimmed.is_empty() {
+                    diagnostics.push(format!("[stderr] {}", trimmed));
+                }
+            }
+            CommandEvent::Terminated(status) => {
+                return Err(format!(
+                    "Sidecar exited prematurely with status: {}. Output: {}",
+                    status.code.map_or("unknown".to_string(), |c| c.to_string()),
+                    diagnostics.join(" | ")
+                ));
+            }
+            _ => {}
         }
-        diagnostics.push(trimmed);
     }
 
     let port = resolved_port.ok_or_else(|| {
@@ -197,15 +138,12 @@ pub async fn ensure_sidecar_started(app: &tauri::AppHandle) -> Result<DesktopRun
         }
     })?;
 
-    let runtime = DesktopRuntimeConfig {
-        port,
-        token,
-        pid: Some(pid),
-    };
+    let runtime = DesktopRuntimeConfig { port, token };
 
     {
-        let mut config = state.config.lock().map_err(|e| e.to_string())?;
-        *config = runtime.clone();
+        let mut proc = state.process.lock().map_err(|e| e.to_string())?;
+        proc.config = runtime.clone();
+        proc.child = Some(child);
     }
 
     Ok(runtime)
@@ -213,23 +151,12 @@ pub async fn ensure_sidecar_started(app: &tauri::AppHandle) -> Result<DesktopRun
 
 pub fn kill_sidecar(app: &impl Manager<tauri::Wry>) {
     let state = app.state::<DesktopRuntimeState>();
-    if let Ok(mut config) = state.config.lock() {
-        if let Some(pid) = config.pid.take() {
-            #[cfg(unix)]
-            {
-                unsafe {
-                    libc::kill(pid as i32, libc::SIGTERM);
-                }
-            }
-            #[cfg(windows)]
-            {
-                let _ = std::process::Command::new("taskkill")
-                    .args(["/PID", &pid.to_string(), "/F"])
-                    .output();
-            }
+    if let Ok(mut proc) = state.process.lock() {
+        if let Some(child) = proc.child.take() {
+            let _ = child.kill();
         }
-        config.port = 0;
-        config.token.clear();
+        proc.config.port = 0;
+        proc.config.token.clear();
     }
 }
 

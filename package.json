@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "desktop-runtime:build": "node desktop-runtime/build.mjs",
+    "desktop-runtime:build-sea": "node desktop-runtime/build-sea.mjs",
     "desktop-runtime:start": "node desktop-runtime/dist/server.cjs",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
