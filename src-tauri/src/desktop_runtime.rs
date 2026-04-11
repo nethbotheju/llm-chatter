@@ -1,16 +1,21 @@
-use serde_json::Value;
-use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Mutex;
-use tauri::Manager;
-use tauri_plugin_shell::ShellExt;
+use std::time::Duration;
 
-pub struct DesktopRuntimeState(pub Mutex<DesktopRuntimeConfig>);
+use eventsource_stream::Eventsource;
+use futures_util::{StreamExt, TryStreamExt};
+use reqwest::header::{HeaderMap, AUTHORIZATION};
+use serde_json::Value;
+use tauri::Manager;
+use tauri::path::BaseDirectory;
+
+const DESKTOP_RUNTIME_ENTRY_RELATIVE: &str = "desktop-runtime/dist/server.cjs";
 
 #[derive(Debug, Clone)]
 pub struct DesktopRuntimeConfig {
     pub port: u16,
     pub token: String,
+    pub pid: Option<u32>,
 }
 
 impl Default for DesktopRuntimeConfig {
@@ -18,23 +23,32 @@ impl Default for DesktopRuntimeConfig {
         Self {
             port: 0,
             token: String::new(),
+            pid: None,
         }
     }
 }
 
-pub fn init_runtime_state(app: &tauri::AppHandle) {
-    app.manage(DesktopRuntimeState(Mutex::new(DesktopRuntimeConfig::default())));
+pub struct DesktopRuntimeState {
+    pub config: Mutex<DesktopRuntimeConfig>,
+    pub http_client: reqwest::Client,
 }
 
-fn find_workspace_root(start: &std::path::Path) -> Option<PathBuf> {
-    let mut current = start.to_path_buf();
-    loop {
+pub fn init_runtime_state(app: &impl Manager<tauri::Wry>) {
+    app.manage(DesktopRuntimeState {
+        config: Mutex::new(DesktopRuntimeConfig::default()),
+        http_client: reqwest::Client::new(),
+    });
+}
+
+fn find_workspace_root(start: &PathBuf) -> Option<PathBuf> {
+    let mut current = start.clone();
+    for _ in 0..10 {
         let package_json = current.join("package.json");
-        let desktop_entry = current.join("desktop-runtime").join("dist").join("server.cjs");
-        if package_json.exists() && desktop_entry.exists() {
+        let cjs_entry = current.join(DESKTOP_RUNTIME_ENTRY_RELATIVE);
+        let js_entry = current.join("desktop-runtime/dist/server.js");
+        if package_json.exists() && (cjs_entry.exists() || js_entry.exists()) {
             return Some(current);
         }
-
         if !current.pop() {
             break;
         }
@@ -43,105 +57,51 @@ fn find_workspace_root(start: &std::path::Path) -> Option<PathBuf> {
 }
 
 fn resolve_desktop_runtime_entry(app: &tauri::AppHandle) -> Option<PathBuf> {
+    // Dev mode: walk up from cwd
     if let Ok(cwd) = std::env::current_dir() {
         if let Some(root) = find_workspace_root(&cwd) {
-            return Some(root.join("desktop-runtime").join("dist").join("server.cjs"));
-        }
-    }
-
-    if let Ok(exe_path) = std::env::current_exe() {
-        if let Some(exe_dir) = exe_path.parent() {
-            if let Some(root) = find_workspace_root(exe_dir) {
-                return Some(root.join("desktop-runtime").join("dist").join("server.cjs"));
+            let entry = root.join(DESKTOP_RUNTIME_ENTRY_RELATIVE);
+            if entry.exists() {
+                return Some(entry);
             }
         }
     }
 
-    if let Ok(resource_dir) = app.path().resource_dir() {
-        let bundled = resource_dir
-            .join("_up_")
-            .join("desktop-runtime")
-            .join("dist")
-            .join("server.cjs");
-        if bundled.exists() {
-            return Some(bundled);
+    // Dev mode: walk up from executable directory
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(exe_dir) = exe.parent() {
+            if let Some(root) = find_workspace_root(&exe_dir.to_path_buf()) {
+                let entry = root.join(DESKTOP_RUNTIME_ENTRY_RELATIVE);
+                if entry.exists() {
+                    return Some(entry);
+                }
+            }
         }
+    }
 
-        if let Some(root) = find_workspace_root(&resource_dir) {
-            return Some(root.join("desktop-runtime").join("dist").join("server.cjs"));
+    // Production: Tauri bundles "../desktop-runtime/dist" as a resource,
+    // replacing "../" with "_up_". resolve() handles this mapping.
+    if let Ok(resolved) = app.path().resolve("../desktop-runtime/dist/server.cjs", BaseDirectory::Resource) {
+        if resolved.exists() {
+            return Some(resolved);
         }
     }
 
     None
 }
 
-fn guess_desktop_runtime_entry_paths(app: &tauri::AppHandle) -> Vec<PathBuf> {
-    let mut candidates: Vec<PathBuf> = Vec::new();
-
-    if let Ok(cwd) = std::env::current_dir() {
-        candidates.push(cwd.join("desktop-runtime").join("dist").join("server.js"));
-        candidates.push(cwd.join("desktop-runtime").join("dist").join("server.cjs"));
-        candidates.push(cwd.join("..").join("desktop-runtime").join("dist").join("server.js"));
-        candidates.push(cwd.join("..").join("desktop-runtime").join("dist").join("server.cjs"));
-        candidates.push(cwd.join("..").join("..").join("desktop-runtime").join("dist").join("server.js"));
-        candidates.push(cwd.join("..").join("..").join("desktop-runtime").join("dist").join("server.cjs"));
-    }
-
-    if let Ok(exe_path) = std::env::current_exe() {
-        if let Some(exe_dir) = exe_path.parent() {
-            candidates.push(exe_dir.join("desktop-runtime").join("dist").join("server.js"));
-            candidates.push(exe_dir.join("desktop-runtime").join("dist").join("server.cjs"));
-            candidates.push(exe_dir.join("..").join("desktop-runtime").join("dist").join("server.js"));
-            candidates.push(exe_dir.join("..").join("desktop-runtime").join("dist").join("server.cjs"));
-            candidates.push(exe_dir.join("..").join("..").join("desktop-runtime").join("dist").join("server.js"));
-            candidates.push(exe_dir.join("..").join("..").join("desktop-runtime").join("dist").join("server.cjs"));
-            candidates.push(exe_dir.join("..").join("..").join("..").join("desktop-runtime").join("dist").join("server.js"));
-            candidates.push(exe_dir.join("..").join("..").join("..").join("desktop-runtime").join("dist").join("server.cjs"));
-        }
-    }
-
-    if let Ok(resource_dir) = app.path().resource_dir() {
-        candidates.push(
-            resource_dir
-                .join("_up_")
-                .join("desktop-runtime")
-                .join("dist")
-                .join("server.js"),
-        );
-        candidates.push(
-            resource_dir
-                .join("_up_")
-                .join("desktop-runtime")
-                .join("dist")
-                .join("server.cjs"),
-        );
-        candidates.push(resource_dir.join("desktop-runtime").join("dist").join("server.js"));
-        candidates.push(resource_dir.join("desktop-runtime").join("dist").join("server.cjs"));
-        candidates.push(resource_dir.join("..").join("desktop-runtime").join("dist").join("server.js"));
-        candidates.push(resource_dir.join("..").join("desktop-runtime").join("dist").join("server.cjs"));
-        candidates.push(resource_dir.join("..").join("..").join("desktop-runtime").join("dist").join("server.js"));
-        candidates.push(resource_dir.join("..").join("..").join("desktop-runtime").join("dist").join("server.cjs"));
-    }
-
-    let mut deduped = Vec::new();
-    let mut seen = HashSet::new();
-
-    for path in candidates {
-        let key = path.to_string_lossy().to_string();
-        if seen.insert(key) {
-            deduped.push(path);
-        }
-    }
-
-    deduped
-}
-
 fn resolve_node_runtime_path() -> Option<PathBuf> {
-    let candidates = [
-        "/opt/homebrew/bin/node",
-        "/usr/local/bin/node",
-        "/usr/bin/node",
-    ];
+    if let Ok(path) = which::which("node") {
+        return Some(path);
+    }
+
+    let candidates: &[&str] = if cfg!(target_os = "macos") {
+        &["/opt/homebrew/bin/node", "/usr/local/bin/node", "/usr/bin/node"]
+    } else if cfg!(target_os = "windows") {
+        &["C:\\Program Files\\nodejs\\node.exe", "C:\\Program Files (x86)\\nodejs\\node.exe"]
+    } else {
+        &["/usr/local/bin/node", "/usr/bin/node"]
+    };
 
     for candidate in candidates {
         let path = PathBuf::from(candidate);
@@ -153,111 +113,124 @@ fn resolve_node_runtime_path() -> Option<PathBuf> {
     None
 }
 
+async fn is_sidecar_healthy(http_client: &reqwest::Client, port: u16, token: &str) -> bool {
+    let url = format!("http://127.0.0.1:{}/health", port);
+    let mut headers = HeaderMap::new();
+    if !token.is_empty() {
+        headers.insert(AUTHORIZATION, format!("Bearer {}", token).parse().unwrap());
+    }
+
+    http_client
+        .get(&url)
+        .headers(headers)
+        .timeout(Duration::from_secs(2))
+        .send()
+        .await
+        .map(|r| r.status().is_success())
+        .unwrap_or(false)
+}
+
 pub async fn ensure_sidecar_started(app: &tauri::AppHandle) -> Result<DesktopRuntimeConfig, String> {
     let state = app.state::<DesktopRuntimeState>();
-    {
-        let current = state.0.lock().map_err(|e| e.to_string())?;
-        if current.port > 0 && !current.token.is_empty() {
-            return Ok(current.clone());
+
+    let cached = {
+        let config = state.config.lock().map_err(|e| e.to_string())?;
+        if config.port > 0 && !config.token.is_empty() {
+            Some((config.port, config.token.clone()))
+        } else {
+            None
+        }
+    };
+
+    if let Some((port, token)) = cached {
+        if is_sidecar_healthy(&state.http_client, port, &token).await {
+            let config = state.config.lock().map_err(|e| e.to_string())?;
+            return Ok(config.clone());
         }
     }
+
+    let entry_path = resolve_desktop_runtime_entry(app)
+        .ok_or("Could not find desktop-runtime entry (server.cjs/server.js)")?;
+
+    let node_path = resolve_node_runtime_path()
+        .ok_or("Could not find Node.js runtime. Please install Node.js.")?;
 
     let token = uuid::Uuid::new_v4().to_string();
-    let mut command = app
-        .shell()
-        .sidecar("desktop-runtime")
-        .map_err(|e| format!("failed to create sidecar command: {}", e))?;
 
-    command = command
+    let mut child = std::process::Command::new(&node_path)
+        .arg(&entry_path)
         .env("DESKTOP_RUNTIME_TOKEN", &token)
-        .env("DESKTOP_RUNTIME_PORT", "0");
-
-    if let Some(entry) = resolve_desktop_runtime_entry(app) {
-        command = command.env("DESKTOP_RUNTIME_ENTRY", entry.to_string_lossy().to_string());
-    } else {
-        let guessed = guess_desktop_runtime_entry_paths(app)
-            .into_iter()
-            .map(|p| p.to_string_lossy().to_string())
-            .collect::<Vec<String>>()
-            .join(":");
-        if !guessed.is_empty() {
-            command = command.env("DESKTOP_RUNTIME_ENTRY_CANDIDATES", guessed);
-        }
-    }
-
-    if let Some(node_path) = resolve_node_runtime_path() {
-        command = command.env("DESKTOP_RUNTIME_NODE", node_path.to_string_lossy().to_string());
-    }
-
-    let (mut rx, _child) = command
+        .env("DESKTOP_RUNTIME_PORT", "0")
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
         .spawn()
-        .map_err(|e| format!("failed to spawn desktop-runtime sidecar: {}", e))?;
+        .map_err(|e| format!("Failed to spawn sidecar: {}", e))?;
 
-    let mut port: Option<u16> = None;
+    let pid = child.id();
+
+    let stdout = child.stdout.take().ok_or("Failed to capture sidecar stdout")?;
+    let reader = std::io::BufReader::new(stdout);
+    let mut resolved_port: Option<u16> = None;
     let mut diagnostics: Vec<String> = Vec::new();
-    let deadline = std::time::Duration::from_secs(10);
-    let start = std::time::Instant::now();
 
-    while start.elapsed() < deadline {
-        match tokio::time::timeout(std::time::Duration::from_millis(500), rx.recv()).await {
-            Ok(Some(event)) => {
-                match event {
-                    tauri_plugin_shell::process::CommandEvent::Stdout(line) => {
-                        let output = String::from_utf8_lossy(&line).trim().to_string();
-                        if !output.is_empty() {
-                            diagnostics.push(format!("stdout:{}", output));
-                        }
-                        if let Some(value) = output.strip_prefix("DESKTOP_RUNTIME_READY:") {
-                            if let Ok(parsed) = value.parse::<u16>() {
-                                port = Some(parsed);
-                                break;
-                            }
-                        }
-                    }
-                    tauri_plugin_shell::process::CommandEvent::Stderr(line) => {
-                        let output = String::from_utf8_lossy(&line).trim().to_string();
-                        if !output.is_empty() {
-                            diagnostics.push(format!("stderr:{}", output));
-                        }
-                    }
-                    tauri_plugin_shell::process::CommandEvent::Error(error) => {
-                        diagnostics.push(format!("error:{}", error));
-                    }
-                    tauri_plugin_shell::process::CommandEvent::Terminated(payload) => {
-                        diagnostics.push(format!(
-                            "terminated:code={:?},signal={:?}",
-                            payload.code, payload.signal
-                        ));
-                    }
-                    _ => {}
-                }
-            }
-            Ok(None) => break,
-            Err(_) => continue,
+    use std::io::BufRead;
+    for line in reader.lines() {
+        let line = line.map_err(|e| format!("Failed to read sidecar output: {}", e))?;
+        let trimmed = line.trim().to_string();
+        if trimmed.is_empty() {
+            continue;
         }
+        if let Some(port_str) = trimmed.strip_prefix("DESKTOP_RUNTIME_READY:") {
+            if let Ok(port) = port_str.parse::<u16>() {
+                resolved_port = Some(port);
+                break;
+            }
+        }
+        diagnostics.push(trimmed);
     }
 
-    let resolved_port = port.ok_or_else(|| {
+    let port = resolved_port.ok_or_else(|| {
         if diagnostics.is_empty() {
-            "desktop-runtime sidecar did not report a port".to_string()
+            "Sidecar did not report a port".to_string()
         } else {
-            format!(
-                "desktop-runtime sidecar did not report a port. diagnostics: {}",
-                diagnostics.join(" | ")
-            )
+            format!("Sidecar did not report a port. Output: {}", diagnostics.join(" | "))
         }
     })?;
+
     let runtime = DesktopRuntimeConfig {
-        port: resolved_port,
+        port,
         token,
+        pid: Some(pid),
     };
 
     {
-        let mut current = state.0.lock().map_err(|e| e.to_string())?;
-        *current = runtime.clone();
+        let mut config = state.config.lock().map_err(|e| e.to_string())?;
+        *config = runtime.clone();
     }
 
     Ok(runtime)
+}
+
+pub fn kill_sidecar(app: &impl Manager<tauri::Wry>) {
+    let state = app.state::<DesktopRuntimeState>();
+    if let Ok(mut config) = state.config.lock() {
+        if let Some(pid) = config.pid.take() {
+            #[cfg(unix)]
+            {
+                unsafe {
+                    libc::kill(pid as i32, libc::SIGTERM);
+                }
+            }
+            #[cfg(windows)]
+            {
+                let _ = std::process::Command::new("taskkill")
+                    .args(["/PID", &pid.to_string(), "/F"])
+                    .output();
+            }
+        }
+        config.port = 0;
+        config.token.clear();
+    }
 }
 
 pub async fn stream_chat_via_sidecar(
@@ -265,50 +238,48 @@ pub async fn stream_chat_via_sidecar(
     body: &Value,
     mut on_event: impl FnMut(Value) -> Result<(), String>,
 ) -> Result<(), String> {
+    let state = app.state::<DesktopRuntimeState>();
     let runtime = ensure_sidecar_started(app).await?;
     let url = format!("http://127.0.0.1:{}/chat", runtime.port);
-    let auth = format!("Bearer {}", runtime.token);
 
-    let resp = reqwest::Client::new()
+    let mut headers = HeaderMap::new();
+    headers.insert(AUTHORIZATION, format!("Bearer {}", runtime.token).parse().unwrap());
+    headers.insert(reqwest::header::CONTENT_TYPE, "application/json".parse().unwrap());
+
+    let resp = state
+        .http_client
         .post(&url)
-        .header("Authorization", auth)
-        .header("Content-Type", "application/json")
+        .headers(headers)
         .json(body)
+        .timeout(Duration::from_secs(300))
         .send()
         .await
-        .map_err(|e| format!("sidecar request failed: {}", e))?;
+        .map_err(|e| format!("Failed to connect to sidecar: {}", e))?;
 
     if !resp.status().is_success() {
         let status = resp.status();
         let text = resp.text().await.unwrap_or_default();
         return Err(format!(
-            "sidecar request failed ({}): {}",
+            "Sidecar error ({}): {}",
             status,
             text.chars().take(300).collect::<String>()
         ));
     }
 
-    let mut stream = resp.bytes_stream();
-    let mut buffer = String::new();
+    let mut stream = resp
+        .bytes_stream()
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+        .eventsource();
 
-    use futures_util::StreamExt;
-
-    while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(|e| format!("sidecar stream error: {}", e))?;
-        buffer.push_str(&String::from_utf8_lossy(&chunk));
-
-        while let Some(pos) = buffer.find('\n') {
-            let line = buffer[..pos].trim().to_string();
-            buffer = buffer[pos + 1..].to_string();
-
-            if line.is_empty() {
-                continue;
-            }
-
-            if let Some(data) = line.strip_prefix("data: ") {
-                if let Ok(event) = serde_json::from_str::<Value>(data) {
-                    on_event(event)?;
+    while let Some(event) = stream.next().await {
+        match event {
+            Ok(sse_event) => {
+                if let Ok(value) = serde_json::from_str::<Value>(&sse_event.data) {
+                    on_event(value)?;
                 }
+            }
+            Err(e) => {
+                return Err(format!("SSE parse error: {}", e));
             }
         }
     }

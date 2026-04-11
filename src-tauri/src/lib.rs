@@ -34,7 +34,7 @@ pub fn run() {
             crypto::init_master_secret(secret.trim().to_string());
 
             db::init_database(&app_handle)?;
-            desktop_runtime::init_runtime_state(&app_handle);
+            desktop_runtime::init_runtime_state(app);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -74,6 +74,11 @@ pub fn run() {
             get_stats,
             reset_data,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app_handle, event| {
+            if let tauri::RunEvent::Exit = event {
+                desktop_runtime::kill_sidecar(app_handle);
+            }
+        });
 }
