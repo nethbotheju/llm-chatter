@@ -1,0 +1,37 @@
+[package]
+name = "llm-chatter"
+version = "0.1.0"
+description = "Multi-provider LLM chat application with desktop support"
+authors = ["nethbotheju"]
+license = ""
+repository = "https://github.com/nethbotheju/llm-chatter"
+edition = "2024"
+rust-version = "1.85.0"
+
+[lib]
+name = "llm_chatter"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.5.6", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri = { version = "2.10.3", features = [] }
+tauri-plugin-log = "2"
+tauri-plugin-shell = "2"
+rusqlite = { version = "0.39", features = ["bundled"] }
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+reqwest = { version = "0.13", features = ["json", "stream"] }
+tokio = { version = "1", features = ["full"] }
+aes-gcm = "0.10"
+rand = "0.8"
+base64 = "0.22"
+thiserror = "1"
+futures-util = "0.3"
+eventsource-stream = "0.2"
+sha2 = "0.10"
+

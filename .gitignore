@@ -30,6 +30,14 @@ Thumbs.db
 dist
 build
 
+# SEA build artifacts
+desktop-runtime/bin/
+
+# Rust / Cargo
+src-tauri/target
+src-tauri/gen/schemas
+src-tauri/binaries
+
 # Debug
 npm-debug.log*
 yarn-debug.log*

@@ -5,14 +5,8 @@ import { Search, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-interface SearchResult {
-  conversationId: string;
-  conversationTitle: string;
-  messageId: string;
-  snippet: string;
-  createdAt: string;
-}
+import { getSearchService, ensureInit } from "@/lib/services";
+import type { SearchResult } from "@/lib/services";
 
 interface SearchDialogProps {
   open: boolean;
@@ -38,9 +32,9 @@ export function SearchDialog({
 
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
-      const data = await res.json();
-      setResults(data.results || []);
+      await ensureInit();
+      const results = await getSearchService().search(searchQuery);
+      setResults(results);
       setSelectedIndex(0);
     } catch (error) {
       console.error("Search failed:", error);
