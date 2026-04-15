@@ -12,7 +12,7 @@ interface ProviderClientInput {
 
 export function getRuntimeModel(input: ProviderClientInput): LanguageModel {
   const { model, provider } = input;
-  const baseURL = provider.baseUrl ?? undefined;
+  const baseURL = provider.baseUrl?.trim() || undefined;
 
   switch (provider.type) {
     case "openai": {
