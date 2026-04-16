@@ -142,8 +142,13 @@ export default function ChatLayout({
     fetchAssistants();
   }, [fetchConversations, fetchModels, fetchAssistants]);
 
+  const currentConversationIdRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (pathConversationId) {
+    if (
+      pathConversationId &&
+      pathConversationId !== currentConversationIdRef.current
+    ) {
       setCurrentConversationId(pathConversationId);
       fetchConversationMessages(pathConversationId);
     }
@@ -168,6 +173,7 @@ export default function ChatLayout({
   const handleNewChat = useCallback(async () => {
     setMessages([]);
     setCurrentConversationId(null);
+    currentConversationIdRef.current = null;
     router.push("/");
     const enabledAssistants = assistants.filter((a) => a.enabled);
     const defaultAssistant = enabledAssistants.find((a) => a.isDefault) || enabledAssistants[0];
@@ -305,6 +311,7 @@ export default function ChatLayout({
       const data = await getConversationService().create({ assistantId: currentAssistant.id });
       convId = data.id;
       setCurrentConversationId(convId);
+      currentConversationIdRef.current = convId;
       router.push(`/c/${convId}`, { scroll: false });
     }
 
