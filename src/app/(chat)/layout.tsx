@@ -51,7 +51,7 @@ export default function ChatLayout({
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const pathConversationId = pathname.match(/\/c\/([^/]+)/)?.[1] || null;
-  const isNewChat = pathname === "/" && !currentConversationId;
+  const isNewChat = pathname === "/";
 
   const selectedModel = models.find((m) => m.id === selectedModelId);
   const hasVisionModel = selectedModel
@@ -143,11 +143,11 @@ export default function ChatLayout({
   }, [fetchConversations, fetchModels, fetchAssistants]);
 
   useEffect(() => {
-    if (pathConversationId && pathConversationId !== currentConversationId) {
+    if (pathConversationId) {
       setCurrentConversationId(pathConversationId);
       fetchConversationMessages(pathConversationId);
     }
-  }, [pathConversationId, currentConversationId, fetchConversationMessages]);
+  }, [pathConversationId, fetchConversationMessages]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
