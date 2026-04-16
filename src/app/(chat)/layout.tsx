@@ -418,7 +418,7 @@ export default function ChatLayout({
       />
 
       {/* Main content canvas */}
-      <main className="relative ml-64 flex flex-1 flex-col h-screen overflow-y-auto overflow-x-hidden custom-scrollbar scroll-smooth scroll-pb-28">
+      <main className="relative ml-64 flex flex-1 flex-col h-screen overflow-y-auto overflow-x-hidden overscroll-none custom-scrollbar scroll-smooth scroll-pb-28">
         {/* TopAppBar */}
         <TopAppBar
           assistantName={currentAssistant?.name || null}
