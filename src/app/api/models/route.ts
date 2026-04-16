@@ -82,10 +82,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({
-      ...model,
-      capabilities: JSON.parse(model.capabilities),
-    });
+    return NextResponse.json(model);
   } catch (error) {
     console.error("Failed to create model:", error);
     return NextResponse.json(
@@ -136,10 +133,7 @@ export async function PATCH(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({
-      ...model,
-      capabilities: JSON.parse(model.capabilities),
-    });
+    return NextResponse.json(model);
   } catch (error) {
     console.error("Failed to update model:", error);
     return NextResponse.json(

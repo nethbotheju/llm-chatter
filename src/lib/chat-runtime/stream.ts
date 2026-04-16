@@ -40,12 +40,27 @@ export async function* streamChatRuntimeEvents(
     });
 
     let text = "";
+    let streamError: string | null = null;
 
-    for await (const token of result.textStream) {
-      text += token;
-      options?.onToken?.(token);
-      const event: ChatEventDTO = { type: "token", token };
-      yield event;
+    for await (const part of result.fullStream) {
+      if (part.type === "text-delta") {
+        text += part.text;
+        options?.onToken?.(part.text);
+        const event: ChatEventDTO = { type: "token", token: part.text };
+        yield event;
+      } else if (part.type === "error") {
+        const err = part.error;
+        streamError =
+          err instanceof Error
+            ? err.message
+            : typeof err === "string"
+              ? err
+              : JSON.stringify(err);
+      }
+    }
+
+    if (!text.trim() && streamError) {
+      throw new Error(streamError);
     }
 
     const finishReason = (await result.finishReason) ?? null;
