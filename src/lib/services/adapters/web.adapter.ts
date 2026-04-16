@@ -94,6 +94,10 @@ class WebModelService implements IModelService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || "Failed to create model");
+    }
     return parseModel(await res.json());
   }
   async update(input: UpdateModelInput): Promise<Model> {
@@ -102,6 +106,10 @@ class WebModelService implements IModelService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || "Failed to update model");
+    }
     return parseModel(await res.json());
   }
   async delete(id: string): Promise<void> {
