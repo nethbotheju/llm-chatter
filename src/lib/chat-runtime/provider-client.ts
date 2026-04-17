@@ -1,4 +1,5 @@
 import type { LanguageModel } from "ai";
+import { wrapLanguageModel, extractReasoningMiddleware } from "ai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
@@ -19,7 +20,11 @@ export function getRuntimeModel(input: ProviderClientInput): LanguageModel {
       return createOpenAI({ apiKey: provider.apiKey, baseURL })(model);
     }
     case "openai-compatible": {
-      return createOpenAI({ apiKey: provider.apiKey, baseURL }).chat(model);
+      const baseModel = createOpenAI({ apiKey: provider.apiKey, baseURL }).chat(model);
+      return wrapLanguageModel({
+        model: baseModel,
+        middleware: extractReasoningMiddleware({ tagName: "thought" }),
+      });
     }
     case "anthropic": {
       return createAnthropic({ apiKey: provider.apiKey, baseURL })(model);
