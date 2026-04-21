@@ -8,20 +8,18 @@ export async function POST(
 ) {
   const { id: conversationId } = await params;
   const body = await request.json();
-  const { role, content, thinking, attachments } = body;
+  const { role, parts, metadata } = body;
 
   const message = await prisma.message.create({
     data: {
       id: nanoid(),
       conversationId,
       role,
-      content,
-      thinking,
-      attachments: attachments ? JSON.stringify(attachments) : null,
+      parts,
+      metadata: metadata ?? null,
     },
   });
 
-  // Update conversation's updatedAt
   await prisma.conversation.update({
     where: { id: conversationId },
     data: { updatedAt: new Date() },
@@ -36,7 +34,7 @@ export async function PATCH(
 ) {
   const { id: conversationId } = await params;
   const body = await request.json();
-  const { messageId, content } = body;
+  const { messageId, parts } = body;
 
   if (!messageId) {
     return NextResponse.json({ error: "Message ID is required" }, { status: 400 });
@@ -44,7 +42,7 @@ export async function PATCH(
 
   const message = await prisma.message.update({
     where: { id: messageId, conversationId },
-    data: { content },
+    data: { parts },
   });
 
   return NextResponse.json(message);

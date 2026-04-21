@@ -8,7 +8,6 @@ import type {
   SearchResult,
   ExportData,
   Stats,
-  ChatMessageInput,
   CreateProviderInput,
   UpdateProviderInput,
   CreateModelInput,
@@ -53,24 +52,10 @@ export interface IConversationService {
 
 export interface IMessageService {
   get(conversationId: string): Promise<Message[]>;
-  create(conversationId: string, role: string, content: string, thinking?: string, attachments?: string): Promise<Message>;
-  update(conversationId: string, messageId: string, content: string): Promise<void>;
+  create(conversationId: string, role: string, parts: string, metadata?: string): Promise<Message>;
+  update(conversationId: string, messageId: string, parts: string): Promise<void>;
   delete(conversationId: string, messageId: string): Promise<void>;
 }
-
-export interface IChatService {
-  send(
-    messages: ChatMessageInput[],
-    modelId: string,
-    conversationId: string | null,
-    onToken: (token: string) => void,
-    onDone: (fullContent: string) => void,
-    onError: (error: string) => void,
-    signal?: AbortSignal
-  ): Promise<void>;
-  abort(): void;
-}
-
 export interface ISearchService {
   search(query: string): Promise<SearchResult[]>;
 }

@@ -1,8 +1,3 @@
-export { streamChatRuntimeEvents } from "./stream";
-export type {
-  ChatRuntimeInput,
-  ChatRuntimeOutput,
-  ChatRuntimeOptions,
-  ChatRuntimeEventStream,
-} from "./types";
+export { streamChatRuntime } from "./stream";
+export type { ChatRuntimeInput } from "./types";
 export { ChatError } from "./errors";
