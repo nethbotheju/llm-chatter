@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { useChat } from "@ai-sdk/react";
+import type { UIMessage } from "ai";
 import { Sidebar } from "@/components/sidebar/sidebar";
-import { ChatMessages, Message } from "@/components/chat/chat-messages";
+import { ChatMessages } from "@/components/chat/chat-messages";
 import { ChatInput, Attachment } from "@/components/chat/chat-input";
 import { ModelSelector } from "@/components/chat/model-selector";
 import { AssistantSelector } from "@/components/chat/assistant-selector";
@@ -13,7 +15,6 @@ import {
   getMessageService,
   getModelService,
   getAssistantService,
-  getChatService,
   ensureInit,
 } from "@/lib/services";
 import type { Model, Assistant } from "@/lib/services";
@@ -40,15 +41,18 @@ export default function ChatLayout({
   const router = useRouter();
   const pathname = usePathname();
 
-  const [messages, setMessages] = useState<Message[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [models, setModels] = useState<Model[]>([]);
   const [assistants, setAssistants] = useState<Assistant[]>([]);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [currentAssistant, setCurrentAssistant] = useState<Assistant | null>(null);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const chat = useChat({
+    onFinish: () => {
+      fetchConversations();
+    },
+  });
 
   const pathConversationId = pathname.match(/\/c\/([^/]+)/)?.[1] || null;
   const isNewChat = pathname === "/";
@@ -119,14 +123,13 @@ export default function ChatLayout({
       await ensureInit();
       const data = await getConversationService().get(id);
       if (data.messages) {
-        setMessages(
-          data.messages.map((m) => ({
-            id: m.id,
-            role: m.role as "user" | "assistant" | "system",
-            content: m.content,
-            thinking: m.thinking,
-          }))
-        );
+        const uiMessages: UIMessage[] = data.messages.map((m) => ({
+          id: m.id,
+          role: m.role as "user" | "assistant" | "system",
+          parts: JSON.parse(m.parts),
+          ...(m.metadata ? { metadata: JSON.parse(m.metadata) } : {}),
+        }));
+        chat.setMessages(uiMessages);
       }
       if (data.assistant) {
         setCurrentAssistant(data.assistant);
@@ -134,7 +137,7 @@ export default function ChatLayout({
     } catch (error) {
       console.error("Failed to fetch conversation:", error);
     }
-  }, []);
+  }, [chat]);
 
   useEffect(() => {
     fetchConversations();
@@ -171,7 +174,7 @@ export default function ChatLayout({
   }, [router]);
 
   const handleNewChat = useCallback(async () => {
-    setMessages([]);
+    chat.setMessages([]);
     setCurrentConversationId(null);
     currentConversationIdRef.current = null;
     router.push("/");
@@ -180,7 +183,7 @@ export default function ChatLayout({
     if (defaultAssistant) {
       setCurrentAssistant(defaultAssistant);
     }
-  }, [router, assistants]);
+  }, [router, assistants, chat]);
 
   const handleSelectConversation = useCallback((id: string) => {
     router.push(`/c/${id}`);
@@ -200,12 +203,8 @@ export default function ChatLayout({
   }, [currentConversationId, handleNewChat]);
 
   const handleStop = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-      setIsLoading(false);
-    }
-  }, []);
+    chat.stop();
+  }, [chat]);
 
   const handleSelectAssistant = useCallback((assistant: Assistant) => {
     if (!currentConversationId) {
@@ -216,24 +215,25 @@ export default function ChatLayout({
   const handleEditMessage = useCallback(async (messageId: string, newContent: string) => {
     if (!currentConversationId || !selectedModelId || !currentAssistant) return;
 
-    const messageIndex = messages.findIndex((m) => m.id === messageId);
-    if (messageIndex === -1 || messages[messageIndex].role !== "user") return;
+    const messageIndex = chat.messages.findIndex((m) => m.id === messageId);
+    if (messageIndex === -1 || chat.messages[messageIndex].role !== "user") return;
 
-    const messagesToKeep = messages.slice(0, messageIndex);
-    const editedMessage: Message = {
-      ...messages[messageIndex],
-      content: newContent,
-    };
+    const messagesToKeep = chat.messages.slice(0, messageIndex);
+    const editedParts = [{ type: "text" as const, text: newContent }];
 
     try {
       await ensureInit();
-      await getMessageService().update(currentConversationId, messageId, newContent);
+      await getMessageService().update(
+        currentConversationId,
+        messageId,
+        JSON.stringify(editedParts),
+      );
     } catch (error) {
       console.error("Failed to update message:", error);
       return;
     }
 
-    const messagesToDelete = messages.slice(messageIndex + 1);
+    const messagesToDelete = chat.messages.slice(messageIndex + 1);
     for (const msg of messagesToDelete) {
       try {
         await getMessageService().delete(currentConversationId, msg.id);
@@ -242,65 +242,15 @@ export default function ChatLayout({
       }
     }
 
-    setMessages([...messagesToKeep, editedMessage]);
-
-    const messagesForApi = [...messagesToKeep, editedMessage].map((m) => ({
-      id: m.id,
-      role: m.role,
-      content: m.content,
-    }));
-
-    const assistantMessage: Message = {
-      id: `assistant-${Date.now()}`,
-      role: "assistant",
-      content: "",
+    const editedMessage: UIMessage = {
+      ...chat.messages[messageIndex],
+      parts: editedParts,
     };
-    setMessages((prev) => [...prev, assistantMessage]);
-
-    setIsLoading(true);
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
-
-    try {
-      let fullContent = "";
-      await getChatService().send(
-        messagesForApi,
-        selectedModelId,
-        currentConversationId,
-        (token) => {
-          fullContent += token;
-          setMessages((prev) => {
-            const newMessages = [...prev];
-            const lastMessage = newMessages[newMessages.length - 1];
-            if (lastMessage.role === "assistant") {
-              lastMessage.content = fullContent;
-            }
-            return newMessages;
-          });
-        },
-        () => {},
-        (error) => {
-          setMessages((prev) => {
-            const newMessages = [...prev];
-            const lastMessage = newMessages[newMessages.length - 1];
-            if (lastMessage && lastMessage.role === "assistant" && !lastMessage.content.trim()) {
-              lastMessage.content = `Error: ${error}`;
-            }
-            return newMessages;
-          });
-          console.error("Chat error:", error);
-        },
-        abortController.signal
-      );
-    } catch (error) {
-      if ((error as Error).name !== "AbortError") {
-        console.error("Chat error:", error);
-      }
-    } finally {
-      setIsLoading(false);
-      abortControllerRef.current = null;
-    }
-  }, [currentConversationId, messages, selectedModelId, currentAssistant]);
+    chat.setMessages([...messagesToKeep, editedMessage]);
+    chat.sendMessage({ text: newContent, messageId: editedMessage.id }, {
+      body: { modelId: selectedModelId, conversationId: currentConversationId },
+    });
+  }, [currentConversationId, chat, selectedModelId, currentAssistant]);
 
   const handleSendMessage = useCallback(async (message: string, attachments?: Attachment[]) => {
     if (!selectedModelId || !currentAssistant) return;
@@ -315,94 +265,27 @@ export default function ChatLayout({
       router.push(`/c/${convId}`, { scroll: false });
     }
 
-    const attachmentData = attachments?.map((a) => ({
-      type: a.type,
-      url: a.url,
-    }));
-
-    const userMessage: Message = {
-      id: `user-${Date.now()}`,
-      role: "user",
-      content: message,
-    };
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
+    const userParts = [{ type: "text" as const, text: message }];
 
     await getMessageService().create(
       convId,
       "user",
-      message,
-      undefined,
-      attachmentData ? JSON.stringify(attachmentData) : undefined
+      JSON.stringify(userParts),
     );
 
-    if (messages.length === 0) {
+    if (chat.messages.length === 0) {
       const title = message.slice(0, 50) + (message.length > 50 ? "..." : "");
       await getConversationService().update(convId, title);
       fetchConversations();
     }
 
-    const messagesForApi = updatedMessages.map((m) => ({
-      id: m.id,
-      role: m.role,
-      content: m.content,
-    }));
-
-    const assistantMessage: Message = {
-      id: `assistant-${Date.now()}`,
-      role: "assistant",
-      content: "",
-    };
-    setMessages([...updatedMessages, assistantMessage]);
-
-    setIsLoading(true);
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
-
-    try {
-      let fullContent = "";
-      await getChatService().send(
-        messagesForApi,
-        selectedModelId,
-        convId,
-        (token) => {
-          fullContent += token;
-          setMessages((prev) => {
-            const newMessages = [...prev];
-            const lastMessage = newMessages[newMessages.length - 1];
-            if (lastMessage.role === "assistant") {
-              lastMessage.content = fullContent;
-            }
-            return newMessages;
-          });
-        },
-        () => {
-          fetchConversations();
-        },
-        (error) => {
-          setMessages((prev) => {
-            const newMessages = [...prev];
-            const lastMessage = newMessages[newMessages.length - 1];
-            if (lastMessage && lastMessage.role === "assistant" && !lastMessage.content.trim()) {
-              lastMessage.content = `Error: ${error}`;
-            }
-            return newMessages;
-          });
-          console.error("Chat error:", error);
-        },
-        abortController.signal
-      );
-    } catch (error) {
-      if ((error as Error).name !== "AbortError") {
-        console.error("Chat error:", error);
-      }
-    } finally {
-      setIsLoading(false);
-      abortControllerRef.current = null;
-    }
-  }, [currentConversationId, messages, selectedModelId, currentAssistant, router, fetchConversations]);
+    chat.sendMessage({ text: message }, {
+      body: { modelId: selectedModelId, conversationId: convId },
+    });
+  }, [currentConversationId, selectedModelId, currentAssistant, router, fetchConversations, chat]);
 
   const modelName = selectedModel?.name || null;
+  const isLoading = chat.status === "submitted" || chat.status === "streaming";
 
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--surface)]">
@@ -440,7 +323,7 @@ export default function ChatLayout({
         />
 
         {/* Chat area */}
-        {isNewChat && messages.length === 0 ? (
+        {isNewChat && chat.messages.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center p-4">
             <AssistantSelector
               assistants={assistants}
@@ -450,7 +333,7 @@ export default function ChatLayout({
           </div>
         ) : (
           <ChatMessages
-            messages={messages}
+            messages={chat.messages}
             isLoading={isLoading}
             onEditMessage={handleEditMessage}
             modelName={modelName ?? undefined}

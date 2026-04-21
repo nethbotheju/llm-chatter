@@ -64,9 +64,8 @@ model Message {
   conversationId String
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   role           String       // "user" | "assistant" | "system"
-  content        String
-  thinking       String?      // Reasoning/thinking content
-  attachments    String?      // JSON string: [{ type: "image", url: string }]
+  parts          String       // JSON string: UIMessagePart[]
+  metadata       String?      // JSON string: message metadata (usage, provider info, etc.)
   createdAt      DateTime     @default(now())
 
   @@index([conversationId])

@@ -4,7 +4,6 @@ import type {
   IAssistantService,
   IConversationService,
   IMessageService,
-  IChatService,
   ISearchService,
   IExportService,
   IStatsService,
@@ -20,7 +19,6 @@ import type {
   SearchResult,
   ExportData,
   Stats,
-  ChatMessageInput,
   CreateProviderInput,
   UpdateProviderInput,
   CreateModelInput,
@@ -41,7 +39,6 @@ import {
   parseSearchResults,
   parseExportData,
   parseStats,
-  parseChatEvent,
 } from "@/lib/contracts";
 
 class WebProviderService implements IProviderService {
@@ -186,96 +183,25 @@ class WebMessageService implements IMessageService {
     const conv = await fetch(`/api/conversations?id=${conversationId}`).then((r) => r.json());
     return parseMessages(conv.messages || []);
   }
-  async create(conversationId: string, role: string, content: string, thinking?: string, attachments?: string): Promise<Message> {
+  async create(conversationId: string, role: string, parts: string, metadata?: string): Promise<Message> {
     const res = await fetch(`/api/conversations/${conversationId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role, content, thinking, attachments }),
+      body: JSON.stringify({ role, parts, metadata }),
     });
     return parseMessage(await res.json());
   }
-  async update(conversationId: string, messageId: string, content: string): Promise<void> {
+  async update(conversationId: string, messageId: string, parts: string): Promise<void> {
     await fetch(`/api/conversations/${conversationId}/messages`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messageId, content }),
+      body: JSON.stringify({ messageId, parts }),
     });
   }
   async delete(conversationId: string, messageId: string): Promise<void> {
     await fetch(`/api/conversations/${conversationId}/messages?messageId=${messageId}`, {
       method: "DELETE",
     });
-  }
-}
-
-class WebChatService implements IChatService {
-  async send(
-    messages: ChatMessageInput[],
-    modelId: string,
-    conversationId: string | null,
-    onToken: (token: string) => void,
-    onDone: (fullContent: string) => void,
-    onError: (error: string) => void,
-    signal?: AbortSignal
-  ): Promise<void> {
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages, modelId, conversationId }),
-        signal,
-      });
-
-      if (!res.ok) throw new Error("Chat request failed");
-
-      const reader = res.body?.getReader();
-      if (!reader) throw new Error("No reader available");
-
-      let fullContent = "";
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-
-        while (true) {
-          const boundary = buffer.indexOf("\n\n");
-          if (boundary === -1) break;
-
-          const rawEvent = buffer.slice(0, boundary);
-          buffer = buffer.slice(boundary + 2);
-
-          const dataLine = rawEvent
-            .split("\n")
-            .find((line) => line.startsWith("data: "));
-
-          if (!dataLine) continue;
-
-          const payload = dataLine.slice(6);
-          const event = parseChatEvent(JSON.parse(payload));
-
-          if (event.type === "token") {
-            fullContent += event.token;
-            onToken(event.token);
-          } else if (event.type === "done") {
-            fullContent = event.text;
-          } else if (event.type === "error") {
-            throw new Error(event.error.message);
-          }
-        }
-      }
-
-      onDone(fullContent);
-    } catch (error) {
-      if ((error as Error).name === "AbortError") return;
-      onError((error as Error).message || "Chat error");
-    }
-  }
-  abort(): void {
-    // Handled via AbortSignal
   }
 }
 
@@ -312,7 +238,6 @@ export const webModelService = new WebModelService();
 export const webAssistantService = new WebAssistantService();
 export const webConversationService = new WebConversationService();
 export const webMessageService = new WebMessageService();
-export const webChatService = new WebChatService();
 export const webSearchService = new WebSearchService();
 export const webExportService = new WebExportService();
 export const webStatsService = new WebStatsService();

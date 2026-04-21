@@ -1,9 +1,8 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db/client";
-import { nanoid } from "nanoid";
 import { decrypt } from "@/lib/ai/encryption";
-import { streamChatRuntimeEvents } from "@/lib/chat-runtime";
-import { parseChatEvent, providerTypeSchema } from "@/lib/contracts";
+import { streamChatRuntime } from "@/lib/chat-runtime";
+import { providerTypeSchema } from "@/lib/contracts";
 
 export const maxDuration = 60;
 
@@ -19,7 +18,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Get model with provider
     const model = await prisma.model.findUnique({
       where: { id: modelId },
       include: { provider: true },
@@ -39,7 +37,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Get assistant settings from conversation
     let assistantConfig = {
       systemPrompt: "",
       temperature: 0.7,
@@ -71,47 +68,28 @@ export async function POST(request: NextRequest) {
 
     const apiKey = decrypt(apiKeyEncrypted);
 
-    const stream = new ReadableStream({
-      async start(controller) {
-        let doneText = "";
-        let finishReason: string | null = null;
-        const encoder = new TextEncoder();
-        const writeEvent = (event: unknown) => {
-          const normalized = parseChatEvent(event);
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(normalized)}\n\n`));
-          return normalized;
-        };
+    const result = await streamChatRuntime({
+      messages,
+      model: model.name,
+      provider: {
+        type: providerTypeSchema.parse(model.provider.type),
+        apiKey,
+        baseUrl: model.provider.baseUrl,
+      },
+      assistantConfig,
+    });
 
-        try {
-          for await (const event of streamChatRuntimeEvents({
-            messages,
-            model: model.name,
-            provider: {
-              type: providerTypeSchema.parse(model.provider.type),
-              apiKey,
-              baseUrl: model.provider.baseUrl,
-            },
-            assistantConfig,
-          })) {
-            const normalized = writeEvent(event);
-
-            if (normalized.type === "done") {
-              doneText = normalized.text;
-              finishReason = normalized.finishReason ?? null;
-            }
-
-            if (normalized.type === "error") {
-              throw new Error(normalized.error.message);
-            }
-          }
-
-          if (conversationId && doneText && (!finishReason || finishReason === "stop")) {
+    return result.toUIMessageStreamResponse({
+      onFinish: async ({ responseMessage }) => {
+        if (conversationId) {
+          try {
             await prisma.message.create({
               data: {
-                id: nanoid(),
+                id: responseMessage.id,
                 conversationId,
                 role: "assistant",
-                content: doneText,
+                parts: JSON.stringify(responseMessage.parts),
+                metadata: responseMessage.metadata ? JSON.stringify(responseMessage.metadata) : null,
               },
             });
 
@@ -119,20 +97,10 @@ export async function POST(request: NextRequest) {
               where: { id: conversationId },
               data: { updatedAt: new Date() },
             });
+          } catch (error) {
+            console.error("Failed to save assistant message:", error);
           }
-
-          controller.close();
-        } catch (error) {
-          controller.error(error);
         }
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
       },
     });
   } catch (error) {
