@@ -83,11 +83,16 @@ export async function POST(request: NextRequest) {
       onFinish: async ({ responseMessage }) => {
         if (conversationId) {
           try {
-            await prisma.message.create({
-              data: {
+            await prisma.message.upsert({
+              where: { id: responseMessage.id },
+              create: {
                 id: responseMessage.id,
                 conversationId,
                 role: "assistant",
+                parts: JSON.stringify(responseMessage.parts),
+                metadata: responseMessage.metadata ? JSON.stringify(responseMessage.metadata) : null,
+              },
+              update: {
                 parts: JSON.stringify(responseMessage.parts),
                 metadata: responseMessage.metadata ? JSON.stringify(responseMessage.metadata) : null,
               },

@@ -1,15 +1,13 @@
 use std::sync::Mutex;
 use std::time::Duration;
 
-use eventsource_stream::Eventsource;
-use futures_util::{StreamExt, TryStreamExt};
 use reqwest::header::{HeaderMap, AUTHORIZATION};
-use serde_json::Value;
+use serde::Serialize;
 use tauri::Manager;
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct DesktopRuntimeConfig {
     pub port: u16,
     pub token: String,
@@ -32,15 +30,19 @@ struct SidecarProcess {
 pub struct DesktopRuntimeState {
     process: Mutex<SidecarProcess>,
     http_client: reqwest::Client,
+    db_path: String,
+    master_secret: String,
 }
 
-pub fn init_runtime_state(app: &impl Manager<tauri::Wry>) {
+pub fn init_runtime_state(app: &impl Manager<tauri::Wry>, db_path: String, master_secret: String) {
     app.manage(DesktopRuntimeState {
         process: Mutex::new(SidecarProcess {
             config: DesktopRuntimeConfig::default(),
             child: None,
         }),
         http_client: reqwest::Client::new(),
+        db_path,
+        master_secret,
     });
 }
 
@@ -87,7 +89,9 @@ pub async fn ensure_sidecar_started(app: &tauri::AppHandle) -> Result<DesktopRun
         .sidecar("desktop-runtime")
         .map_err(|e| format!("Failed to create sidecar command: {}", e))?
         .env("DESKTOP_RUNTIME_TOKEN", &token)
-        .env("DESKTOP_RUNTIME_PORT", "0");
+        .env("DESKTOP_RUNTIME_PORT", "0")
+        .env("DESKTOP_RUNTIME_DB_PATH", &state.db_path)
+        .env("DESKTOP_RUNTIME_MASTER_SECRET", &state.master_secret);
 
     let (mut rx, child) = sidecar_command
         .spawn()
@@ -160,56 +164,7 @@ pub fn kill_sidecar(app: &impl Manager<tauri::Wry>) {
     }
 }
 
-pub async fn stream_chat_via_sidecar(
-    app: &tauri::AppHandle,
-    body: &Value,
-    mut on_event: impl FnMut(Value) -> Result<(), String>,
-) -> Result<(), String> {
-    let state = app.state::<DesktopRuntimeState>();
-    let runtime = ensure_sidecar_started(app).await?;
-    let url = format!("http://127.0.0.1:{}/chat", runtime.port);
-
-    let mut headers = HeaderMap::new();
-    headers.insert(AUTHORIZATION, format!("Bearer {}", runtime.token).parse().unwrap());
-    headers.insert(reqwest::header::CONTENT_TYPE, "application/json".parse().unwrap());
-
-    let resp = state
-        .http_client
-        .post(&url)
-        .headers(headers)
-        .json(body)
-        .timeout(Duration::from_secs(300))
-        .send()
-        .await
-        .map_err(|e| format!("Failed to connect to sidecar: {}", e))?;
-
-    if !resp.status().is_success() {
-        let status = resp.status();
-        let text = resp.text().await.unwrap_or_default();
-        return Err(format!(
-            "Sidecar error ({}): {}",
-            status,
-            text.chars().take(300).collect::<String>()
-        ));
-    }
-
-    let mut stream = resp
-        .bytes_stream()
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
-        .eventsource();
-
-    while let Some(event) = stream.next().await {
-        match event {
-            Ok(sse_event) => {
-                if let Ok(value) = serde_json::from_str::<Value>(&sse_event.data) {
-                    on_event(value)?;
-                }
-            }
-            Err(e) => {
-                return Err(format!("SSE parse error: {}", e));
-            }
-        }
-    }
-
-    Ok(())
+#[tauri::command]
+pub async fn get_sidecar_config(app: tauri::AppHandle) -> Result<DesktopRuntimeConfig, String> {
+    ensure_sidecar_started(&app).await
 }

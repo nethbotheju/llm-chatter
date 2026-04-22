@@ -41,7 +41,7 @@ pub fn export_data(state: State<DbState>) -> Result<serde_json::Value, String> {
 
         let mut msg_stmt = conn
             .prepare(
-                "SELECT role, content, thinking, created_at FROM message WHERE conversation_id = ?1 ORDER BY created_at ASC",
+                "SELECT role, parts, metadata, created_at FROM message WHERE conversation_id = ?1 ORDER BY created_at ASC",
             )
             .map_err(|e| e.to_string())?;
 
@@ -49,8 +49,8 @@ pub fn export_data(state: State<DbState>) -> Result<serde_json::Value, String> {
             .query_map(params![conv_id], |row| {
                 Ok(serde_json::json!({
                     "role": row.get::<_, String>(0)?,
-                    "content": row.get::<_, String>(1)?,
-                    "thinking": row.get::<_, Option<String>>(2)?,
+                    "parts": row.get::<_, String>(1)?,
+                    "metadata": row.get::<_, Option<String>>(2)?,
                     "createdAt": row.get::<_, String>(3)?,
                 }))
             })

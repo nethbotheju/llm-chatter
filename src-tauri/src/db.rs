@@ -115,9 +115,8 @@ pub struct Message {
     pub id: String,
     pub conversation_id: String,
     pub role: String,
-    pub content: String,
-    pub thinking: Option<String>,
-    pub attachments: Option<String>,
+    pub parts: String,
+    pub metadata: Option<String>,
     pub created_at: String,
 }
 
@@ -127,9 +126,8 @@ impl Message {
             id: row.get("id")?,
             conversation_id: row.get("conversation_id")?,
             role: row.get("role")?,
-            content: row.get("content")?,
-            thinking: row.get("thinking")?,
-            attachments: row.get("attachments")?,
+            parts: row.get("parts")?,
+            metadata: row.get("metadata")?,
             created_at: row.get("created_at")?,
         })
     }
@@ -250,9 +248,8 @@ pub fn init_database(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> 
             id TEXT PRIMARY KEY,
             conversation_id TEXT NOT NULL REFERENCES conversation(id) ON DELETE CASCADE,
             role TEXT NOT NULL,
-            content TEXT NOT NULL,
-            thinking TEXT,
-            attachments TEXT,
+            parts TEXT NOT NULL,
+            metadata TEXT,
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
 
@@ -262,8 +259,80 @@ pub fn init_database(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> 
 
     seed_default_assistants(&conn)?;
 
+    migrate_message_table(&conn)?;
+
     let conn = Mutex::new(conn);
     app.manage(DbState(conn));
+
+    Ok(())
+}
+
+fn migrate_message_table(conn: &Connection) -> Result<(), Box<dyn std::error::Error>> {
+    let has_parts: bool = conn
+        .query_row(
+            "SELECT COUNT(*) > 0 FROM pragma_table_info('message') WHERE name = 'parts'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(false);
+
+    if has_parts {
+        return Ok(());
+    }
+
+    conn.execute_batch(
+        "ALTER TABLE message ADD COLUMN parts TEXT;
+         ALTER TABLE message ADD COLUMN metadata TEXT;"
+    )?;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, content, thinking FROM message WHERE parts IS NULL"
+    )?;
+
+    let rows: Vec<(String, String, Option<String>)> = stmt
+        .query_map([], |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+
+    for (id, content, thinking) in rows {
+        let mut parts = vec![serde_json::json!({
+            "type": "text",
+            "text": content
+        })];
+
+        if let Some(thinking_text) = thinking {
+            if !thinking_text.is_empty() {
+                parts.push(serde_json::json!({
+                    "type": "reasoning",
+                    "text": thinking_text
+                }));
+            }
+        }
+
+        let parts_json = serde_json::to_string(&parts)?;
+        conn.execute(
+            "UPDATE message SET parts = ?1 WHERE id = ?2",
+            params![parts_json, id],
+        )?;
+    }
+
+    conn.execute_batch(
+        "CREATE TABLE message_new (
+            id TEXT PRIMARY KEY,
+            conversation_id TEXT NOT NULL REFERENCES conversation(id) ON DELETE CASCADE,
+            role TEXT NOT NULL,
+            parts TEXT NOT NULL,
+            metadata TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        INSERT INTO message_new (id, conversation_id, role, parts, metadata, created_at)
+            SELECT id, conversation_id, role, parts, metadata, created_at FROM message;
+        DROP TABLE message;
+        ALTER TABLE message_new RENAME TO message;
+        CREATE INDEX IF NOT EXISTS idx_message_conversation_id ON message(conversation_id);
+        CREATE INDEX IF NOT EXISTS idx_message_created_at ON message(created_at);"
+    )?;
 
     Ok(())
 }

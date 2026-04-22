@@ -296,18 +296,6 @@ class TauriMessageService implements IMessageService {
   }
 }
 
-// TauriChatService removed - desktop will use useChat with sidecar transport
-// in a future phase. This stub keeps the export for backward compatibility.
-
-class TauriChatService {
-  async send(): Promise<void> {
-    throw new Error("TauriChatService is deprecated. Use useChat with sidecar transport.");
-  }
-  abort(): void {
-    // no-op
-  }
-}
-
 class TauriSearchService implements ISearchService {
   async search(query: string): Promise<SearchResult[]> {
     const result = await invoke<{ results: SearchResult[] }>("search_messages", { query });
@@ -338,7 +326,6 @@ export const tauriModelService = new TauriModelService();
 export const tauriAssistantService = new TauriAssistantService();
 export const tauriConversationService = new TauriConversationService();
 export const tauriMessageService = new TauriMessageService();
-export const tauriChatService = new TauriChatService();
 export const tauriSearchService = new TauriSearchService();
 export const tauriExportService = new TauriExportService();
 export const tauriStatsService = new TauriStatsService();

@@ -4,6 +4,7 @@ mod db;
 mod desktop_runtime;
 
 use commands::*;
+use desktop_runtime::get_sidecar_config;
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -33,8 +34,14 @@ pub fn run() {
 
             crypto::init_master_secret(secret.trim().to_string());
 
+            let db_path = app_data_dir
+                .join("ilm-chatter.db")
+                .to_str()
+                .expect("invalid db path")
+                .to_string();
+
             db::init_database(&app_handle)?;
-            desktop_runtime::init_runtime_state(app);
+            desktop_runtime::init_runtime_state(app, db_path, secret.trim().to_string());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -65,9 +72,10 @@ pub fn run() {
             create_message,
             update_message,
             delete_message,
-            // Chat
-            send_chat,
-            abort_chat,
+            // Desktop runtime
+            get_sidecar_config,
+            save_assistant_message,
+            resolve_chat_config,
             // Utils
             search_messages,
             export_data,

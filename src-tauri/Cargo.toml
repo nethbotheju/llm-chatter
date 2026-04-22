@@ -25,13 +25,10 @@ tauri-plugin-shell = "2"
 rusqlite = { version = "0.39", features = ["bundled"] }
 uuid = { version = "1", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
-reqwest = { version = "0.13", features = ["json", "stream"] }
+reqwest = { version = "0.13", features = ["json"] }
 tokio = { version = "1", features = ["full"] }
 aes-gcm = "0.10"
 rand = "0.8"
 base64 = "0.22"
 thiserror = "1"
-futures-util = "0.3"
-eventsource-stream = "0.2"
 sha2 = "0.10"
-
