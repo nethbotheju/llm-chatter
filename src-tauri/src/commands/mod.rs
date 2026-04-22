@@ -1,5 +1,4 @@
 pub mod assistants;
-pub mod chat;
 pub mod conversations;
 pub mod export;
 pub mod models;
@@ -8,7 +7,6 @@ pub mod search;
 pub mod utils;
 
 pub use assistants::*;
-pub use chat::*;
 pub use conversations::*;
 pub use export::*;
 pub use models::*;

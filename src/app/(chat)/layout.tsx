@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { useChat } from "@ai-sdk/react";
+import { useChat, type UseChatOptions } from "@ai-sdk/react";
+import { DefaultChatTransport, type ChatTransport } from "ai";
 import type { UIMessage } from "ai";
 import { Sidebar } from "@/components/sidebar/sidebar";
 import { ChatMessages } from "@/components/chat/chat-messages";
@@ -16,6 +17,9 @@ import {
   getModelService,
   getAssistantService,
   ensureInit,
+  isTauri,
+  getChatTransportConfig,
+  resolveChatConfig,
 } from "@/lib/services";
 import type { Model, Assistant } from "@/lib/services";
 
@@ -38,6 +42,54 @@ export default function ChatLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const [transport, setTransport] = useState<ChatTransport<UIMessage> | undefined>(undefined);
+  const [transportReady, setTransportReady] = useState(false);
+
+  useEffect(() => {
+    if (isTauri()) {
+      console.log("[Desktop] Resolving sidecar transport...");
+      getChatTransportConfig()
+        .then((config) => {
+          console.log("[Desktop] Sidecar config:", config);
+          if (config) {
+            setTransport(new DefaultChatTransport({
+              api: config.apiUrl,
+              headers: config.headers,
+            }));
+          }
+          setTransportReady(true);
+        })
+        .catch((err) => {
+          console.error("[Desktop] Failed to resolve sidecar transport:", err);
+          setTransportReady(true);
+        });
+    } else {
+      setTransportReady(true);
+    }
+  }, []);
+
+  if (!transportReady) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[var(--surface)]">
+        <div className="text-[var(--text-secondary)]">Loading...</div>
+      </div>
+    );
+  }
+
+  return (
+    <ChatLayoutInner transport={transport}>
+      {children}
+    </ChatLayoutInner>
+  );
+}
+
+function ChatLayoutInner({
+  transport,
+  children,
+}: {
+  transport: ChatTransport<UIMessage> | undefined;
+  children: React.ReactNode;
+}) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -48,19 +100,8 @@ export default function ChatLayout({
   const [currentAssistant, setCurrentAssistant] = useState<Assistant | null>(null);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
 
-  const chat = useChat({
-    onFinish: () => {
-      fetchConversations();
-    },
-  });
-
-  const pathConversationId = pathname.match(/\/c\/([^/]+)/)?.[1] || null;
-  const isNewChat = pathname === "/";
-
-  const selectedModel = models.find((m) => m.id === selectedModelId);
-  const hasVisionModel = selectedModel
-    ? parseModelCapabilities(selectedModel.capabilities).includes("vision")
-    : false;
+  const currentConversationIdRef = useRef<string | null>(null);
+  const setMessagesRef = useRef<((messages: UIMessage[]) => void) | null>(null);
 
   const fetchConversations = useCallback(async () => {
     try {
@@ -72,18 +113,61 @@ export default function ChatLayout({
     }
   }, []);
 
+  const onFinish = useCallback(async (options: { message: UIMessage; isAbort: boolean; isError: boolean }) => {
+    fetchConversations();
+
+    if (isTauri() && !options.isAbort && !options.isError && currentConversationIdRef.current) {
+      try {
+        const { invoke } = await import("@tauri-apps/api/core");
+        await invoke("save_assistant_message", {
+          input: {
+            conversationId: currentConversationIdRef.current,
+            messageId: options.message.id,
+            role: options.message.role,
+            parts: JSON.stringify(options.message.parts),
+            metadata: options.message.metadata ? JSON.stringify(options.message.metadata) : null,
+          },
+        });
+      } catch (error) {
+        console.error("Failed to save assistant message:", error);
+      }
+    }
+  }, [fetchConversations]);
+
+  const chatOptions = useMemo<UseChatOptions<UIMessage>>(() => ({
+    transport,
+    onFinish,
+  }), [transport, onFinish]);
+
+  const chat = useChat(chatOptions);
+  setMessagesRef.current = chat.setMessages;
+
+  const pathConversationId = pathname.match(/\/c\/([^/]+)/)?.[1] || null;
+  const isNewChat = pathname === "/";
+
+  const selectedModel = models.find((m) => m.id === selectedModelId);
+  const hasVisionModel = selectedModel
+    ? parseModelCapabilities(selectedModel.capabilities).includes("vision")
+    : false;
+
+  const selectedModelIdRef = useRef<string | null>(null);
+  selectedModelIdRef.current = selectedModelId;
+
   const fetchModels = useCallback(async () => {
     try {
       await ensureInit();
       const data = await getModelService().getAll();
       setModels(data);
-      if (data.length > 0 && !selectedModelId) {
+      if (data.length > 0 && !selectedModelIdRef.current) {
         setSelectedModelId(data[0].id);
       }
     } catch (error) {
       console.error("Failed to fetch models:", error);
     }
-  }, [selectedModelId]);
+  }, []);
+
+  const currentConversationIdRef2 = useRef<string | null>(null);
+  currentConversationIdRef2.current = currentConversationId;
 
   const fetchAssistants = useCallback(async () => {
     try {
@@ -105,7 +189,7 @@ export default function ChatLayout({
       }
 
       setAssistants(data);
-      if (!currentConversationId) {
+      if (!currentConversationIdRef2.current) {
         const enabledAssistants = data.filter((a: Assistant) => a.enabled);
         const defaultAssistant =
           enabledAssistants.find((a: Assistant) => a.isDefault) || enabledAssistants[0] || null;
@@ -116,7 +200,7 @@ export default function ChatLayout({
     } catch (error) {
       console.error("Failed to fetch assistants:", error);
     }
-  }, [currentConversationId]);
+  }, []);
 
   const fetchConversationMessages = useCallback(async (id: string) => {
     try {
@@ -129,7 +213,7 @@ export default function ChatLayout({
           parts: JSON.parse(m.parts),
           ...(m.metadata ? { metadata: JSON.parse(m.metadata) } : {}),
         }));
-        chat.setMessages(uiMessages);
+        setMessagesRef.current?.(uiMessages);
       }
       if (data.assistant) {
         setCurrentAssistant(data.assistant);
@@ -137,7 +221,7 @@ export default function ChatLayout({
     } catch (error) {
       console.error("Failed to fetch conversation:", error);
     }
-  }, [chat]);
+  }, []);
 
   useEffect(() => {
     fetchConversations();
@@ -145,13 +229,12 @@ export default function ChatLayout({
     fetchAssistants();
   }, [fetchConversations, fetchModels, fetchAssistants]);
 
-  const currentConversationIdRef = useRef<string | null>(null);
-
   useEffect(() => {
     if (
       pathConversationId &&
       pathConversationId !== currentConversationIdRef.current
     ) {
+      currentConversationIdRef.current = pathConversationId;
       setCurrentConversationId(pathConversationId);
       fetchConversationMessages(pathConversationId);
     }
@@ -212,6 +295,20 @@ export default function ChatLayout({
     }
   }, [currentConversationId]);
 
+  const buildRequestBody = useCallback(async (modelId: string, conversationId: string | null) => {
+    if (isTauri()) {
+      console.log("[Desktop] Resolving chat config for model:", modelId, "conv:", conversationId);
+      const config = await resolveChatConfig(modelId, conversationId);
+      console.log("[Desktop] Resolved config:", { model: config.model, providerType: config.provider.type, hasApiKey: !!config.provider.apiKey });
+      return {
+        model: config.model,
+        provider: config.provider,
+        assistantConfig: config.assistantConfig,
+      };
+    }
+    return { modelId, conversationId };
+  }, []);
+
   const handleEditMessage = useCallback(async (messageId: string, newContent: string) => {
     if (!currentConversationId || !selectedModelId || !currentAssistant) return;
 
@@ -247,10 +344,10 @@ export default function ChatLayout({
       parts: editedParts,
     };
     chat.setMessages([...messagesToKeep, editedMessage]);
-    chat.sendMessage({ text: newContent, messageId: editedMessage.id }, {
-      body: { modelId: selectedModelId, conversationId: currentConversationId },
-    });
-  }, [currentConversationId, chat, selectedModelId, currentAssistant]);
+
+    const body = await buildRequestBody(selectedModelId, currentConversationId);
+    chat.sendMessage({ text: newContent, messageId: editedMessage.id }, { body });
+  }, [currentConversationId, chat, selectedModelId, currentAssistant, buildRequestBody]);
 
   const handleSendMessage = useCallback(async (message: string, attachments?: Attachment[]) => {
     if (!selectedModelId || !currentAssistant) return;
@@ -279,10 +376,11 @@ export default function ChatLayout({
       fetchConversations();
     }
 
-    chat.sendMessage({ text: message }, {
-      body: { modelId: selectedModelId, conversationId: convId },
-    });
-  }, [currentConversationId, selectedModelId, currentAssistant, router, fetchConversations, chat]);
+    console.log("[Desktop] handleSendMessage:", { selectedModelId, hasAssistant: !!currentAssistant, convId });
+    const body = await buildRequestBody(selectedModelId!, convId);
+    console.log("[Desktop] Sending message with body keys:", Object.keys(body));
+    chat.sendMessage({ text: message }, { body });
+  }, [currentConversationId, selectedModelId, currentAssistant, router, fetchConversations, chat, buildRequestBody]);
 
   const modelName = selectedModel?.name || null;
   const isLoading = chat.status === "submitted" || chat.status === "streaming";
