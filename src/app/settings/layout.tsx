@@ -50,10 +50,10 @@ export default function SettingsLayout({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "settings-nav-item flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium",
+                  "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors duration-150",
                   isActive
                     ? "bg-[var(--surface-container-highest)] text-[var(--on-surface)]"
-                    : "text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
+                    : "text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
                 )}
               >
                 <Icon className="h-4 w-4" />

@@ -7,14 +7,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ConversationList } from "./conversation-list";
 import { SearchDialog } from "./search-dialog";
 
-interface Conversation {
-  id: string;
-  title: string | null;
-  createdAt: Date;
-}
+import type { UIConversation } from "@/types";
 
 interface SidebarProps {
-  conversations: Conversation[];
+  conversations: UIConversation[];
   activeConversationId?: string;
   onNewChat: () => void;
   onSelectConversation: (id: string) => void;
