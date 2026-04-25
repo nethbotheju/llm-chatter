@@ -2,14 +2,10 @@
 
 import { ConversationItem } from "./conversation-item";
 
-interface Conversation {
-  id: string;
-  title: string | null;
-  createdAt: Date;
-}
+import type { UIConversation } from "@/types";
 
 interface ConversationListProps {
-  conversations: Conversation[];
+  conversations: UIConversation[];
   activeId?: string;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
