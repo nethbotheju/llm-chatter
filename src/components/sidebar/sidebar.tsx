@@ -119,10 +119,10 @@ export function Sidebar({
         </div>
 
         {/* Footer */}
-        <div className="shrink-0 border-t border-[var(--outline-variant)]/10">
+        <div className="shrink-0 border-t border-[var(--outline-variant)]/10 py-3">
           <a
             href="/settings"
-            className="flex w-full items-center py-3 text-sm font-medium text-neutral-400 transition-colors hover:bg-[var(--surface-container-high)] hover:text-neutral-100"
+            className="flex w-full items-center py-2.5 text-sm font-medium text-neutral-400 transition-colors hover:bg-[var(--surface-container-high)] hover:text-neutral-100"
             title="Settings"
           >
             <div className="flex w-16 shrink-0 items-center justify-center">
