@@ -29,6 +29,9 @@ export function ChatMessage({
   onEdit,
 }: ChatMessageProps) {
   const { id, role, parts } = message;
+  const messageModelName =
+    (message.metadata as { modelName?: string } | undefined)?.modelName ||
+    modelName;
   const isUser = role === "user";
   const [copied, setCopied] = useState(false);
   const userText = isUser ? getUserText(message) : "";
@@ -115,7 +118,7 @@ export function ChatMessage({
           <Sparkles className="h-3.5 w-3.5 text-[var(--primary-foreground)]" />
         </div>
         <span className="text-sm font-bold tracking-tight text-white">
-          {modelName || "AI"}
+          {messageModelName || "AI"}
         </span>
       </div>
 
