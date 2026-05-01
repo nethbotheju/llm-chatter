@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { nanoid } from "nanoid";
 import { prisma } from "@/lib/db/client";
 import { decrypt } from "@/lib/ai/encryption";
 import { streamChatRuntime } from "@/lib/chat-runtime";
@@ -80,6 +81,7 @@ export async function POST(request: NextRequest) {
     });
 
     return result.toUIMessageStreamResponse({
+      generateMessageId: () => nanoid(),
       messageMetadata: () => ({
         modelName: model.name,
       }),
