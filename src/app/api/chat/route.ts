@@ -80,6 +80,9 @@ export async function POST(request: NextRequest) {
     });
 
     return result.toUIMessageStreamResponse({
+      messageMetadata: () => ({
+        modelName: model.name,
+      }),
       onFinish: async ({ responseMessage }) => {
         if (conversationId) {
           try {

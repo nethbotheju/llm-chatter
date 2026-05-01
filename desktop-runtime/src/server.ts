@@ -105,6 +105,9 @@ async function run(): Promise<void> {
       process.stderr.write(`[sidecar] streamChatRuntime resolved, creating response...\n`);
       const response = result.toUIMessageStreamResponse({
         sendReasoning: true,
+        messageMetadata: () => ({
+          modelName: model,
+        }),
       });
 
       process.stderr.write(`[sidecar] Response status=${response.status} hasBody=${!!response.body}\n`);
