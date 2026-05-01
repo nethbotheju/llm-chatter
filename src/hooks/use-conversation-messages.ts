@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
-import { usePathname } from "next/navigation";
 import type { UIMessage } from "ai";
 import { getConversationService, ensureInit } from "@/lib/services";
 import type { Assistant } from "@/lib/services";
@@ -12,12 +11,7 @@ export function useConversationMessages(
   setCurrentConversationId: (id: string | null) => void,
   currentConversationId: string | null,
 ) {
-  const pathname = usePathname();
-  const pathConversationId = pathname.match(/\/c\/([^/]+)/)?.[1] || null;
-  const isNewChat = pathname === "/";
-
-  const conversationIdRef = useRef<string | null>(currentConversationId);
-  conversationIdRef.current = currentConversationId;
+  const prevConversationIdRef = useRef<string | null>(null);
 
   const fetchConversationMessages = useCallback(async (id: string) => {
     try {
@@ -40,16 +34,33 @@ export function useConversationMessages(
     }
   }, [setMessages, setCurrentAssistant]);
 
+  // React to currentConversationId changes directly (set by both URL navigation
+  // and manual state updates via window.history.pushState/replaceState).
+  // This avoids relying on usePathname() which doesn't update with pushState
+  // in static export builds.
   useEffect(() => {
-    if (pathConversationId && pathConversationId !== conversationIdRef.current) {
-      conversationIdRef.current = pathConversationId;
-      setCurrentConversationId(pathConversationId);
-      fetchConversationMessages(pathConversationId);
-    } else if (isNewChat && conversationIdRef.current !== null) {
-      conversationIdRef.current = null;
-      setCurrentConversationId(null);
-    }
-  }, [pathConversationId, isNewChat, fetchConversationMessages, setCurrentConversationId]);
+    if (currentConversationId === prevConversationIdRef.current) return;
+    prevConversationIdRef.current = currentConversationId;
 
-  return { pathConversationId, isNewChat };
+    if (currentConversationId) {
+      fetchConversationMessages(currentConversationId);
+    } else {
+      setMessages([]);
+    }
+  }, [currentConversationId, fetchConversationMessages, setMessages]);
+
+  // On initial mount, sync from the URL in case the user landed directly on /c/{id}
+  useEffect(() => {
+    const pathConversationId = window.location.pathname.match(/\/c\/([^/]+)/)?.[1] || null;
+    if (pathConversationId && !currentConversationId) {
+      setCurrentConversationId(pathConversationId);
+    }
+    prevConversationIdRef.current = currentConversationId;
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const isNewChat = currentConversationId === null;
+
+  return { isNewChat };
 }

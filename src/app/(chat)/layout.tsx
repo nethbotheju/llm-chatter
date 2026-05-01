@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { useChat } from "@ai-sdk/react";
 import type { ChatTransport, UIMessage } from "ai";
 import { Sidebar } from "@/components/sidebar/sidebar";
@@ -53,8 +52,6 @@ function ChatLayoutInner({
   transport: ChatTransport<UIMessage> | undefined;
   children: React.ReactNode;
 }) {
-  const router = useRouter();
-
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
 
   const {
@@ -120,10 +117,15 @@ function ChatLayoutInner({
   }, [currentConversationId, selectAssistant]);
 
   const handleSelectConversation = useCallback((id: string) => {
-    router.push(`/c/${id}`);
-  }, [router]);
+    window.history.pushState(null, '', `/c/${id}`);
+    setCurrentConversationId(id);
+  }, []);
 
-  const { isCollapsed, toggle: toggleSidebar } = useSidebarState();
+  const { isCollapsed, toggle: toggleSidebar, mounted } = useSidebarState();
+
+  // Prevent hydration mismatch: always render expanded during SSR/hydration,
+  // then transition to the stored collapsed state after mount.
+  const effectiveCollapsed = mounted && isCollapsed;
 
   useKeyboardShortcuts({ onNewChat: handleNewChat, onToggleSidebar: toggleSidebar });
 
@@ -144,11 +146,11 @@ function ChatLayoutInner({
         onNewChat={handleNewChat}
         onSelectConversation={handleSelectConversation}
         onDeleteConversation={handleDeleteConversation}
-        isCollapsed={isCollapsed}
+        isCollapsed={effectiveCollapsed}
         onToggleCollapse={toggleSidebar}
       />
 
-      <main className={`relative flex flex-1 flex-col h-screen overflow-y-auto overflow-x-hidden overscroll-none custom-scrollbar scroll-smooth scroll-pb-28 transition-[margin] duration-300 ease-in-out ${isCollapsed ? "ml-16" : "ml-64"}`}>
+      <main className={`relative flex flex-1 flex-col h-screen overflow-y-auto overflow-x-hidden overscroll-none custom-scrollbar scroll-smooth scroll-pb-28 transition-[margin] duration-300 ease-in-out ${effectiveCollapsed ? "ml-16" : "ml-64"}`}>
         <TopAppBar
           assistantName={currentAssistant?.name || null}
           modelName={modelName}
