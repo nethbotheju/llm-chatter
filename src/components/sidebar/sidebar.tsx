@@ -90,7 +90,7 @@ export function Sidebar({
                 className="flex w-full items-center justify-center gap-2 rounded-full bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-foreground)] transition-all hover:opacity-90 active:scale-95"
               >
                 <Plus className="h-4 w-4" />
-                <span>New Chat</span>
+                <span className="text-[15px]">New Chat</span>
               </Button>
             </div>
           )}
