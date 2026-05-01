@@ -86,6 +86,7 @@ function ChatLayoutInner({
     chat.setMessages,
     setCurrentAssistant,
     setCurrentConversationId,
+    currentConversationId,
   );
 
   const {

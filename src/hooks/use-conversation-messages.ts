@@ -10,12 +10,14 @@ export function useConversationMessages(
   setMessages: (messages: UIMessage[]) => void,
   setCurrentAssistant: (assistant: Assistant | null) => void,
   setCurrentConversationId: (id: string | null) => void,
+  currentConversationId: string | null,
 ) {
   const pathname = usePathname();
   const pathConversationId = pathname.match(/\/c\/([^/]+)/)?.[1] || null;
   const isNewChat = pathname === "/";
 
-  const conversationIdRef = useRef<string | null>(null);
+  const conversationIdRef = useRef<string | null>(currentConversationId);
+  conversationIdRef.current = currentConversationId;
 
   const fetchConversationMessages = useCallback(async (id: string) => {
     try {
