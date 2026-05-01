@@ -1,11 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Settings, HelpCircle, Network } from "lucide-react";
+import {
+  Plus,
+  Settings,
+  MessageSquare,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ConversationList } from "./conversation-list";
 import { SearchDialog } from "./search-dialog";
+import { cn } from "@/lib/utils";
 
 import type { UIConversation } from "@/types";
 
@@ -15,6 +20,8 @@ interface SidebarProps {
   onNewChat: () => void;
   onSelectConversation: (id: string) => void;
   onDeleteConversation: (id: string) => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 export function Sidebar({
@@ -23,6 +30,8 @@ export function Sidebar({
   onNewChat,
   onSelectConversation,
   onDeleteConversation,
+  isCollapsed = false,
+  onToggleCollapse,
 }: SidebarProps) {
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -37,69 +46,92 @@ export function Sidebar({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  const labelClass = cn(
+    "overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out",
+    isCollapsed ? "w-0 opacity-0" : "w-auto flex-1 opacity-100"
+  );
+
   return (
     <>
-      <aside className="fixed left-0 top-0 z-40 flex h-full w-64 flex-col bg-[var(--surface-container-low)] tracking-tight max-md:hidden">
+      <aside
+        className={cn(
+          "fixed left-0 top-0 z-40 flex h-full flex-col bg-[var(--surface-container-low)] tracking-tight transition-[width] duration-300 ease-in-out max-md:hidden",
+          isCollapsed ? "w-16" : "w-64"
+        )}
+      >
         {/* Header */}
-        <div className="p-6">
-          <h1 className="mb-0.5 text-xl font-bold tracking-tighter text-neutral-100">
-            Ilm Chatter
-          </h1>
-          <p className="text-[10px] font-medium text-[var(--on-surface-variant)] opacity-60">
-            Anthracite Edition
-          </p>
+        <div className="flex h-14 shrink-0 items-center">
+          <div className="flex w-16 shrink-0 items-center justify-center">
+            <MessageSquare className="h-5 w-5 text-neutral-100" />
+          </div>
+          <div className={labelClass}>
+            <h1 className="text-xl font-bold tracking-tighter text-neutral-100">
+              Ilm Chatter
+            </h1>
+          </div>
         </div>
 
         {/* New Chat CTA */}
-        <div className="mb-6 px-4">
-          <Button
-            onClick={onNewChat}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-[var(--primary)] px-4 py-2.5 font-semibold text-[var(--primary-foreground)] transition-all hover:opacity-90 active:scale-95"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="text-sm">New Chat</span>
-          </Button>
+        <div className="mb-6 mt-6 shrink-0">
+          {isCollapsed ? (
+            <div className="flex w-16 justify-center">
+              <Button
+                onClick={onNewChat}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--primary)] p-0 font-semibold text-[var(--primary-foreground)] transition-all hover:opacity-90 active:scale-95"
+                title="New chat"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="px-4">
+              <Button
+                onClick={onNewChat}
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-foreground)] transition-all hover:opacity-90 active:scale-95"
+              >
+                <Plus className="h-4 w-4" />
+                <span>New Chat</span>
+              </Button>
+            </div>
+          )}
         </div>
 
-        {/* Navigation */}
+        {/* CHATS section */}
         <div className="flex flex-1 flex-col min-h-0">
-          <nav className="mb-6 space-y-1 px-2">
-            <button className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-neutral-400 transition-colors hover:bg-[var(--surface-container-high)] hover:text-neutral-100">
-              <Network className="h-5 w-5" />
-              Projects
-            </button>
-            <a
-              href="/settings"
-              className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-neutral-400 transition-colors hover:bg-[var(--surface-container-high)] hover:text-neutral-100"
-            >
-              <Settings className="h-5 w-5" />
-              Settings
-            </a>
-          </nav>
+          {!isCollapsed && (
+            <div className="mb-2 px-6">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--on-surface-variant)] opacity-50">
+                Chats
+              </span>
+            </div>
+          )}
 
-          {/* CHATS section */}
-          <div className="mb-2 px-6">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--on-surface-variant)] opacity-50">
-              Chats
-            </span>
-          </div>
-
-          <ScrollArea className="flex-1 custom-scrollbar px-2 pb-4">
-            <ConversationList
-              conversations={conversations}
-              activeId={activeConversationId}
-              onSelect={onSelectConversation}
-              onDelete={onDeleteConversation}
-            />
-          </ScrollArea>
+          {!isCollapsed && (
+            <ScrollArea className="flex-1 custom-scrollbar px-2 pb-4">
+              <ConversationList
+                conversations={conversations}
+                activeId={activeConversationId}
+                onSelect={onSelectConversation}
+                onDelete={onDeleteConversation}
+              />
+            </ScrollArea>
+          )}
         </div>
 
         {/* Footer */}
-        <div className="mt-auto border-t border-[var(--outline-variant)]/10 p-4">
-          <button className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-neutral-400 transition-colors hover:bg-[var(--surface-container-high)] hover:text-neutral-100">
-            <HelpCircle className="h-5 w-5" />
-            Help
-          </button>
+        <div className="shrink-0 border-t border-[var(--outline-variant)]/10">
+          <a
+            href="/settings"
+            className="flex w-full items-center py-3 text-sm font-medium text-neutral-400 transition-colors hover:bg-[var(--surface-container-high)] hover:text-neutral-100"
+            title="Settings"
+          >
+            <div className="flex w-16 shrink-0 items-center justify-center">
+              <Settings className="h-5 w-5 shrink-0" />
+            </div>
+            <div className={labelClass}>
+              <span>Settings</span>
+            </div>
+          </a>
         </div>
       </aside>
 

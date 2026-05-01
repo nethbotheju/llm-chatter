@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 
 interface UseKeyboardShortcutsOptions {
   onNewChat: () => void;
+  onToggleSidebar?: () => void;
 }
 
-export function useKeyboardShortcuts({ onNewChat }: UseKeyboardShortcutsOptions) {
+export function useKeyboardShortcuts({ onNewChat, onToggleSidebar }: UseKeyboardShortcutsOptions) {
   const router = useRouter();
 
   useEffect(() => {
@@ -20,9 +21,13 @@ export function useKeyboardShortcuts({ onNewChat }: UseKeyboardShortcutsOptions)
         e.preventDefault();
         router.push("/settings");
       }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        onToggleSidebar?.();
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onNewChat, router]);
+  }, [onNewChat, onToggleSidebar, router]);
 }

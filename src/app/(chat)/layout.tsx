@@ -19,6 +19,7 @@ import {
   useChatOptions,
   useChatActions,
   useKeyboardShortcuts,
+  useSidebarState,
 } from "@/hooks";
 import { toUIConversation } from "@/types";
 import type { Assistant } from "@/lib/services";
@@ -122,7 +123,9 @@ function ChatLayoutInner({
     router.push(`/c/${id}`);
   }, [router]);
 
-  useKeyboardShortcuts({ onNewChat: handleNewChat });
+  const { isCollapsed, toggle: toggleSidebar } = useSidebarState();
+
+  useKeyboardShortcuts({ onNewChat: handleNewChat, onToggleSidebar: toggleSidebar });
 
   useEffect(() => {
     fetchConversations();
@@ -141,9 +144,11 @@ function ChatLayoutInner({
         onNewChat={handleNewChat}
         onSelectConversation={handleSelectConversation}
         onDeleteConversation={handleDeleteConversation}
+        isCollapsed={isCollapsed}
+        onToggleCollapse={toggleSidebar}
       />
 
-      <main className="relative ml-64 flex flex-1 flex-col h-screen overflow-y-auto overflow-x-hidden overscroll-none custom-scrollbar scroll-smooth scroll-pb-28">
+      <main className={`relative flex flex-1 flex-col h-screen overflow-y-auto overflow-x-hidden overscroll-none custom-scrollbar scroll-smooth scroll-pb-28 transition-[margin] duration-300 ease-in-out ${isCollapsed ? "ml-16" : "ml-64"}`}>
         <TopAppBar
           assistantName={currentAssistant?.name || null}
           modelName={modelName}
@@ -161,6 +166,7 @@ function ChatLayoutInner({
               compact
             />
           }
+          onToggleSidebar={toggleSidebar}
         />
 
         {isNewChat && chat.messages.length === 0 ? (
