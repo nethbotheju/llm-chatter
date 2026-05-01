@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 
 interface UseKeyboardShortcutsOptions {
   onNewChat: () => void;
@@ -9,8 +8,6 @@ interface UseKeyboardShortcutsOptions {
 }
 
 export function useKeyboardShortcuts({ onNewChat, onToggleSidebar }: UseKeyboardShortcutsOptions) {
-  const router = useRouter();
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "n") {
@@ -19,7 +16,7 @@ export function useKeyboardShortcuts({ onNewChat, onToggleSidebar }: UseKeyboard
       }
       if ((e.metaKey || e.ctrlKey) && e.key === ",") {
         e.preventDefault();
-        router.push("/settings");
+        window.location.href = "/settings";
       }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
         e.preventDefault();
@@ -29,5 +26,5 @@ export function useKeyboardShortcuts({ onNewChat, onToggleSidebar }: UseKeyboard
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onNewChat, onToggleSidebar, router]);
+  }, [onNewChat, onToggleSidebar]);
 }

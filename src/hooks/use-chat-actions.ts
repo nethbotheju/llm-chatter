@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
 import type { UIMessage } from "ai";
 import type { UseChatHelpers } from "@ai-sdk/react";
 import type { Attachment } from "@/components/chat/chat-input";
@@ -36,8 +35,6 @@ export function useChatActions(options: UseChatActionsOptions) {
     fetchConversations,
   } = options;
 
-  const router = useRouter();
-
   const chatRef = useRef(options.chat);
   chatRef.current = options.chat;
 
@@ -64,8 +61,8 @@ export function useChatActions(options: UseChatActionsOptions) {
     if (defaultAssistant) {
       setCurrentAssistant(defaultAssistant);
     }
-    router.push("/");
-  }, [setCurrentConversationId, setCurrentAssistant, assistants, router]);
+    window.history.pushState(null, '', '/');
+  }, [setCurrentConversationId, setCurrentAssistant, assistants]);
 
   const handleSendMessage = useCallback(async (message: string, _attachments?: Attachment[]) => {
     if (!selectedModelId || !currentAssistant) return;
@@ -76,7 +73,7 @@ export function useChatActions(options: UseChatActionsOptions) {
       const data = await getConversationService().create({ assistantId: currentAssistant.id });
       convId = data.id;
       setCurrentConversationId(convId);
-      router.push(`/c/${convId}`, { scroll: false });
+      window.history.replaceState(null, '', `/c/${convId}`);
     }
 
     const userParts = [{ type: "text" as const, text: message }];
@@ -90,7 +87,7 @@ export function useChatActions(options: UseChatActionsOptions) {
 
     const body = await buildRequestBody(selectedModelId, convId);
     chatRef.current.sendMessage({ text: message }, { body });
-  }, [currentConversationId, selectedModelId, currentAssistant, router, fetchConversations, buildRequestBody]);
+  }, [currentConversationId, selectedModelId, currentAssistant, fetchConversations, buildRequestBody]);
 
   const handleEditMessage = useCallback(async (messageId: string, newContent: string) => {
     if (!currentConversationId || !selectedModelId || !currentAssistant) return;
