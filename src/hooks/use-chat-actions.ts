@@ -3,6 +3,7 @@
 import { useCallback, useRef } from "react";
 import type { UIMessage } from "ai";
 import type { UseChatHelpers } from "@ai-sdk/react";
+import type { MutableRefObject } from "react";
 import type { Attachment } from "@/components/chat/chat-input";
 import {
   getConversationService,
@@ -22,6 +23,7 @@ export interface UseChatActionsOptions {
   setCurrentAssistant: (assistant: Assistant | null) => void;
   assistants: Assistant[];
   fetchConversations: () => Promise<void>;
+  skipFetchRef: MutableRefObject<boolean>;
 }
 
 export function useChatActions(options: UseChatActionsOptions) {
@@ -33,6 +35,7 @@ export function useChatActions(options: UseChatActionsOptions) {
     setCurrentAssistant,
     assistants,
     fetchConversations,
+    skipFetchRef,
   } = options;
 
   const chatRef = useRef(options.chat);
@@ -72,6 +75,9 @@ export function useChatActions(options: UseChatActionsOptions) {
     if (!convId) {
       const data = await getConversationService().create({ assistantId: currentAssistant.id });
       convId = data.id;
+      // Signal to useConversationMessages that it should NOT fetch messages
+      // from DB for this new conversation — the useChat hook already has them.
+      skipFetchRef.current = true;
       setCurrentConversationId(convId);
       window.history.replaceState(null, '', `/c/${convId}`);
     }

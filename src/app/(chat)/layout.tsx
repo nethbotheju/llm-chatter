@@ -80,7 +80,7 @@ function ChatLayoutInner({
   const chatOptions = useChatOptions(transport, fetchConversations, currentConversationId);
   const chat = useChat(chatOptions);
 
-  const { isNewChat } = useConversationMessages(
+  const { isNewChat, skipFetchRef } = useConversationMessages(
     chat.setMessages,
     setCurrentAssistant,
     setCurrentConversationId,
@@ -101,6 +101,7 @@ function ChatLayoutInner({
     setCurrentAssistant,
     assistants,
     fetchConversations,
+    skipFetchRef,
   });
 
   const handleDeleteConversation = useCallback(async (id: string) => {

@@ -12,6 +12,7 @@ export function useConversationMessages(
   currentConversationId: string | null,
 ) {
   const prevConversationIdRef = useRef<string | null>(null);
+  const skipFetchRef = useRef(false);
 
   const fetchConversationMessages = useCallback(async (id: string) => {
     try {
@@ -43,6 +44,13 @@ export function useConversationMessages(
     prevConversationIdRef.current = currentConversationId;
 
     if (currentConversationId) {
+      // When a new conversation is created during sendMessage, the messages are
+      // already being managed by the useChat hook — skip fetching from DB to
+      // avoid duplicates.
+      if (skipFetchRef.current) {
+        skipFetchRef.current = false;
+        return;
+      }
       fetchConversationMessages(currentConversationId);
     } else {
       setMessages([]);
@@ -62,5 +70,5 @@ export function useConversationMessages(
 
   const isNewChat = currentConversationId === null;
 
-  return { isNewChat };
+  return { isNewChat, skipFetchRef };
 }
