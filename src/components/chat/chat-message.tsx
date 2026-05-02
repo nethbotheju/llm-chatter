@@ -148,7 +148,7 @@ export function ChatMessage({
             switch (part.type) {
               case "text":
                 return part.text ? (
-                  <div key={index} className="prose prose-sm max-w-none prose-invert prose-headings:text-white prose-p:text-neutral-300 prose-strong:text-white prose-code:text-[var(--primary)]">
+                  <div key={index}>
                     <MarkdownRenderer content={part.text} />
                   </div>
                 ) : null;
