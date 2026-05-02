@@ -17,6 +17,7 @@
     "db:studio": "prisma studio",
     "build:desktop": "pnpm desktop-runtime:build && mv src/app/api .api-bak && BUILD_TARGET=desktop next build; mv .api-bak src/app/api",
     "tauri:dev": "tauri dev",
+    "tauri:dev:hot": "tauri dev --devUrl http://localhost:3000",
     "tauri:build": "tauri build"
   },
   "keywords": [],

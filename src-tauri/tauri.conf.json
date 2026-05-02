@@ -5,8 +5,7 @@
   "identifier": "com.llmchatter.desktop",
   "build": {
     "frontendDist": "../out",
-    "devUrl": "http://localhost:3000",
-    "beforeDevCommand": "pnpm dev",
+    "beforeDevCommand": "pnpm build:desktop",
     "beforeBuildCommand": "pnpm build:desktop"
   },
   "app": {
