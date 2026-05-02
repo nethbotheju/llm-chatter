@@ -66,7 +66,7 @@ export default function SettingsLayout({
         {/* Footer */}
         <div className="border-t border-[var(--outline-variant)]/10 p-4">
           <p className="text-center text-[10px] font-medium text-[var(--on-surface-variant)] opacity-40">
-            Ilm Chatter v1.0
+            llm Chatter v1.0
           </p>
         </div>
       </aside>

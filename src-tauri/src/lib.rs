@@ -35,7 +35,7 @@ pub fn run() {
             crypto::init_master_secret(secret.trim().to_string());
 
             let db_path = app_data_dir
-                .join("ilm-chatter.db")
+                .join("llm-chatter.db")
                 .to_str()
                 .expect("invalid db path")
                 .to_string();

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 
-const STORAGE_KEY = "ilm-chatter:sidebar-collapsed";
+const STORAGE_KEY = "llm-chatter:sidebar-collapsed";
 
 export function useSidebarState() {
   const [isCollapsed, setIsCollapsed] = useState(false);
