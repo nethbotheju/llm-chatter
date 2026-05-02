@@ -139,7 +139,7 @@ fn get_db_path(app: &AppHandle) -> std::path::PathBuf {
         .app_data_dir()
         .expect("failed to resolve app data dir");
     std::fs::create_dir_all(&app_data_dir).ok();
-    app_data_dir.join("ilm-chatter.db")
+    app_data_dir.join("llm-chatter.db")
 }
 
 fn seed_default_assistants(conn: &Connection) -> Result<(), Box<dyn std::error::Error>> {

@@ -66,7 +66,7 @@ export function Sidebar({
           </div>
           <div className={labelClass}>
             <h1 className="text-xl font-bold tracking-tighter text-neutral-100">
-              Ilm Chatter
+              llm Chatter
             </h1>
           </div>
         </div>

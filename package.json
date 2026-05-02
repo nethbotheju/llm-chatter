@@ -1,5 +1,5 @@
 {
-  "name": "chat-llm-web",
+  "name": "llm-chatter",
   "version": "1.0.0",
   "description": "LLM Chat Application with multi-provider support",
   "scripts": {
