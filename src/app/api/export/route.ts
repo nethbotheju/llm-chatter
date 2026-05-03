@@ -24,8 +24,8 @@ export async function GET() {
         createdAt: conv.createdAt.toISOString(),
         messages: conv.messages.map((msg) => ({
           role: msg.role,
-          content: msg.content,
-          thinking: msg.thinking,
+          parts: msg.parts,
+          metadata: msg.metadata,
           createdAt: msg.createdAt.toISOString(),
         })),
       })),

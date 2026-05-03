@@ -1,18 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import type { UIMessage } from "ai";
 import { ChatMessage } from "./chat-message";
 
-export interface Message {
-  id: string;
-  role: "user" | "assistant" | "system";
-  content: string;
-  thinking?: string | null;
-  thinkingDuration?: number;
-}
-
 interface ChatMessagesProps {
-  messages: Message[];
+  messages: UIMessage[];
   isLoading?: boolean;
   onEditMessage?: (id: string, newContent: string) => void;
   modelName?: string;
@@ -36,11 +29,7 @@ export function ChatMessages({ messages, isLoading, onEditMessage, modelName }: 
           {messages.map((message) => (
             <ChatMessage
               key={message.id}
-              id={message.id}
-              role={message.role}
-              content={message.content}
-              thinking={message.thinking}
-              thinkingDuration={message.thinkingDuration}
+              message={message}
               isStreaming={isLoading && message === messages[messages.length - 1]}
               modelName={message.role === "assistant" ? modelName : undefined}
               onEdit={message.role === "user" ? onEditMessage : undefined}

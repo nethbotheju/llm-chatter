@@ -1,12 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   IProviderService,
   IModelService,
   IAssistantService,
   IConversationService,
   IMessageService,
-  IChatService,
   ISearchService,
   IExportService,
   IStatsService,
@@ -22,7 +20,6 @@ import type {
   SearchResult,
   ExportData,
   Stats,
-  ChatMessageInput,
   CreateProviderInput,
   UpdateProviderInput,
   CreateModelInput,
@@ -43,7 +40,6 @@ import {
   parseSearchResults,
   parseExportData,
   parseStats,
-  parseChatEvent,
 } from "@/lib/contracts";
 
 interface TauriConversationRow {
@@ -69,9 +65,8 @@ interface TauriMessageRow {
   id: string;
   conversation_id: string;
   role: string;
-  content: string;
-  thinking: string | null;
-  attachments: string | null;
+  parts: string;
+  metadata: string | null;
   created_at: string;
 }
 
@@ -120,9 +115,8 @@ function mapMessage(row: TauriMessageRow): Message {
     id: row.id,
     conversationId: row.conversation_id,
     role: row.role as Message["role"],
-    content: row.content,
-    thinking: row.thinking,
-    attachments: row.attachments,
+    parts: row.parts,
+    metadata: row.metadata,
     createdAt: row.created_at,
   });
 }
@@ -288,109 +282,17 @@ class TauriMessageService implements IMessageService {
     const rows = await invoke<TauriMessageRow[]>("get_messages", { conversationId });
     return parseMessages(rows.map(mapMessage));
   }
-  async create(conversationId: string, role: string, content: string, thinking?: string, attachments?: string): Promise<Message> {
+  async create(conversationId: string, role: string, parts: string, metadata?: string): Promise<Message> {
     const row = await invoke<TauriMessageRow>("create_message", {
-      input: { conversationId, role, content, thinking: thinking || null, attachments: attachments || null },
+      input: { conversationId, role, parts, metadata: metadata || null },
     });
     return mapMessage(row);
   }
-  async update(conversationId: string, messageId: string, content: string): Promise<void> {
-    await invoke("update_message", { input: { messageId, conversationId, content } });
+  async update(conversationId: string, messageId: string, parts: string): Promise<void> {
+    await invoke("update_message", { input: { messageId, conversationId, parts } });
   }
   async delete(conversationId: string, messageId: string): Promise<void> {
     await invoke("delete_message", { messageId, conversationId });
-  }
-}
-
-class TauriChatService implements IChatService {
-  private unlisten: UnlistenFn | null = null;
-  private unlistenError: UnlistenFn | null = null;
-  private unlistenDone: UnlistenFn | null = null;
-
-  async send(
-    messages: ChatMessageInput[],
-    modelId: string,
-    conversationId: string | null,
-    onToken: (token: string) => void,
-    onDone: (fullContent: string) => void,
-    onError: (error: string) => void,
-  ): Promise<void> {
-    let fullContent = "";
-    let doneText: string | null = null;
-    let runtimeError: string | null = null;
-
-    this.unlisten = await listen<string>("chat-token", (event) => {
-      const parsed = parseChatEvent({ type: "token", token: event.payload });
-      if (parsed.type === "token") {
-        fullContent += parsed.token;
-        onToken(parsed.token);
-      }
-    });
-
-    this.unlistenDone = await listen<string>("chat-done", (event) => {
-      const parsed = parseChatEvent({ type: "done", text: event.payload, finishReason: "stop" });
-      if (parsed.type === "done") {
-        doneText = parsed.text;
-      }
-    });
-
-    this.unlistenError = await listen<string>("chat-error", (event) => {
-      const parsed = parseChatEvent({
-        type: "error",
-        error: {
-          code: "CHAT_RUNTIME_ERROR",
-          message: event.payload,
-          status: null,
-          retryable: false,
-          details: null,
-        },
-      });
-      if (parsed.type === "error") {
-        runtimeError = parsed.error.message;
-      }
-    });
-
-    try {
-      await invoke("send_chat", {
-        input: {
-          messages: messages.map((m) => ({ id: m.id, role: m.role, content: m.content })),
-          modelId,
-          conversationId: conversationId || null,
-        },
-      });
-
-      if (runtimeError) {
-        onError(runtimeError);
-        return;
-      }
-
-      const finalText = doneText ?? fullContent;
-      if (!finalText.trim()) {
-        onError("No response from provider. Check model ID/provider compatibility and API key.");
-        return;
-      }
-
-      onDone(finalText);
-    } catch (error) {
-      onError(String(error));
-    } finally {
-      if (this.unlisten) {
-        this.unlisten();
-        this.unlisten = null;
-      }
-      if (this.unlistenDone) {
-        this.unlistenDone();
-        this.unlistenDone = null;
-      }
-      if (this.unlistenError) {
-        this.unlistenError();
-        this.unlistenError = null;
-      }
-    }
-  }
-
-  abort(): void {
-    invoke("abort_chat").catch(() => {});
   }
 }
 
@@ -424,7 +326,6 @@ export const tauriModelService = new TauriModelService();
 export const tauriAssistantService = new TauriAssistantService();
 export const tauriConversationService = new TauriConversationService();
 export const tauriMessageService = new TauriMessageService();
-export const tauriChatService = new TauriChatService();
 export const tauriSearchService = new TauriSearchService();
 export const tauriExportService = new TauriExportService();
 export const tauriStatsService = new TauriStatsService();

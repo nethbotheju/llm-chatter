@@ -64,9 +64,8 @@ export const messageSchema = z.object({
   id: z.string(),
   conversationId: z.string(),
   role: messageRoleSchema,
-  content: z.string(),
-  thinking: z.string().nullable().optional(),
-  attachments: z.string().nullable().optional(),
+  parts: z.string(), // JSON string: UIMessagePart[]
+  metadata: z.string().nullable().optional(), // JSON string: message metadata
   createdAt: isoDateSchema,
 });
 
@@ -105,8 +104,8 @@ export const searchResultListSchema = z.array(searchResultSchema);
 
 export const exportMessageSchema = z.object({
   role: z.string(),
-  content: z.string(),
-  thinking: z.string().nullable().optional(),
+  parts: z.string(), // JSON string: UIMessagePart[]
+  metadata: z.string().nullable().optional(),
   createdAt: isoDateSchema,
 });
 
@@ -131,7 +130,7 @@ export const statsSchema = z.object({
 export const chatMessageInputSchema = z.object({
   id: z.string(),
   role: messageRoleSchema,
-  content: z.string(),
+  parts: z.string(), // JSON string: UIMessagePart[]
 });
 
 export const chatAssistantConfigSchema = z.object({
@@ -160,35 +159,6 @@ export const chatErrorSchema = z.object({
   retryable: z.boolean().optional(),
   details: z.string().nullable().optional(),
 });
-
-export const chatTokenEventSchema = z.object({
-  type: z.literal("token"),
-  token: z.string(),
-});
-
-export const chatDoneEventSchema = z.object({
-  type: z.literal("done"),
-  text: z.string(),
-  finishReason: z.string().nullable().optional(),
-});
-
-export const chatErrorEventSchema = z.object({
-  type: z.literal("error"),
-  error: chatErrorSchema,
-});
-
-export const chatAbortEventSchema = z.object({
-  type: z.literal("abort"),
-});
-
-export const chatEventSchema = z.discriminatedUnion("type", [
-  chatTokenEventSchema,
-  chatDoneEventSchema,
-  chatErrorEventSchema,
-  chatAbortEventSchema,
-]);
-
-export const chatEventListSchema = z.array(chatEventSchema);
 
 export const createConversationInputSchema = z.object({
   assistantId: z.string().optional(),
@@ -269,7 +239,7 @@ export type ChatAssistantConfigDTO = z.infer<typeof chatAssistantConfigSchema>;
 export type ChatProviderConfigDTO = z.infer<typeof chatProviderConfigSchema>;
 export type ChatRequestDTO = z.infer<typeof chatRequestSchema>;
 export type ChatErrorDTO = z.infer<typeof chatErrorSchema>;
-export type ChatEventDTO = z.infer<typeof chatEventSchema>;
+
 export type CreateProviderInputDTO = z.infer<typeof createProviderInputSchema>;
 export type UpdateProviderInputDTO = z.infer<typeof updateProviderInputSchema>;
 export type CreateModelInputDTO = z.infer<typeof createModelInputSchema>;
@@ -343,10 +313,4 @@ export function parseChatRequest(input: unknown): ChatRequestDTO {
   return chatRequestSchema.parse(input);
 }
 
-export function parseChatEvent(input: unknown): ChatEventDTO {
-  return chatEventSchema.parse(input);
-}
 
-export function parseChatEvents(input: unknown): ChatEventDTO[] {
-  return chatEventListSchema.parse(input);
-}

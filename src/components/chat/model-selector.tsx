@@ -5,22 +5,10 @@ import { ChevronDown, Check, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
-interface Model {
-  id: string;
-  name: string;
-  providerId: string;
-  capabilities: string;
-  enabled: boolean;
-  provider?: {
-    id: string;
-    name: string;
-    type: string;
-    enabled: boolean;
-  };
-}
+import type { ModelWithProvider } from "@/types";
 
 interface ModelSelectorProps {
-  models: Model[];
+  models: ModelWithProvider[];
   selectedModelId: string | null;
   onSelectModel: (modelId: string) => void;
   disabled?: boolean;
@@ -53,7 +41,7 @@ export function ModelSelector({
       acc[providerKey].models.push(model);
       return acc;
     },
-    {} as Record<string, { provider?: Model["provider"]; models: Model[] }>
+    {} as Record<string, { provider?: ModelWithProvider["provider"]; models: ModelWithProvider[] }>
   );
 
   useEffect(() => {

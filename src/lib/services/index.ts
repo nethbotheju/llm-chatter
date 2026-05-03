@@ -4,7 +4,6 @@ import type {
   IAssistantService,
   IConversationService,
   IMessageService,
-  IChatService,
   ISearchService,
   IExportService,
   IStatsService,
@@ -17,7 +16,6 @@ export type {
   IAssistantService,
   IConversationService,
   IMessageService,
-  IChatService,
   ISearchService,
   IExportService,
   IStatsService,
@@ -35,7 +33,6 @@ let _model: IModelService | null = null;
 let _assistant: IAssistantService | null = null;
 let _conversation: IConversationService | null = null;
 let _message: IMessageService | null = null;
-let _chat: IChatService | null = null;
 let _search: ISearchService | null = null;
 let _export: IExportService | null = null;
 let _stats: IStatsService | null = null;
@@ -49,7 +46,6 @@ async function loadAdapter() {
     _assistant = adapter.tauriAssistantService;
     _conversation = adapter.tauriConversationService;
     _message = adapter.tauriMessageService;
-    _chat = adapter.tauriChatService;
     _search = adapter.tauriSearchService;
     _export = adapter.tauriExportService;
     _stats = adapter.tauriStatsService;
@@ -61,7 +57,6 @@ async function loadAdapter() {
     _assistant = adapter.webAssistantService;
     _conversation = adapter.webConversationService;
     _message = adapter.webMessageService;
-    _chat = adapter.webChatService;
     _search = adapter.webSearchService;
     _export = adapter.webExportService;
     _stats = adapter.webStatsService;
@@ -98,10 +93,6 @@ export function getMessageService(): IMessageService {
   if (!_message) throw new Error("Services not initialized");
   return _message;
 }
-export function getChatService(): IChatService {
-  if (!_chat) throw new Error("Services not initialized");
-  return _chat;
-}
 export function getSearchService(): ISearchService {
   if (!_search) throw new Error("Services not initialized");
   return _search;
@@ -121,3 +112,37 @@ export function getResetService(): IResetService {
 
 export { ensureInit };
 export { isTauri };
+
+export interface ChatTransportConfig {
+  apiUrl: string;
+  headers?: Record<string, string>;
+}
+
+export async function getChatTransportConfig(): Promise<ChatTransportConfig | null> {
+  if (!isTauri()) return null;
+  const { invoke } = await import("@tauri-apps/api/core");
+  const config = await invoke<{ port: number; token: string }>("get_sidecar_config");
+  return {
+    apiUrl: `http://127.0.0.1:${config.port}/chat`,
+    headers: { Authorization: `Bearer ${config.token}` },
+  };
+}
+
+export interface ResolvedChatConfig {
+  model: string;
+  provider: { type: string; apiKey: string; baseUrl?: string | null };
+  assistantConfig: { systemPrompt: string; temperature: number; topP: number };
+}
+
+export async function resolveChatConfig(
+  modelId: string,
+  conversationId?: string | null,
+): Promise<ResolvedChatConfig> {
+  if (!isTauri()) {
+    throw new Error("resolveChatConfig is only available in desktop mode");
+  }
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<ResolvedChatConfig>("resolve_chat_config", {
+    input: { modelId, conversationId: conversationId ?? null },
+  });
+}

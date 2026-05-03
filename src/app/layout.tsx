@@ -10,7 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Ilm Chatter",
+  title: "llm Chatter",
   description: "Multi-provider LLM chat application",
 };
 

@@ -1,18 +1,17 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Ilm Chatter",
+  "productName": "llm Chatter",
   "version": "0.1.0",
-  "identifier": "com.ilmchatter.desktop",
+  "identifier": "com.llmchatter.desktop",
   "build": {
     "frontendDist": "../out",
-    "devUrl": "http://localhost:3000",
-    "beforeDevCommand": "pnpm dev",
+    "beforeDevCommand": "pnpm build:desktop",
     "beforeBuildCommand": "pnpm build:desktop"
   },
   "app": {
     "windows": [
       {
-        "title": "Ilm Chatter",
+        "title": "llm Chatter",
         "width": 1200,
         "height": 800,
         "minWidth": 800,
