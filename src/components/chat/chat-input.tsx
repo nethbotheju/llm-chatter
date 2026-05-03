@@ -128,7 +128,14 @@ export function ChatInput({
         </div>
       )}
 
-      <div className="glass-input rounded-[32px] border border-white/10 shadow-2xl">
+      <div
+        className="rounded-[32px] border border-white/10 shadow-2xl"
+        style={{
+          background: "rgba(30, 30, 30, 0.98)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+        }}
+      >
         {/* Quick Actions */}
         {!compact && (
           <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pl-6 pr-3 pt-3 custom-scrollbar">

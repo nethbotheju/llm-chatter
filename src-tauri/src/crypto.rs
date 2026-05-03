@@ -20,7 +20,7 @@ fn get_or_create_master_key() -> &'static [u8] {
             .get()
             .cloned()
             .or_else(|| std::env::var("MASTER_SECRET").ok())
-            .unwrap_or_else(|| "ilm-chatter-fallback-master-secret".to_string());
+            .unwrap_or_else(|| "llm-chatter-fallback-master-secret".to_string());
         let mut hasher = Sha256::new();
         hasher.update(secret.as_bytes());
         hasher.finalize().to_vec()

@@ -11,24 +11,26 @@ export async function GET(req: NextRequest) {
   try {
     const messages = await prisma.message.findMany({
       where: {
-        content: {
+        parts: {
           contains: query,
         },
       },
-      include: {
-        conversation: {
-          select: { id: true, title: true },
-        },
-      },
-      take: 50,
       orderBy: { createdAt: "desc" },
+      take: 50,
     });
 
+    const conversationIds = [...new Set(messages.map((m) => m.conversationId))];
+    const conversations = await prisma.conversation.findMany({
+      where: { id: { in: conversationIds } },
+      select: { id: true, title: true },
+    });
+    const convMap = new Map(conversations.map((c) => [c.id, c]));
+
     const results = messages.map((msg) => ({
-      conversationId: msg.conversation.id,
-      conversationTitle: msg.conversation.title || "Untitled",
+      conversationId: msg.conversationId,
+      conversationTitle: convMap.get(msg.conversationId)?.title || "Untitled",
       messageId: msg.id,
-      snippet: getSnippet(msg.content, query, 150),
+      snippet: getSnippet(msg.parts, query, 150),
       createdAt: msg.createdAt.toISOString(),
     }));
 
@@ -39,21 +41,21 @@ export async function GET(req: NextRequest) {
   }
 }
 
-function getSnippet(content: string, query: string, length: number): string {
-  const lowerContent = content.toLowerCase();
+function getSnippet(parts: string, query: string, length: number): string {
+  const lowerParts = parts.toLowerCase();
   const lowerQuery = query.toLowerCase();
-  const idx = lowerContent.indexOf(lowerQuery);
+  const idx = lowerParts.indexOf(lowerQuery);
 
   if (idx === -1) {
-    return content.slice(0, length) + (content.length > length ? "..." : "");
+    return parts.slice(0, length) + (parts.length > length ? "..." : "");
   }
 
   const start = Math.max(0, idx - Math.floor(length / 2));
-  const end = Math.min(content.length, idx + query.length + Math.floor(length / 2));
+  const end = Math.min(parts.length, idx + query.length + Math.floor(length / 2));
 
-  let snippet = content.slice(start, end);
+  let snippet = parts.slice(start, end);
   if (start > 0) snippet = "..." + snippet;
-  if (end < content.length) snippet = snippet + "...";
+  if (end < parts.length) snippet = snippet + "...";
 
   return snippet;
 }

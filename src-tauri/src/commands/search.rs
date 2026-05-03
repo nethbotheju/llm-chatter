@@ -13,21 +13,21 @@ pub fn search_messages(query: String, state: State<DbState>) -> Result<serde_jso
 
     let mut stmt = conn
         .prepare(
-            "SELECT m.id, m.content, m.created_at, c.id, c.title \
+            "SELECT m.id, m.parts, m.created_at, c.id, c.title \
              FROM message m JOIN conversation c ON m.conversation_id = c.id \
-             WHERE m.content LIKE ?1 ORDER BY m.created_at DESC LIMIT 50",
+             WHERE m.parts LIKE ?1 ORDER BY m.created_at DESC LIMIT 50",
         )
         .map_err(|e| e.to_string())?;
 
     let results: Vec<serde_json::Value> = stmt
         .query_map(params![pattern], |row| {
             let msg_id: String = row.get(0)?;
-            let content: String = row.get(1)?;
+            let parts: String = row.get(1)?;
             let created_at: String = row.get(2)?;
             let conv_id: String = row.get(3)?;
             let conv_title: String = row.get(4).unwrap_or_else(|_| "Untitled".to_string());
 
-            let snippet = get_snippet(&content, &query, 150);
+            let snippet = get_snippet(&parts, &query, 150);
 
             Ok(serde_json::json!({
                 "messageId": msg_id,

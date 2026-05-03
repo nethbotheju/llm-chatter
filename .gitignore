@@ -49,5 +49,7 @@ next-env.d.ts
 
 # Other
 .plan
-plan
+plans
 .factory
+AGENTS.md
+.pi

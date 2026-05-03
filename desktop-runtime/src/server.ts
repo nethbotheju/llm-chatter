@@ -1,19 +1,6 @@
 import { createServer } from "node:http";
 import { parse as parseUrl } from "node:url";
-import {
-  parseChatRequest,
-  parseChatEvent,
-  type ChatEventDTO,
-} from "../../src/lib/contracts/index";
-import { streamChatRuntimeEvents } from "../../src/lib/chat-runtime/index";
-
-function writeSseEvent(
-  res: import("node:http").ServerResponse,
-  event: ChatEventDTO,
-): void {
-  const normalized = parseChatEvent(event);
-  res.write(`data: ${JSON.stringify(normalized)}\n\n`);
-}
+import { streamChatRuntime } from "../../src/lib/chat-runtime/index";
 
 function sendJson(
   res: import("node:http").ServerResponse,
@@ -37,6 +24,14 @@ async function readJson(req: import("node:http").IncomingMessage): Promise<unkno
   return JSON.parse(body);
 }
 
+function corsHeaders(): Record<string, string> {
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  };
+}
+
 async function run(): Promise<void> {
   const token = process.env.DESKTOP_RUNTIME_TOKEN;
   const port = Number(process.env.DESKTOP_RUNTIME_PORT || "0");
@@ -46,50 +41,108 @@ async function run(): Promise<void> {
   }
 
   const server = createServer(async (req, res) => {
+    const cors = corsHeaders();
+
     try {
+      const method = req.method || "GET";
+      const pathname = parseUrl(req.url || "").pathname || "/";
+
+      // Handle CORS preflight BEFORE auth check
+      if (method === "OPTIONS") {
+        Object.entries(cors).forEach(([k, v]) => res.setHeader(k, v));
+        res.statusCode = 204;
+        res.end();
+        return;
+      }
+
       const authorization = req.headers.authorization;
       if (authorization !== `Bearer ${token}`) {
+        Object.entries(cors).forEach(([k, v]) => res.setHeader(k, v));
         sendJson(res, 401, { error: "Unauthorized" });
         return;
       }
 
-      const method = req.method || "GET";
-      const pathname = parseUrl(req.url || "").pathname || "/";
-
       if (method === "GET" && pathname === "/health") {
+        Object.entries(cors).forEach(([k, v]) => res.setHeader(k, v));
         sendJson(res, 200, { ok: true });
         return;
       }
 
       if (method !== "POST" || pathname !== "/chat") {
+        Object.entries(cors).forEach(([k, v]) => res.setHeader(k, v));
         sendJson(res, 404, { error: "Not found" });
         return;
       }
 
       const raw = await readJson(req);
-      const input = parseChatRequest(raw);
+      process.stderr.write(`[sidecar] /chat request received. Body keys: ${Object.keys(raw as object).join(", ")}\n`);
+      const { messages, model, provider, assistantConfig } = raw as {
+        messages: unknown[];
+        model: string;
+        provider: { type: string; apiKey: string; baseUrl?: string | null };
+        assistantConfig?: { systemPrompt?: string; temperature?: number; topP?: number };
+      };
 
-      res.statusCode = 200;
-      res.setHeader("Content-Type", "text/event-stream");
-      res.setHeader("Cache-Control", "no-cache");
-      res.setHeader("Connection", "keep-alive");
+      process.stderr.write(`[sidecar] model=${model} providerType=${provider?.type} hasApiKey=${!!provider?.apiKey} messages=${messages?.length}\n`);
 
-      for await (const event of streamChatRuntimeEvents(input)) {
-        writeSseEvent(res, event);
+      const result = await streamChatRuntime({
+        messages: messages as Parameters<typeof streamChatRuntime>[0]["messages"],
+        model,
+        provider: {
+          type: provider.type as "openai" | "anthropic" | "google" | "openai-compatible" | "anthropic-compatible",
+          apiKey: provider.apiKey,
+          baseUrl: provider.baseUrl ?? undefined,
+        },
+        assistantConfig: assistantConfig
+          ? {
+              systemPrompt: assistantConfig.systemPrompt ?? "",
+              temperature: assistantConfig.temperature ?? 0.7,
+              topP: assistantConfig.topP ?? 1,
+            }
+          : undefined,
+      });
+
+      process.stderr.write(`[sidecar] streamChatRuntime resolved, creating response...\n`);
+      const response = result.toUIMessageStreamResponse({
+        sendReasoning: true,
+        messageMetadata: () => ({
+          modelName: model,
+        }),
+      });
+
+      process.stderr.write(`[sidecar] Response status=${response.status} hasBody=${!!response.body}\n`);
+
+      res.statusCode = response.status;
+      response.headers.forEach((value, key) => {
+        res.setHeader(key, value);
+      });
+      Object.entries(cors).forEach(([k, v]) => res.setHeader(k, v));
+
+      if (!response.body) {
+        res.end();
+        return;
       }
 
-      res.end();
+      const reader = response.body.getReader();
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          res.write(value);
+        }
+      } finally {
+        reader.releaseLock();
+        res.end();
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
+      process.stderr.write(`[sidecar] ERROR: ${message}\n`);
 
-      if (res.headersSent) {
-        writeSseEvent(res, {
-          type: "error",
-          error: { code: "STREAM_ERROR", message, status: null, retryable: false, details: null },
-        });
-        res.end();
-      } else {
+      if (!res.headersSent) {
+        Object.entries(cors).forEach(([k, v]) => res.setHeader(k, v));
         sendJson(res, 500, { error: message });
+      } else {
+        res.end();
       }
     }
   });
