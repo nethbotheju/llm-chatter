@@ -33,7 +33,7 @@ export default function ChatLayout({
   if (!transportReady) {
     return (
       <div className="flex h-screen items-center justify-center bg-[var(--surface)]">
-        <div className="text-[var(--text-secondary)]">Loading...</div>
+        <div className="text-[var(--muted-foreground)]">Loading...</div>
       </div>
     );
   }
@@ -156,7 +156,7 @@ function ChatLayoutInner({
           assistantName={currentAssistant?.name || null}
           modelName={modelName}
           assistantDropdown={
-            <button className="flex items-center gap-1 text-sm font-semibold text-white">
+            <button className="flex items-center gap-1 text-sm font-semibold text-[var(--on-surface)]">
               {currentAssistant?.name || "Select"}
             </button>
           }

@@ -62,10 +62,10 @@ export function Sidebar({
         {/* Header */}
         <div className="flex h-14 shrink-0 items-center">
           <div className="flex w-16 shrink-0 items-center justify-center">
-            <MessageSquare className="h-5 w-5 text-neutral-100" />
+            <MessageSquare className="h-5 w-5 text-[var(--on-surface)]" />
           </div>
           <div className={labelClass}>
-            <h1 className="text-xl font-bold tracking-tighter text-neutral-100">
+            <h1 className="text-xl font-bold tracking-tighter text-[var(--on-surface)]">
               llm Chatter
             </h1>
           </div>
@@ -122,7 +122,7 @@ export function Sidebar({
         <div className="shrink-0 border-t border-[var(--outline-variant)]/10 py-3">
           <a
             href="/settings"
-            className="flex w-full items-center py-2.5 text-sm font-medium text-neutral-400 transition-colors hover:bg-[var(--surface-container-high)] hover:text-neutral-100"
+            className="flex w-full items-center py-2.5 text-sm font-medium text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
             title="Settings"
           >
             <div className="flex w-16 shrink-0 items-center justify-center">

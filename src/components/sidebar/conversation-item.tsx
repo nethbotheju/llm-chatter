@@ -42,7 +42,7 @@ export function ConversationItem({
         "group relative flex cursor-pointer items-center rounded-full px-5 py-2 text-[15px] transition-colors",
         isActive
           ? "bg-[var(--surface-bright)] text-[var(--primary)]"
-          : "text-neutral-400 hover:bg-[var(--surface-container-high)] hover:text-neutral-100"
+          : "text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
       )}
       onClick={() => {
         if (!menuOpen) onClick();
@@ -66,7 +66,7 @@ export function ConversationItem({
             "flex h-6 w-6 items-center justify-center rounded-md transition-colors",
             isActive
               ? "text-[var(--primary)] hover:bg-[var(--surface-container-highest)]"
-              : "text-neutral-400 hover:bg-[var(--surface-container-high)] hover:text-neutral-100"
+              : "text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
           )}
           onClick={(e) => {
             e.stopPropagation();

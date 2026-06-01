@@ -110,7 +110,7 @@ export function AssistantForm({
             <button
               type="button"
               onClick={handleRemoveImage}
-              className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--destructive)] text-white shadow-sm hover:opacity-90"
+              className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--destructive)] text-[var(--destructive-foreground)] shadow-sm hover:opacity-90"
             >
               <X className="h-3 w-3" />
             </button>
