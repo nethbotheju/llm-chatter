@@ -76,17 +76,17 @@ export function ModelSelector({
           type="button"
           onClick={() => !disabled && setOpen(!open)}
           disabled={disabled}
-          className="flex items-center gap-1 text-sm font-semibold text-white transition-colors hover:text-[var(--primary)] disabled:opacity-50"
+          className="flex items-center gap-1 text-sm font-semibold text-[var(--on-surface)] transition-colors hover:text-[var(--primary)] disabled:opacity-50"
         >
           {selectedModel ? selectedModel.name : "Select a model"}
-          <ChevronDown className={cn("h-4 w-4 text-neutral-500 transition-transform", open && "rotate-180")} />
+          <ChevronDown className={cn("h-4 w-4 text-[var(--on-surface-variant)] transition-transform", open && "rotate-180")} />
         </button>
 
         {open && (
-          <div className="absolute left-0 top-full z-50 mt-2 min-w-[220px] overflow-auto rounded-xl border border-white/10 bg-[var(--surface-container-highest)] shadow-2xl">
+          <div className="absolute left-0 top-full z-50 mt-2 min-w-[220px] overflow-auto rounded-xl border border-[var(--outline-variant)]/30 bg-[var(--surface-container-highest)] shadow-2xl">
             {Object.entries(groupedModels).map(([providerId, { provider, models: providerModels }]) => (
               <div key={providerId}>
-                <div className="sticky top-0 border-b border-white/5 bg-[var(--surface-container)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--on-surface-variant)]">
+                <div className="sticky top-0 border-b border-[var(--outline-variant)]/20 bg-[var(--surface-container)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--on-surface-variant)]">
                   {provider?.name || "Unknown"}
                 </div>
                 {providerModels.map((model) => (
@@ -126,7 +126,7 @@ export function ModelSelector({
         onClick={() => !disabled && setOpen(!open)}
         disabled={disabled}
         className={cn(
-          "flex h-9 w-full items-center justify-between rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm",
+          "flex h-9 w-full items-center justify-between rounded-lg border border-[var(--outline-variant)]/30 bg-transparent px-3 py-2 text-sm",
           "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--primary)]",
           "disabled:cursor-not-allowed disabled:opacity-50",
           open && "ring-1 ring-[var(--primary)]"
@@ -146,10 +146,10 @@ export function ModelSelector({
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-1 max-h-80 w-full overflow-auto rounded-lg border border-white/10 bg-[var(--surface-container-highest)] shadow-2xl">
+        <div className="absolute z-50 mt-1 max-h-80 w-full overflow-auto rounded-lg border border-[var(--outline-variant)]/30 bg-[var(--surface-container-highest)] shadow-2xl">
           {Object.entries(groupedModels).map(([providerId, { provider, models: providerModels }]) => (
             <div key={providerId}>
-              <div className="sticky top-0 border-b border-white/5 bg-[var(--surface-container)] px-3 py-1.5 text-xs font-medium text-[var(--on-surface-variant)]">
+              <div className="sticky top-0 border-b border-[var(--outline-variant)]/20 bg-[var(--surface-container)] px-3 py-1.5 text-xs font-medium text-[var(--on-surface-variant)]">
                 {provider?.name || "Unknown Provider"}
               </div>
               {providerModels.map((model) => (
