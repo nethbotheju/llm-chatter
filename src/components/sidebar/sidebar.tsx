@@ -123,7 +123,7 @@ export function Sidebar({
           <div className="flex flex-col gap-0.5 px-3 pb-2 pt-2">
             <button
               onClick={() => setSearchOpen(true)}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-base font-medium text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
             >
               <Search className="h-[18px] w-[18px] shrink-0" />
               <span>Search</span>
@@ -134,7 +134,7 @@ export function Sidebar({
 
             <button
               onClick={onNewChat}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium text-[var(--on-surface)] transition-colors hover:bg-[var(--surface-container-high)]"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-base font-medium text-[var(--on-surface)] transition-colors hover:bg-[var(--surface-container-high)]"
             >
               <SquarePen className="h-[18px] w-[18px] shrink-0" />
               <span>New Chat</span>
@@ -176,18 +176,37 @@ export function Sidebar({
         </div>
 
         {/* Footer */}
-        <div className="shrink-0 px-3 pb-3 pt-2">
-          <a
-            href="/settings"
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] font-medium text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
-            title="Settings"
-          >
-            <Settings className="h-[18px] w-[18px] shrink-0" />
-            <span className={cn("transition-all duration-300 ease-in-out", isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100")}>
-              Settings
-            </span>
-          </a>
-        </div>
+        {!isCollapsed && (
+          <div className="shrink-0 px-3 pb-3 pt-2">
+            <a
+              href="/settings"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-[var(--surface-container-high)]"
+              title="Settings"
+            >
+              <Settings className="h-6 w-6 shrink-0 text-[var(--on-surface)]" />
+              <div className="flex flex-col overflow-hidden">
+                <span className="text-base font-semibold text-[var(--on-surface)]">
+                  Settings
+                </span>
+                <span className="text-xs text-[var(--on-surface-variant)] opacity-70">
+                  Providers, models & more
+                </span>
+              </div>
+            </a>
+          </div>
+        )}
+
+        {isCollapsed && (
+          <div className="shrink-0 flex w-16 justify-center pb-3 pt-2">
+            <a
+              href="/settings"
+              className="flex h-8 w-8 items-center justify-center rounded-xl text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
+              title="Settings"
+            >
+              <Settings className="h-5 w-5" />
+            </a>
+          </div>
+        )}
       </aside>
 
       <SearchDialog
