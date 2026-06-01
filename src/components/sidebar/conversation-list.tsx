@@ -38,12 +38,12 @@ function Section({
   return (
     <div className="flex flex-col">
       <div className="flex items-center gap-2 px-3 py-2">
-        <span className="text-[13px] font-medium text-[var(--on-surface-variant)] opacity-70">
+        <span className="text-sm font-medium text-[var(--on-surface-variant)] opacity-70">
           {title}
         </span>
         <div className="h-px flex-1 bg-[var(--outline-variant)]/10" />
       </div>
-      <div className="flex flex-col gap-0 pb-1">
+      <div className="flex flex-col gap-0.5 pb-1">
         {conversations.map((conversation) => (
           <ConversationItem
             key={conversation.id}
@@ -86,7 +86,7 @@ export function ConversationList({
         onClick={() => setExpanded((prev) => !prev)}
         className="flex items-center gap-1.5 px-3 py-2 text-left"
       >
-        <span className="text-[15px] font-bold text-[var(--on-surface)]">
+        <span className="text-base font-bold text-[var(--on-surface)]">
           History
         </span>
         <ChevronDown
