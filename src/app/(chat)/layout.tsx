@@ -151,7 +151,7 @@ function ChatLayoutInner({
         onToggleCollapse={toggleSidebar}
       />
 
-      <main className={`relative flex flex-1 flex-col h-screen overflow-y-auto overflow-x-hidden overscroll-none custom-scrollbar scroll-smooth scroll-pb-28 transition-[margin] duration-300 ease-in-out ${effectiveCollapsed ? "ml-16" : "ml-64"}`}>
+      <main className={`relative flex flex-1 flex-col h-screen overflow-y-auto overflow-x-hidden overscroll-none custom-scrollbar scroll-smooth scroll-pb-28 transition-[margin] duration-300 ease-in-out ${effectiveCollapsed ? "ml-16" : "ml-[280px]"}`}>
         <TopAppBar
           assistantName={currentAssistant?.name || null}
           modelName={modelName}
