@@ -101,7 +101,7 @@ export function ModelSelector({
         </button>
 
         {open && (
-          <div className="absolute -left-4 top-full z-50 mt-3 flex w-[260px] max-h-[420px] flex-col overflow-hidden rounded-2xl bg-[var(--surface-container-low)] shadow-[0_8px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.5)] backdrop-blur-xl ring-1 ring-black/5 dark:ring-white/10">
+          <div className="absolute -left-4 top-full z-50 mt-3 flex w-[260px] max-h-[420px] flex-col overflow-hidden rounded-2xl bg-[var(--surface-container-low)]/90 dropdown-shadow backdrop-blur-xl">
             {/* Search Bar */}
             <div className="px-3 pt-3 pb-2 bg-[var(--surface-container-low)]">
               <div className="relative">
@@ -203,7 +203,7 @@ export function ModelSelector({
       </button>
 
       {open && (
-        <div className="absolute -left-4 z-50 mt-3 flex w-[280px] max-h-[450px] flex-col overflow-hidden rounded-2xl bg-[var(--surface-container-low)] shadow-[0_8px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.5)] backdrop-blur-xl ring-1 ring-black/5 dark:ring-white/10">
+        <div className="absolute -left-4 z-50 mt-3 flex w-[280px] max-h-[450px] flex-col overflow-hidden rounded-2xl bg-[var(--surface-container-low)]/90 dropdown-shadow backdrop-blur-xl">
           {/* Search Bar */}
           <div className="p-3 pb-2 bg-[var(--surface-container-low)]">
             <div className="relative">
