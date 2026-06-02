@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { ChevronDown, Check, Settings } from "lucide-react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { ChevronDown, Check, Settings, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
@@ -25,11 +25,20 @@ export function ModelSelector({
   compact = false,
 }: ModelSelectorProps) {
   const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const selectedModel = models.find((m) => m.id === selectedModelId);
 
-  const groupedModels = models.reduce(
+  const filteredModels = useMemo(() => {
+    return models.filter((m) =>
+      m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.provider?.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [models, searchQuery]);
+
+  const groupedModels = filteredModels.reduce(
     (acc, model) => {
       const providerKey = model.provider?.id || "unknown";
       if (!acc[providerKey]) {
@@ -43,6 +52,15 @@ export function ModelSelector({
     },
     {} as Record<string, { provider?: ModelWithProvider["provider"]; models: ModelWithProvider[] }>
   );
+
+  useEffect(() => {
+    if (open && inputRef.current) {
+      inputRef.current.focus();
+    }
+    if (!open) {
+      setSearchQuery("");
+    }
+  }, [open]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -83,35 +101,69 @@ export function ModelSelector({
         </button>
 
         {open && (
-          <div className="absolute left-0 top-full z-50 mt-2 min-w-[220px] overflow-auto rounded-xl border border-[var(--outline-variant)]/30 bg-[var(--surface-container-highest)] shadow-2xl">
-            {Object.entries(groupedModels).map(([providerId, { provider, models: providerModels }]) => (
-              <div key={providerId}>
-                <div className="sticky top-0 border-b border-[var(--outline-variant)]/20 bg-[var(--surface-container)] px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-[var(--on-surface-variant)]">
-                  {provider?.name || "Unknown"}
-                </div>
-                {providerModels.map((model) => (
+          <div className="absolute -left-4 top-full z-50 mt-3 flex w-[260px] max-h-[420px] flex-col overflow-hidden rounded-2xl bg-[var(--surface-container-low)] shadow-[0_8px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.5)] backdrop-blur-xl ring-1 ring-black/5 dark:ring-white/10">
+            {/* Search Bar */}
+            <div className="px-3 pt-3 pb-2 bg-[var(--surface-container-low)]">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--on-surface-variant)]/50" />
+                <input
+                  ref={inputRef}
+                  type="text"
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full rounded-xl bg-[var(--surface-container-high)] py-2 pl-9 pr-8 text-sm text-[var(--on-surface)] outline-none transition-all placeholder:text-[var(--on-surface-variant)]/40"
+                />
+                {searchQuery && (
                   <button
-                    key={model.id}
-                    type="button"
-                    onClick={() => {
-                      onSelectModel(model.id);
-                      setOpen(false);
-                    }}
-                    className={cn(
-                      "flex w-full items-center justify-between px-4 py-2.5 text-sm transition-colors hover:bg-[var(--surface-container-high)]",
-                      model.id === selectedModelId
-                        ? "text-[var(--primary)]"
-                        : "text-[var(--on-surface)]"
-                    )}
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
                   >
-                    <span>{model.name}</span>
-                    {model.id === selectedModelId && (
-                      <Check className="h-4 w-4" />
-                    )}
+                    <X className="h-3.5 w-3.5" />
                   </button>
-                ))}
+                )}
               </div>
-            ))}
+            </div>
+
+            {/* Scrollable List */}
+            <div className="flex-1 overflow-y-auto px-1.5 pb-2 bg-[var(--surface-container-low)] scrollbar-none">
+              {Object.keys(groupedModels).length === 0 ? (
+                <div className="px-4 py-12 text-center text-[var(--on-surface-variant)]">
+                  <p className="text-sm font-medium">No results</p>
+                </div>
+              ) : (
+                Object.entries(groupedModels).map(([providerId, { provider, models: providerModels }]) => (
+                  <div key={providerId} className="mb-1 last:mb-0">
+                    <div className="sticky top-0 z-10 bg-[var(--surface-container-low)] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--on-surface-variant)]/60">
+                      {provider?.name || "Unknown"}
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      {providerModels.map((model) => (
+                        <button
+                          key={model.id}
+                          type="button"
+                          onClick={() => {
+                            onSelectModel(model.id);
+                            setOpen(false);
+                          }}
+                          className={cn(
+                            "group flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-all duration-200",
+                            model.id === selectedModelId
+                              ? "bg-[var(--primary)]/10 text-[var(--primary)]"
+                              : "text-[var(--on-surface)] hover:bg-[var(--surface-container-highest)]"
+                          )}
+                        >
+                          <span className="truncate">{model.name}</span>
+                          {model.id === selectedModelId && (
+                            <Check className="h-3.5 w-3.5 shrink-0" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -126,53 +178,94 @@ export function ModelSelector({
         onClick={() => !disabled && setOpen(!open)}
         disabled={disabled}
         className={cn(
-          "flex h-9 w-full items-center justify-between rounded-lg border border-[var(--outline-variant)]/30 bg-transparent px-3 py-2 text-sm",
-          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--primary)]",
+          "flex h-11 w-full items-center justify-between rounded-xl border border-[var(--outline-variant)]/30 bg-[var(--surface-container-low)] px-4 py-2 text-sm transition-all duration-300",
+          "hover:bg-[var(--surface-container-high)]",
+          "focus-visible:outline-none",
           "disabled:cursor-not-allowed disabled:opacity-50",
-          open && "ring-1 ring-[var(--primary)]"
+          open && "border-[var(--primary)]/50 ring-4 ring-[var(--primary)]/5 shadow-lg"
         )}
       >
-        <span className="truncate text-[var(--on-surface)]">
+        <div className="flex items-baseline gap-2 truncate overflow-hidden text-left">
           {selectedModel ? (
-            <span>
-              <span className="text-[var(--on-surface-variant)]">{selectedModel.provider?.name} / </span>
-              {selectedModel.name}
-            </span>
+            <>
+              <span className="truncate font-semibold text-[var(--on-surface)]">
+                {selectedModel.name}
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--on-surface-variant)] opacity-40">
+                {selectedModel.provider?.name}
+              </span>
+            </>
           ) : (
-            "Select a model"
+            <span className="font-medium text-[var(--on-surface-variant)]">Select a model</span>
           )}
-        </span>
-        <ChevronDown className={cn("ml-2 h-4 w-4 text-[var(--on-surface-variant)]", open && "rotate-180")} />
+        </div>
+        <ChevronDown className={cn("ml-2 h-4 w-4 text-[var(--on-surface-variant)] transition-transform duration-300", open && "rotate-180")} />
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-1 max-h-80 w-full overflow-auto rounded-lg border border-[var(--outline-variant)]/30 bg-[var(--surface-container-highest)] shadow-2xl">
-          {Object.entries(groupedModels).map(([providerId, { provider, models: providerModels }]) => (
-            <div key={providerId}>
-              <div className="sticky top-0 border-b border-[var(--outline-variant)]/20 bg-[var(--surface-container)] px-3 py-1.5 text-xs font-medium text-[var(--on-surface-variant)]">
-                {provider?.name || "Unknown Provider"}
-              </div>
-              {providerModels.map((model) => (
+        <div className="absolute -left-4 z-50 mt-3 flex w-[280px] max-h-[450px] flex-col overflow-hidden rounded-2xl bg-[var(--surface-container-low)] shadow-[0_8px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.5)] backdrop-blur-xl ring-1 ring-black/5 dark:ring-white/10">
+          {/* Search Bar */}
+          <div className="p-3 pb-2 bg-[var(--surface-container-low)]">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--on-surface-variant)]/50" />
+              <input
+                ref={inputRef}
+                type="text"
+                placeholder="Search models..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-xl bg-[var(--surface-container-high)] py-2.5 pl-9 pr-8 text-sm text-[var(--on-surface)] outline-none transition-all placeholder:text-[var(--on-surface-variant)]/40"
+              />
+              {searchQuery && (
                 <button
-                  key={model.id}
-                  type="button"
-                  onClick={() => {
-                    onSelectModel(model.id);
-                    setOpen(false);
-                  }}
-                  className={cn(
-                    "flex w-full items-center justify-between px-3 py-2 text-sm transition-colors hover:bg-[var(--surface-container-high)]",
-                    model.id === selectedModelId && "bg-[var(--surface-container-high)] text-[var(--primary)]"
-                  )}
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
                 >
-                  <span>{model.name}</span>
-                  {model.id === selectedModelId && (
-                    <Check className="h-4 w-4" />
-                  )}
+                  <X className="h-4 w-4" />
                 </button>
-              ))}
+              )}
             </div>
-          ))}
+          </div>
+
+          {/* Scrollable List */}
+          <div className="flex-1 overflow-y-auto px-1.5 pb-3 bg-[var(--surface-container-low)] scrollbar-none">
+            {Object.keys(groupedModels).length === 0 ? (
+              <div className="px-4 py-16 text-center text-[var(--on-surface-variant)]">
+                <p className="text-sm font-medium">No results found</p>
+              </div>
+            ) : (
+              Object.entries(groupedModels).map(([providerId, { provider, models: providerModels }]) => (
+                <div key={providerId} className="mb-2 last:mb-0">
+                  <div className="sticky top-0 z-10 bg-[var(--surface-container-low)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--on-surface-variant)]/60">
+                    {provider?.name || "Unknown"}
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    {providerModels.map((model) => (
+                      <button
+                        key={model.id}
+                        type="button"
+                        onClick={() => {
+                          onSelectModel(model.id);
+                          setOpen(false);
+                        }}
+                        className={cn(
+                          "group flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-all duration-200",
+                          model.id === selectedModelId
+                            ? "bg-[var(--primary)]/10 text-[var(--primary)]"
+                            : "text-[var(--on-surface)] hover:bg-[var(--surface-container-highest)]"
+                        )}
+                      >
+                        <span className="truncate font-medium">{model.name}</span>
+                        {model.id === selectedModelId && (
+                          <Check className="h-4 w-4 shrink-0" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       )}
     </div>
