@@ -37,7 +37,7 @@ function Section({
 
   return (
     <div className="flex flex-col">
-      <div className="flex items-center gap-2 px-3 py-2">
+      <div className="flex items-center gap-2 px-2 py-2">
         <span className="text-sm font-medium text-[var(--on-surface-variant)] opacity-70">
           {title}
         </span>
@@ -74,7 +74,7 @@ export function ConversationList({
 
   if (total === 0) {
     return (
-      <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+      <div className="px-2 py-6 text-center text-sm text-muted-foreground">
         No conversations yet
       </div>
     );
@@ -84,7 +84,7 @@ export function ConversationList({
     <div className="flex flex-col pt-1">
       <button
         onClick={() => setExpanded((prev) => !prev)}
-        className="flex items-center gap-1.5 px-3 py-2 text-left"
+        className="flex items-center gap-1.5 px-2 py-2 text-left"
       >
         <span className="text-base font-bold text-[var(--on-surface)]">
           History
