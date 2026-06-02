@@ -119,13 +119,13 @@ export function Sidebar({
         </div>
 
         {/* Top Actions */}
-        <div className="flex flex-col gap-1 px-3 pb-2 pt-2">
+        <div className="flex flex-col gap-1 px-2 pb-2 pt-2">
           <button
             onClick={() => setSearchOpen(true)}
             className="group flex w-full items-center rounded-xl py-2.5 transition-all duration-300 ease-in-out hover:bg-[var(--surface-container-high)]"
             title="Search"
           >
-            <div className="flex h-5 w-10 shrink-0 items-center justify-center">
+            <div className="flex h-5 w-12 shrink-0 items-center justify-center">
               <Search className="h-5 w-5 text-[var(--on-surface-variant)] group-hover:text-[var(--on-surface)]" />
             </div>
             <div className={cn("flex flex-1 items-center overflow-hidden transition-all duration-300 ease-in-out", isCollapsed ? "max-w-0 opacity-0" : "max-w-[200px] opacity-100")}>
@@ -143,7 +143,7 @@ export function Sidebar({
             className="group flex w-full items-center rounded-xl py-2.5 transition-all duration-300 ease-in-out hover:bg-[var(--surface-container-high)]"
             title="New Chat"
           >
-            <div className="flex h-5 w-10 shrink-0 items-center justify-center">
+            <div className="flex h-5 w-12 shrink-0 items-center justify-center">
               <SquarePen className="h-5 w-5 text-[var(--on-surface)]" />
             </div>
             <div className={cn("overflow-hidden transition-all duration-300 ease-in-out", isCollapsed ? "max-w-0 opacity-0" : "max-w-[200px] opacity-100")}>
@@ -156,7 +156,7 @@ export function Sidebar({
 
         {/* History */}
         <div className="flex flex-1 flex-col min-h-0">
-          <ScrollArea className={cn("flex-1 custom-scrollbar px-3 transition-opacity duration-300", isCollapsed ? "opacity-0 pointer-events-none" : "opacity-100")}>
+          <ScrollArea className={cn("flex-1 custom-scrollbar px-2 transition-opacity duration-300", isCollapsed ? "opacity-0 pointer-events-none" : "opacity-100")}>
             <ConversationList
               grouped={grouped}
               activeId={activeConversationId}
@@ -167,13 +167,13 @@ export function Sidebar({
         </div>
 
         {/* Footer */}
-        <div className={cn("shrink-0 px-3 pb-3 pt-2", isCollapsed ? "pb-6" : "")}>
+        <div className={cn("shrink-0 px-2 pb-3 pt-2", isCollapsed ? "pb-6" : "")}>
           <a
             href="/settings"
             className="group flex w-full items-center rounded-xl py-3 transition-all duration-300 ease-in-out hover:bg-[var(--surface-container-high)]"
             title="Settings"
           >
-            <div className="flex h-5 w-10 shrink-0 items-center justify-center">
+            <div className="flex h-5 w-12 shrink-0 items-center justify-center">
               <Settings className="h-5 w-5 text-[var(--on-surface)]" />
             </div>
             <div className={cn("flex flex-col overflow-hidden transition-all duration-300 ease-in-out", isCollapsed ? "max-h-0 max-w-0 opacity-0" : "max-h-12 max-w-[200px] opacity-100")}>
