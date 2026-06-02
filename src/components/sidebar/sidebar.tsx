@@ -129,7 +129,7 @@ export function Sidebar({
               <Search className="h-5 w-5 text-[var(--on-surface-variant)] group-hover:text-[var(--on-surface)]" />
             </div>
             <div className={cn("flex flex-1 items-center overflow-hidden transition-all duration-300 ease-in-out", isCollapsed ? "max-w-0 opacity-0" : "max-w-[200px] opacity-100")}>
-              <span className="whitespace-nowrap text-base font-medium text-[var(--on-surface-variant)] group-hover:text-[var(--on-surface)]">
+              <span className="whitespace-nowrap text-sm font-medium text-[var(--on-surface-variant)] group-hover:text-[var(--on-surface)]">
                 Search
               </span>
               <span className="ml-auto pr-3 text-xs text-[var(--on-surface-variant)] opacity-50">
@@ -147,7 +147,7 @@ export function Sidebar({
               <SquarePen className="h-5 w-5 text-[var(--on-surface)]" />
             </div>
             <div className={cn("overflow-hidden transition-all duration-300 ease-in-out", isCollapsed ? "max-w-0 opacity-0" : "max-w-[200px] opacity-100")}>
-              <span className="whitespace-nowrap text-base font-medium text-[var(--on-surface)]">
+              <span className="whitespace-nowrap text-sm font-medium text-[var(--on-surface)]">
                 New Chat
               </span>
             </div>
@@ -177,7 +177,7 @@ export function Sidebar({
               <Settings className="h-5 w-5 text-[var(--on-surface)]" />
             </div>
             <div className={cn("flex flex-col overflow-hidden transition-all duration-300 ease-in-out", isCollapsed ? "max-h-0 max-w-0 opacity-0" : "max-h-12 max-w-[200px] opacity-100")}>
-              <span className="whitespace-nowrap text-base font-semibold text-[var(--on-surface)]">
+              <span className="whitespace-nowrap text-sm font-semibold text-[var(--on-surface)]">
                 Settings
               </span>
               <span className="whitespace-nowrap text-xs text-[var(--on-surface-variant)] opacity-70">
