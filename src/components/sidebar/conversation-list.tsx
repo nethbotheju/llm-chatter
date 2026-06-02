@@ -86,7 +86,7 @@ export function ConversationList({
         onClick={() => setExpanded((prev) => !prev)}
         className="flex items-center gap-1.5 px-2 py-2 text-left"
       >
-        <span className="text-base font-bold text-[var(--on-surface)]">
+        <span className="text-sm font-bold text-[var(--on-surface)]">
           History
         </span>
         <ChevronDown

@@ -37,7 +37,7 @@ export function ConversationItem({
   return (
     <div
       className={cn(
-        "group relative flex cursor-pointer items-center rounded-xl px-3 py-2 text-base transition-colors",
+        "group relative flex cursor-pointer items-center rounded-xl px-3 py-2 text-sm transition-colors",
         isActive
           ? "bg-[var(--surface-container-high)] text-[var(--on-surface)]"
           : "text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
