@@ -28,6 +28,10 @@ const isTauri = (): boolean => {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 };
 
+const isElectron = (): boolean => {
+  return typeof window !== "undefined" && !!window.electronAPI;
+};
+
 let _provider: IProviderService | null = null;
 let _model: IModelService | null = null;
 let _assistant: IAssistantService | null = null;
@@ -50,6 +54,17 @@ async function loadAdapter() {
     _export = adapter.tauriExportService;
     _stats = adapter.tauriStatsService;
     _reset = adapter.tauriResetService;
+  } else if (isElectron()) {
+    const adapter = await import("./adapters/electron.adapter");
+    _provider = adapter.electronProviderService;
+    _model = adapter.electronModelService;
+    _assistant = adapter.electronAssistantService;
+    _conversation = adapter.electronConversationService;
+    _message = adapter.electronMessageService;
+    _search = adapter.electronSearchService;
+    _export = adapter.electronExportService;
+    _stats = adapter.electronStatsService;
+    _reset = adapter.electronResetService;
   } else {
     const adapter = await import("./adapters/web.adapter");
     _provider = adapter.webProviderService;
@@ -111,7 +126,7 @@ export function getResetService(): IResetService {
 }
 
 export { ensureInit };
-export { isTauri };
+export { isTauri, isElectron };
 
 export interface ChatTransportConfig {
   apiUrl: string;

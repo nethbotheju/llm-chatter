@@ -2,7 +2,7 @@ export {};
 
 declare global {
   interface Window {
-    electronAPI: {
+    electronAPI?: {
       providers: {
         getAll: () => Promise<unknown[]>;
         create: (input: unknown) => Promise<unknown>;
@@ -11,7 +11,10 @@ declare global {
         validate: (input: unknown) => Promise<{ valid: boolean; error?: string }>;
       };
       models: {
-        getAll: (args?: unknown) => Promise<unknown[]>;
+        getAll: (args?: {
+          providerId?: string;
+          includeDisabled?: boolean;
+        }) => Promise<unknown[]>;
         create: (input: unknown) => Promise<unknown>;
         update: (input: unknown) => Promise<unknown>;
         delete: (id: string) => Promise<void>;
@@ -49,8 +52,9 @@ declare global {
       reset: {
         data: () => Promise<void>;
       };
-      chat: {
-        _placeholder: boolean;
+      // Phase 3: chat streaming
+      chat?: {
+        _placeholder?: boolean;
       };
     };
   }

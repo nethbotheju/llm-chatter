@@ -39,6 +39,7 @@
     "node_modules",
     "dist-electron",
     "release",
-    "electron"
+    "electron",
+    "scripts"
   ]
 }
