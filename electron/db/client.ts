@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { existsSync, mkdirSync } from "node:fs";
 import { app } from "electron";
 
-function getDataDir(): string {
+export function getDataDir(): string {
   const dir = join(app.getPath("userData"), "llm-chatter");
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   return dir;

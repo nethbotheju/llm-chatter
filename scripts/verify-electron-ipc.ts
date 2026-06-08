@@ -70,15 +70,6 @@ async function main() {
   console.log(`\n=== Phase 2 Round-Trip Test ===`);
   console.log(`Registered ${registeredChannels.length} IPC channels: ${registeredChannels.join(", ")}\n`);
 
-  const { execSync } = await import("node:child_process");
-  const dataDir = join(TEST_USER_DATA, "llm-chatter");
-  const dbPath = join(dataDir, "llm-chatter.db");
-  const dbUrl = `file:${dbPath}`;
-  execSync("pnpm exec prisma db push --skip-generate --accept-data-loss", {
-    env: { ...process.env, DATABASE_URL: dbUrl },
-    stdio: "inherit",
-  });
-
   await runMigrations();
 
   await testProviders();
