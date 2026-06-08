@@ -1,0 +1,27 @@
+{
+  "appId": "com.llmchatter.desktop",
+  "productName": "llm Chatter",
+  "directories": {
+    "output": "release",
+    "buildResources": "electron/build"
+  },
+  "files": [
+    "dist-electron/**/*",
+    "out/**/*",
+    "package.json"
+  ],
+  "asarUnpack": [
+    "node_modules/@prisma/**/*",
+    "node_modules/better-sqlite3/**/*"
+  ],
+  "mac": {
+    "category": "public.app-category.productivity"
+  },
+  "win": {
+    "target": "nsis"
+  },
+  "linux": {
+    "target": ["AppImage", "deb"],
+    "category": "Utility"
+  }
+}
