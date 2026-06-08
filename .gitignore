@@ -30,6 +30,10 @@ Thumbs.db
 dist
 build
 
+# Electron
+dist-electron/
+release/
+
 # SEA build artifacts
 desktop-runtime/bin/
 
@@ -53,3 +57,4 @@ plans
 .factory
 AGENTS.md
 .pi
+!plans/migrating-to-electron

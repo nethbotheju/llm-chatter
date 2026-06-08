@@ -2,6 +2,7 @@
   "name": "llm-chatter",
   "version": "1.0.0",
   "description": "LLM Chat Application with multi-provider support",
+  "main": "dist-electron/main/index.js",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
@@ -16,6 +17,12 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "build:desktop": "pnpm desktop-runtime:build && mv src/app/api .api-bak && BUILD_TARGET=desktop next build; mv .api-bak src/app/api",
+    "electron:dev": "node scripts/electron-dev.mjs",
+    "electron:build": "node scripts/electron-build-renderer.mjs",
+    "electron:build:dist": "pnpm electron:build && pnpm exec electron-builder",
+    "electron:build:mac": "pnpm electron:build && pnpm exec electron-builder --mac",
+    "electron:build:win": "pnpm electron:build && pnpm exec electron-builder --win",
+    "electron:build:linux": "pnpm electron:build && pnpm exec electron-builder --linux",
     "tauri:dev": "tauri dev",
     "tauri:dev:hot": "tauri dev --devUrl http://localhost:3000",
     "tauri:build": "tauri build"
@@ -61,6 +68,10 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",
     "@tauri-apps/cli": "^2.10.1",
+    "electron": "^40.0.0",
+    "electron-vite": "^3.0.0",
+    "electron-builder": "^25.0.0",
+    "vite": "^5.4.0",
     "@types/better-sqlite3": "^7.6.13",
     "esbuild": "^0.25.11",
     "eslint": "^10.0.3",
@@ -74,7 +85,8 @@
       "prisma",
       "esbuild",
       "sharp",
-      "unrs-resolver"
+      "unrs-resolver",
+      "electron"
     ]
   }
 }
