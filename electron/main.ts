@@ -49,8 +49,12 @@ function createWindow(): BrowserWindow {
 }
 
 app.whenReady().then(async () => {
-  await runMigrations();
-  registerAllIpc();
+  try {
+    await runMigrations();
+    registerAllIpc();
+  } catch (err) {
+    console.error("Migration/IPC setup failed:", err);
+  }
   createWindow();
 
   app.on("activate", () => {
