@@ -119,7 +119,7 @@ export function ChatInput({
               <button
                 type="button"
                 onClick={() => handleRemoveAttachment(att.id)}
-                className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--destructive)] text-white shadow-sm hover:opacity-90"
+                className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--destructive)] text-[var(--destructive-foreground)] shadow-sm hover:opacity-90"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -129,12 +129,7 @@ export function ChatInput({
       )}
 
       <div
-        className="rounded-[32px] border border-white/10 shadow-2xl"
-        style={{
-          background: "rgba(30, 30, 30, 0.98)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-        }}
+        className="chat-input-glass rounded-[32px] border border-[var(--outline-variant)]/30 shadow-2xl"
       >
         {/* Quick Actions */}
         {!compact && (
@@ -168,7 +163,7 @@ export function ChatInput({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={disabled || isLoading}
-                className="ml-2 mr-0 rounded-full p-2 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-white disabled:opacity-50"
+                className="ml-2 mr-0 rounded-full p-2 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)] disabled:opacity-50"
               >
                 <Plus className="h-5 w-5" />
               </button>
@@ -191,7 +186,7 @@ export function ChatInput({
           <div className="flex items-center gap-2 pr-2">
             <button
               type="button"
-              className="p-2 text-[var(--on-surface-variant)] transition-colors hover:text-white"
+              className="p-2 text-[var(--on-surface-variant)] transition-colors hover:text-[var(--on-surface)]"
             >
               <Mic className="h-5 w-5" />
             </button>
@@ -200,7 +195,7 @@ export function ChatInput({
               <button
                 type="button"
                 onClick={onStop}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--destructive)] text-white transition-all hover:opacity-90 active:scale-95"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--destructive)] text-[var(--destructive-foreground)] transition-all hover:opacity-90 active:scale-95"
               >
                 <Square className="h-4 w-4" />
               </button>

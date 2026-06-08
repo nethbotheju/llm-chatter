@@ -87,14 +87,14 @@ export function ChatMessage({
               {onEdit && (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="rounded-md p-1.5 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-white"
+                  className="rounded-md p-1.5 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
                 >
                   <Pencil className="h-3.5 w-3.5" />
                 </button>
               )}
               <button
                 onClick={() => handleCopy(userText)}
-                className="rounded-md p-1.5 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-white"
+                className="rounded-md p-1.5 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
               >
                 {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
               </button>
@@ -117,7 +117,7 @@ export function ChatMessage({
         <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--primary)]">
           <Sparkles className="h-3.5 w-3.5 text-[var(--primary-foreground)]" />
         </div>
-        <span className="text-sm font-bold tracking-tight text-white">
+        <span className="text-sm font-bold tracking-tight text-[var(--on-surface)]">
           {messageModelName || "AI"}
         </span>
       </div>
@@ -175,7 +175,7 @@ export function ChatMessage({
             <div className="absolute -bottom-8 left-0 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
               <button
                 onClick={() => handleCopy(getUserText(message))}
-                className="rounded-md p-1.5 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-white"
+                className="rounded-md p-1.5 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
               >
                 {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
               </button>

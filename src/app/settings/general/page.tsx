@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Sun, Moon, Monitor } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -12,6 +13,9 @@ const themeOptions = [
 
 export default function GeneralSettingsPage() {
   const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   return (
     <div className="space-y-8">
@@ -39,7 +43,7 @@ export default function GeneralSettingsPage() {
         <div className="grid grid-cols-3 gap-3">
           {themeOptions.map((option) => {
             const Icon = option.icon;
-            const isActive = theme === option.value;
+            const isActive = mounted && theme === option.value;
             return (
               <button
                 key={option.value}

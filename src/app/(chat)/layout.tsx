@@ -33,7 +33,7 @@ export default function ChatLayout({
   if (!transportReady) {
     return (
       <div className="flex h-screen items-center justify-center bg-[var(--surface)]">
-        <div className="text-[var(--text-secondary)]">Loading...</div>
+        <div className="text-[var(--muted-foreground)]">Loading...</div>
       </div>
     );
   }
@@ -151,12 +151,12 @@ function ChatLayoutInner({
         onToggleCollapse={toggleSidebar}
       />
 
-      <main className={`relative flex flex-1 flex-col h-screen overflow-y-auto overflow-x-hidden overscroll-none custom-scrollbar scroll-smooth scroll-pb-28 transition-[margin] duration-300 ease-in-out ${effectiveCollapsed ? "ml-16" : "ml-64"}`}>
+      <main className={`relative flex flex-1 flex-col h-screen overflow-y-auto overflow-x-hidden overscroll-none custom-scrollbar scroll-smooth scroll-pb-28 transition-[margin] duration-300 ease-in-out ${effectiveCollapsed ? "ml-16" : "ml-[280px]"}`}>
         <TopAppBar
           assistantName={currentAssistant?.name || null}
           modelName={modelName}
           assistantDropdown={
-            <button className="flex items-center gap-1 text-sm font-semibold text-white">
+            <button className="flex items-center gap-1 text-sm font-semibold text-[var(--on-surface)]">
               {currentAssistant?.name || "Select"}
             </button>
           }

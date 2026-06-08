@@ -172,7 +172,7 @@ export default function PrivacySettingsPage() {
           <button
             type="button"
             onClick={() => setDeleteDialogOpen(true)}
-            className="flex items-center gap-2 rounded-xl border border-[var(--destructive)]/20 bg-transparent px-4 py-2.5 text-xs font-semibold text-[var(--destructive)] transition-colors hover:bg-[var(--destructive)] hover:text-white"
+            className="flex items-center gap-2 rounded-xl border border-[var(--destructive)]/20 bg-transparent px-4 py-2.5 text-xs font-semibold text-[var(--destructive)] transition-colors hover:bg-[var(--destructive)] hover:text-[var(--destructive-foreground)]"
           >
             <Trash2 className="h-4 w-4" />
             Delete All Conversations
@@ -180,7 +180,7 @@ export default function PrivacySettingsPage() {
           <button
             type="button"
             onClick={() => setResetDialogOpen(true)}
-            className="flex items-center gap-2 rounded-xl bg-[var(--destructive)] px-4 py-2.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+            className="flex items-center gap-2 rounded-xl bg-[var(--destructive)] px-4 py-2.5 text-xs font-semibold text-[var(--destructive-foreground)] transition-opacity hover:opacity-90"
           >
             Reset Application
           </button>
