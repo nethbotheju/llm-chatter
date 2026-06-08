@@ -14,9 +14,7 @@ interface ConversationItemProps {
 }
 
 export function ConversationItem({
-  id,
   title,
-  createdAt,
   isActive,
   onClick,
   onDelete,
@@ -39,10 +37,10 @@ export function ConversationItem({
   return (
     <div
       className={cn(
-        "group relative flex cursor-pointer items-center rounded-full px-5 py-2 text-[15px] transition-colors",
+        "group relative flex cursor-pointer items-center rounded-xl px-3 py-2 text-sm transition-colors",
         isActive
-          ? "bg-[var(--surface-bright)] text-[var(--primary)]"
-          : "text-neutral-400 hover:bg-[var(--surface-container-high)] hover:text-neutral-100"
+          ? "bg-[var(--surface-container-high)] text-[var(--on-surface)]"
+          : "text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
       )}
       onClick={() => {
         if (!menuOpen) onClick();
@@ -65,8 +63,8 @@ export function ConversationItem({
           className={cn(
             "flex h-6 w-6 items-center justify-center rounded-md transition-colors",
             isActive
-              ? "text-[var(--primary)] hover:bg-[var(--surface-container-highest)]"
-              : "text-neutral-400 hover:bg-[var(--surface-container-high)] hover:text-neutral-100"
+              ? "text-[var(--on-surface)] hover:bg-[var(--surface-container-highest)]"
+              : "text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-highest)] hover:text-[var(--on-surface)]"
           )}
           onClick={(e) => {
             e.stopPropagation();

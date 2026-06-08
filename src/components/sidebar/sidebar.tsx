@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
-  Plus,
+  SquarePen,
   Settings,
   MessageSquare,
+  Search,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ConversationList } from "./conversation-list";
 import { SearchDialog } from "./search-dialog";
@@ -22,6 +22,32 @@ interface SidebarProps {
   onDeleteConversation: (id: string) => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+}
+
+function isToday(date: Date) {
+  const now = new Date();
+  return (
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear()
+  );
+}
+
+function isYesterday(date: Date) {
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  return (
+    date.getDate() === yesterday.getDate() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getFullYear() === yesterday.getFullYear()
+  );
+}
+
+function isWithinLast7Days(date: Date) {
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  return diff >= 0 && diff < 7 * 24 * 60 * 60 * 1000;
 }
 
 export function Sidebar({
@@ -48,88 +74,115 @@ export function Sidebar({
 
   const labelClass = cn(
     "overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out",
-    isCollapsed ? "w-0 opacity-0" : "w-auto flex-1 opacity-100"
+    isCollapsed ? "max-w-0 opacity-0" : "max-w-[200px] flex-1 opacity-100"
   );
+
+  const grouped = useMemo(() => {
+    const today: UIConversation[] = [];
+    const yesterday: UIConversation[] = [];
+    const last7Days: UIConversation[] = [];
+    const earlier: UIConversation[] = [];
+
+    for (const c of conversations) {
+      if (isToday(c.createdAt)) {
+        today.push(c);
+      } else if (isYesterday(c.createdAt)) {
+        yesterday.push(c);
+      } else if (isWithinLast7Days(c.createdAt)) {
+        last7Days.push(c);
+      } else {
+        earlier.push(c);
+      }
+    }
+
+    return { today, yesterday, last7Days, earlier };
+  }, [conversations]);
 
   return (
     <>
       <aside
         className={cn(
-          "fixed left-0 top-0 z-40 flex h-full flex-col bg-[var(--surface-container-low)] tracking-tight transition-[width] duration-300 ease-in-out max-md:hidden",
-          isCollapsed ? "w-16" : "w-64"
+          "fixed left-0 top-0 z-40 flex h-full flex-col overflow-hidden bg-[var(--surface-container-low)] tracking-tight transition-[width] duration-300 ease-in-out max-md:hidden",
+          isCollapsed ? "w-16" : "w-[280px]"
         )}
       >
         {/* Header */}
         <div className="flex h-14 shrink-0 items-center">
           <div className="flex w-16 shrink-0 items-center justify-center">
-            <MessageSquare className="h-5 w-5 text-neutral-100" />
+            <MessageSquare className="h-5 w-5 text-[var(--on-surface)]" />
           </div>
           <div className={labelClass}>
-            <h1 className="text-xl font-bold tracking-tighter text-neutral-100">
-              llm Chatter
+            <h1 className="text-xl font-bold tracking-tighter text-[var(--on-surface)]">
+              LLM Chatter
             </h1>
           </div>
         </div>
 
-        {/* New Chat CTA */}
-        <div className="mb-6 mt-6 shrink-0">
-          {isCollapsed ? (
-            <div className="flex w-16 justify-center">
-              <Button
-                onClick={onNewChat}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--primary)] p-0 font-semibold text-[var(--primary-foreground)] transition-all hover:opacity-90 active:scale-95"
-                title="New chat"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
+        {/* Top Actions */}
+        <div className="flex flex-col gap-1 px-2 pb-2 pt-2">
+          <button
+            onClick={() => setSearchOpen(true)}
+            className="group flex w-full items-center rounded-xl py-2.5 transition-all duration-300 ease-in-out hover:bg-[var(--surface-container-high)]"
+            title="Search"
+          >
+            <div className="flex h-5 w-12 shrink-0 items-center justify-center">
+              <Search className="h-5 w-5 text-[var(--on-surface-variant)] group-hover:text-[var(--on-surface)]" />
             </div>
-          ) : (
-            <div className="px-4">
-              <Button
-                onClick={onNewChat}
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-foreground)] transition-all hover:opacity-90 active:scale-95"
-              >
-                <Plus className="h-4 w-4" />
-                <span className="text-[15px]">New Chat</span>
-              </Button>
-            </div>
-          )}
-        </div>
-
-        {/* CHATS section */}
-        <div className="flex flex-1 flex-col min-h-0">
-          {!isCollapsed && (
-            <div className="mb-2 px-6">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--on-surface-variant)] opacity-50">
-                Chats
+            <div className={cn("flex flex-1 items-center overflow-hidden transition-all duration-300 ease-in-out", isCollapsed ? "max-w-0 opacity-0" : "max-w-[200px] opacity-100")}>
+              <span className="whitespace-nowrap text-sm font-medium text-[var(--on-surface-variant)] group-hover:text-[var(--on-surface)]">
+                Search
+              </span>
+              <span className="ml-auto pr-3 text-xs text-[var(--on-surface-variant)] opacity-50">
+                ⌘K
               </span>
             </div>
-          )}
+          </button>
 
-          {!isCollapsed && (
-            <ScrollArea className="flex-1 custom-scrollbar px-2 pb-4">
-              <ConversationList
-                conversations={conversations}
-                activeId={activeConversationId}
-                onSelect={onSelectConversation}
-                onDelete={onDeleteConversation}
-              />
-            </ScrollArea>
-          )}
+          <button
+            onClick={onNewChat}
+            className="group flex w-full items-center rounded-xl py-2.5 transition-all duration-300 ease-in-out hover:bg-[var(--surface-container-high)]"
+            title="New Chat"
+          >
+            <div className="flex h-5 w-12 shrink-0 items-center justify-center">
+              <SquarePen className="h-5 w-5 text-[var(--on-surface)]" />
+            </div>
+            <div className={cn("overflow-hidden transition-all duration-300 ease-in-out", isCollapsed ? "max-w-0 opacity-0" : "max-w-[200px] opacity-100")}>
+              <span className="whitespace-nowrap text-sm font-medium text-[var(--on-surface)]">
+                New Chat
+              </span>
+            </div>
+          </button>
+        </div>
+
+        {/* History */}
+        <div className="flex flex-1 flex-col min-h-0">
+          <ScrollArea className={cn("flex-1 custom-scrollbar px-2 transition-opacity duration-300", isCollapsed ? "opacity-0 pointer-events-none" : "opacity-100")}>
+            <ConversationList
+              grouped={grouped}
+              activeId={activeConversationId}
+              onSelect={onSelectConversation}
+              onDelete={onDeleteConversation}
+            />
+          </ScrollArea>
         </div>
 
         {/* Footer */}
-        <div className="shrink-0 border-t border-[var(--outline-variant)]/10 py-3">
+        <div className={cn("shrink-0 px-2 pb-3 pt-2", isCollapsed ? "pb-6" : "")}>
           <a
             href="/settings"
-            className="flex w-full items-center py-2.5 text-sm font-medium text-neutral-400 transition-colors hover:bg-[var(--surface-container-high)] hover:text-neutral-100"
+            className="group flex w-full items-center rounded-xl py-3 transition-all duration-300 ease-in-out hover:bg-[var(--surface-container-high)]"
             title="Settings"
           >
-            <div className="flex w-16 shrink-0 items-center justify-center">
-              <Settings className="h-5 w-5 shrink-0" />
+            <div className="flex h-5 w-12 shrink-0 items-center justify-center">
+              <Settings className="h-5 w-5 text-[var(--on-surface)]" />
             </div>
-            <div className={labelClass}>
-              <span>Settings</span>
+            <div className={cn("flex flex-col overflow-hidden transition-all duration-300 ease-in-out", isCollapsed ? "max-h-0 max-w-0 opacity-0" : "max-h-12 max-w-[200px] opacity-100")}>
+              <span className="whitespace-nowrap text-sm font-semibold text-[var(--on-surface)]">
+                Settings
+              </span>
+              <span className="whitespace-nowrap text-xs text-[var(--on-surface-variant)] opacity-70">
+                Providers, models & more
+              </span>
             </div>
           </a>
         </div>

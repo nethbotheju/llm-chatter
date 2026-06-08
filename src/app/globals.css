@@ -5,8 +5,63 @@
   --font-sans: var(--font-inter), "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
-/* ── MD3 Dark Theme Color Tokens ── */
+/* ── Light Theme (default) ── */
 :root {
+  --background: #fdfcfb;
+  --foreground: #1b1b1b;
+
+  --muted: #f0f0f0;
+  --muted-foreground: #5e5e5e;
+
+  --border: #c4c4c4;
+  --ring: #c4c4c4;
+
+  --primary: #005cbb;
+  --primary-foreground: #ffffff;
+
+  --secondary: #5e5e5e;
+  --secondary-foreground: #ffffff;
+
+  --accent: #f0f0f0;
+  --accent-foreground: #1b1b1b;
+
+  --destructive: #ba1a1a;
+  --destructive-foreground: #ffffff;
+
+  --radius: 0.5rem;
+
+  /* MD3 Surface tokens */
+  --surface: #fdfcfb;
+  --surface-dim: #f0f0f0;
+  --surface-container-low: #f7f7f7;
+  --surface-container: #f0f0f0;
+  --surface-container-high: #e8e8e8;
+  --surface-container-highest: #e0e0e0;
+  --surface-bright: #ffffff;
+  --surface-tint: #005cbb;
+
+  /* MD3 On-surface tokens */
+  --on-surface: #1b1b1b;
+  --on-surface-variant: #5e5e5e;
+
+  /* MD3 Outline tokens */
+  --outline: #767575;
+  --outline-variant: #c4c4c4;
+
+  /* MD3 Tertiary */
+  --tertiary: #006c4c;
+  --tertiary-container: #cceedb;
+
+  /* Component-specific tokens */
+  --code-bg: #f5f5f5;
+  --chat-input-bg: rgba(255, 255, 255, 0.98);
+  --app-bar-bg: rgba(253, 252, 251, 0.7);
+  --scrollbar-thumb: #c4c4c4;
+  --scrollbar-thumb-hover: #767575;
+}
+
+/* ── Dark Theme ── */
+.dark {
   --background: #0e0e0e;
   --foreground: #e7e5e4;
 
@@ -28,9 +83,6 @@
   --destructive: #ee7d77;
   --destructive-foreground: #490106;
 
-  --radius: 0.5rem;
-
-  /* MD3 Surface tokens */
   --surface: #0e0e0e;
   --surface-dim: #0e0e0e;
   --surface-container-low: #131313;
@@ -40,17 +92,20 @@
   --surface-bright: #2c2c2c;
   --surface-tint: #adc6ff;
 
-  /* MD3 On-surface tokens */
   --on-surface: #e7e5e4;
   --on-surface-variant: #acabaa;
 
-  /* MD3 Outline tokens */
   --outline: #767575;
   --outline-variant: #484848;
 
-  /* MD3 Tertiary */
   --tertiary: #85fed5;
   --tertiary-container: #76f0c7;
+
+  --code-bg: #1a1a1a;
+  --chat-input-bg: rgba(30, 30, 30, 0.98);
+  --app-bar-bg: rgba(14, 14, 14, 0.7);
+  --scrollbar-thumb: #484848;
+  --scrollbar-thumb-hover: #767575;
 }
 
 * {
@@ -74,7 +129,7 @@ html, body {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #484848;
+  background: var(--scrollbar-thumb);
   border-radius: 10px;
 }
 
@@ -89,17 +144,17 @@ html, body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #484848;
+  background: var(--scrollbar-thumb);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #767575;
+  background: var(--scrollbar-thumb-hover);
 }
 
 /* ── Code block base ── */
 pre {
-  background: #1a1a1a;
+  background: var(--code-bg);
   border-radius: var(--radius);
   padding: 1rem;
   overflow-x: auto;
@@ -117,9 +172,102 @@ code {
 
 /* ── Glass card (settings panels) ── */
 .glass-card {
-  background: rgba(25, 26, 26, 0.6);
+  background: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(72, 72, 72, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 1rem;
+}
+
+.dark .glass-card {
+  background: rgba(25, 26, 26, 0.6);
+  border: 1px solid rgba(72, 72, 72, 0.15);
+}
+
+/* ── Chat input glass ── */
+.chat-input-glass {
+  background: var(--chat-input-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* ── Dropdown custom shadow ── */
+.dropdown-shadow {
+  box-shadow: 
+    0 0 1px rgba(0, 0, 0, 0.12), 
+    0 -2px 10px rgba(0, 0, 0, 0.04), 
+    0 8px 24px -4px rgba(0, 0, 0, 0.08);
+}
+
+.dark .dropdown-shadow {
+  box-shadow: 
+    0 0 1px rgba(255, 255, 255, 0.22),
+    0 24px 48px -12px rgba(0, 0, 0, 0.75);
+}
+
+/* ── Scrollbar Utilities ── */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* ── App bar ── */
+.app-bar {
+  background-color: var(--app-bar-bg);
+}
+
+/* ── Prose / Markdown overrides ── */
+.prose p,
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6,
+.prose strong,
+.prose code,
+.prose li,
+.prose blockquote,
+.prose th,
+.prose td,
+.prose ol,
+.prose ul,
+.prose span {
+  color: var(--on-surface) !important;
+}
+
+.prose :where(ol > li)::marker,
+.prose :where(ul > li)::marker {
+  color: var(--on-surface) !important;
+}
+
+.prose a {
+  color: var(--primary) !important;
+}
+
+.prose a:hover {
+  color: var(--primary) !important;
+  opacity: 0.8;
+}
+
+.prose pre {
+  background-color: var(--code-bg) !important;
+}
+
+.prose pre code {
+  color: var(--on-surface) !important;
+}
+
+.prose hr {
+  border-color: var(--outline-variant) !important;
+}
+
+.prose blockquote {
+  border-left-color: var(--outline-variant) !important;
+}
+
+.prose thead {
+  border-bottom-color: var(--outline-variant);
+}
+
+.prose tbody tr {
+  border-bottom-color: var(--outline-variant);
 }
