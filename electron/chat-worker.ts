@@ -1,0 +1,70 @@
+import { streamChatRuntime } from "../src/lib/chat-runtime";
+import { ChatError } from "../src/lib/chat-runtime/errors";
+
+interface StartPayload {
+  messages: { id: string; role: string; parts: unknown }[];
+  model: string;
+  provider: { type: string; apiKey: string; baseUrl?: string | null };
+  assistantConfig?: { systemPrompt: string; temperature: number; topP: number };
+}
+
+let abortController = new AbortController();
+
+process.parentPort.on("message", (e: { data: unknown }) => {
+  const msg = e.data as { type: string; payload?: StartPayload };
+  if (msg.type === "abort") {
+    abortController.abort();
+    return;
+  }
+
+  if (msg.type !== "start" || !msg.payload) return;
+
+  abortController = new AbortController();
+
+  const { messages, model, provider, assistantConfig } = msg.payload;
+
+  (async () => {
+    try {
+      const result = await streamChatRuntime(
+        {
+          messages: messages.map((m) => ({
+            id: m.id,
+            role: m.role as "user" | "assistant" | "system",
+            parts: typeof m.parts === "string" ? JSON.parse(m.parts as string) : m.parts,
+          })),
+          model,
+          provider: {
+            type: provider.type as "openai" | "anthropic" | "google" | "openai-compatible" | "anthropic-compatible",
+            apiKey: provider.apiKey,
+            baseUrl: provider.baseUrl ?? undefined,
+          },
+          assistantConfig: assistantConfig
+            ? {
+                systemPrompt: assistantConfig.systemPrompt,
+                temperature: assistantConfig.temperature,
+                topP: assistantConfig.topP,
+              }
+            : undefined,
+        },
+        { signal: abortController.signal },
+      );
+
+      const stream = result.toUIMessageStream({ sendReasoning: true });
+      const reader = stream.getReader();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        process.parentPort.postMessage({ type: "chunk", payload: value });
+      }
+
+      process.parentPort.postMessage({ type: "done" });
+    } catch (err) {
+      const error =
+        err instanceof ChatError
+          ? err.toDTO()
+          : { code: "UNKNOWN", message: String(err) };
+      process.parentPort.postMessage({ type: "error", payload: error });
+    }
+  })();
+});

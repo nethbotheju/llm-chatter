@@ -54,7 +54,32 @@ declare global {
       };
       // Phase 3: chat streaming
       chat?: {
-        _placeholder?: boolean;
+        resolve: (input: {
+          modelId: string;
+          conversationId?: string | null;
+        }) => Promise<{
+          model: string;
+          provider: { type: string; apiKey: string; baseUrl: string | null };
+          assistantConfig: {
+            systemPrompt: string;
+            temperature: number;
+            topP: number;
+          };
+        }>;
+        start: (payload: unknown) => Promise<string>;
+        abort: (streamId: string) => void;
+        onChunk: (
+          streamId: string,
+          handler: (chunk: unknown) => void,
+        ) => () => void;
+        onError: (
+          streamId: string,
+          handler: (error: unknown) => void,
+        ) => () => void;
+        onDone: (
+          streamId: string,
+          handler: () => void,
+        ) => () => void;
       };
     };
   }
