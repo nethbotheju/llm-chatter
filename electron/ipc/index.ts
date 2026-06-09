@@ -8,6 +8,9 @@ import { registerExportIpc } from "./export";
 import { registerStatsIpc } from "./stats";
 import { registerResetIpc } from "./reset";
 import { registerChatIpc } from "./chat";
+import { registerDialogsIpc } from "./dialogs";
+import { registerNotificationsIpc } from "./notifications";
+import { registerAutoLaunchIpc } from "./auto-launch";
 
 export function registerAllIpc() {
   registerProvidersIpc();
@@ -19,4 +22,7 @@ export function registerAllIpc() {
   registerStatsIpc();
   registerResetIpc();
   registerChatIpc(() => BrowserWindow.getAllWindows()[0] ?? null);
+  registerDialogsIpc();
+  registerNotificationsIpc();
+  registerAutoLaunchIpc();
 }
