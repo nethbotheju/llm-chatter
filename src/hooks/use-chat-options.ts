@@ -36,6 +36,16 @@ export function useChatOptions(
             parts: JSON.stringify(options.message.parts),
             metadata: options.message.metadata ? JSON.stringify(options.message.metadata) : null,
           });
+
+          const preview = options.message.parts
+            .filter((p) => p.type === "text")
+            .map((p) => (p as { text: string }).text)
+            .join("")
+            .slice(0, 120);
+          await window.electronAPI!.notifications.show({
+            title: "New response",
+            body: preview || "(empty response)",
+          });
         }
       } catch (error) {
         console.error("Failed to save assistant message:", error);

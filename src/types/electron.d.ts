@@ -81,6 +81,34 @@ declare global {
           handler: () => void,
         ) => () => void;
       };
+      // Phase 4: native integrations
+      dialogs: {
+        saveExport: (payload: {
+          defaultName: string;
+          json: string;
+        }) => Promise<{ canceled: boolean; filePath?: string }>;
+      };
+      notifications: {
+        show: (payload: {
+          title: string;
+          body: string;
+          silent?: boolean;
+        }) => Promise<void>;
+      };
+      autoLaunch: {
+        get: () => Promise<boolean>;
+        set: (enabled: boolean) => Promise<boolean>;
+      };
+      onShortcut: (
+        name: string,
+        handler: () => void,
+      ) => () => void;
+      offShortcut: (name: string) => void;
+      onAction: (
+        name: string,
+        handler: () => void,
+      ) => () => void;
+      offAction: (name: string) => void;
     };
   }
 }

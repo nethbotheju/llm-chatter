@@ -79,4 +79,35 @@ contextBridge.exposeInMainWorld("electronAPI", {
       return () => ipcRenderer.removeListener(channel, listener);
     },
   },
+  // Phase 4: native integrations
+  dialogs: {
+    saveExport: (payload: { defaultName: string; json: string }) =>
+      invoke("dialogs:saveExport", payload),
+  },
+  notifications: {
+    show: (payload: { title: string; body: string; silent?: boolean }) =>
+      invoke("notifications:show", payload),
+  },
+  autoLaunch: {
+    get: () => invoke("autoLaunch:get"),
+    set: (enabled: boolean) => invoke("autoLaunch:set", enabled),
+  },
+  onShortcut: (name: string, handler: () => void) => {
+    const channel = `shortcut:${name}`;
+    const listener = () => handler();
+    ipcRenderer.on(channel, listener);
+    return () => ipcRenderer.removeListener(channel, listener);
+  },
+  offShortcut: (name: string) => {
+    ipcRenderer.removeAllListeners(`shortcut:${name}`);
+  },
+  onAction: (name: string, handler: () => void) => {
+    const channel = `action:${name}`;
+    const listener = () => handler();
+    ipcRenderer.on(channel, listener);
+    return () => ipcRenderer.removeListener(channel, listener);
+  },
+  offAction: (name: string) => {
+    ipcRenderer.removeAllListeners(`action:${name}`);
+  },
 });

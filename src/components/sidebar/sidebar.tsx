@@ -11,6 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ConversationList } from "./conversation-list";
 import { SearchDialog } from "./search-dialog";
 import { cn } from "@/lib/utils";
+import { isElectron } from "@/lib/runtime";
 
 import type { UIConversation } from "@/types";
 
@@ -70,6 +71,12 @@ export function Sidebar({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    if (!isElectron()) return;
+    const cleanup = window.electronAPI!.onAction("open-search", () => setSearchOpen(true));
+    return cleanup;
   }, []);
 
   const labelClass = cn(
