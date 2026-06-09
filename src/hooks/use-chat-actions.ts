@@ -10,6 +10,7 @@ import {
   getMessageService,
   ensureInit,
   isTauri,
+  isElectron,
   resolveChatConfig,
 } from "@/lib/services";
 import type { Assistant } from "@/lib/services";
@@ -52,6 +53,9 @@ export function useChatActions(options: UseChatActionsOptions) {
         provider: config.provider,
         assistantConfig: config.assistantConfig,
       };
+    }
+    if (isElectron()) {
+      return { modelId, conversationId };
     }
     return { modelId, conversationId };
   }, []);

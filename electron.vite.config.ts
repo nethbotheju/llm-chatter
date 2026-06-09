@@ -7,7 +7,16 @@ export default defineConfig({
     build: {
       outDir: "dist-electron/main",
       rollupOptions: {
-        input: { index: resolve(__dirname, "electron/main.ts") },
+        input: {
+          index: resolve(__dirname, "electron/main.ts"),
+          "chat-worker": resolve(__dirname, "electron/chat-worker.ts"),
+        },
+        output: {
+          entryFileNames: (chunkInfo) => {
+            if (chunkInfo.name === "chat-worker") return "[name].mjs";
+            return "[name].js";
+          },
+        },
       },
     },
   },

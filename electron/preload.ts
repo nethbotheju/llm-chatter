@@ -53,6 +53,30 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   // Phase 3: chat streaming
   chat: {
-    _placeholder: true,
+    resolve: (input: { modelId: string; conversationId?: string | null }) =>
+      invoke("chat:resolve", input),
+    start: (payload: unknown): Promise<string> =>
+      invoke("chat:start", payload),
+    abort: (streamId: string) => invoke("chat:abort", streamId),
+    onChunk: (streamId: string, handler: (chunk: unknown) => void) => {
+      const channel = `chat:chunk:${streamId}`;
+      const listener = (_e: Electron.IpcRendererEvent, chunk: unknown) =>
+        handler(chunk);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+    onError: (streamId: string, handler: (error: unknown) => void) => {
+      const channel = `chat:error:${streamId}`;
+      const listener = (_e: Electron.IpcRendererEvent, err: unknown) =>
+        handler(err);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+    onDone: (streamId: string, handler: () => void) => {
+      const channel = `chat:done:${streamId}`;
+      const listener = () => handler();
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
   },
 });
