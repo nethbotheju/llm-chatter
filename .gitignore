@@ -33,6 +33,9 @@ build
 # Electron
 dist-electron/
 release/
+*.pfx
+*.p12
+*.cer
 
 # SEA build artifacts
 desktop-runtime/bin/
