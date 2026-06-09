@@ -6,6 +6,7 @@ import { registerAllIpc } from "./ipc";
 import { registerShortcuts, unregisterShortcuts } from "./shortcuts";
 import { createTray, destroyTray } from "./tray";
 import { setApplicationMenu } from "./menu";
+import { setupAutoUpdater } from "./updater";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -71,6 +72,10 @@ app.whenReady().then(async () => {
   createTray(getMainWindow);
   registerShortcuts(getMainWindow);
   createWindow();
+
+  if (!isDev) {
+    setupAutoUpdater(getMainWindow);
+  }
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
