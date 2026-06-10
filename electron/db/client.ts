@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "./generated";
 import { join } from "node:path";
 import { existsSync, mkdirSync } from "node:fs";
 import { app } from "electron";

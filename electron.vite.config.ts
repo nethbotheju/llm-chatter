@@ -11,9 +11,10 @@ export default defineConfig({
           index: resolve(__dirname, "electron/main.ts"),
           "chat-worker": resolve(__dirname, "electron/chat-worker.ts"),
         },
+        external: [/electron\/db\/generated/],
         output: {
           entryFileNames: (chunkInfo) => {
-            if (chunkInfo.name === "chat-worker") return "[name].mjs";
+            if (chunkInfo.name === "chat-worker") return "[name].cjs";
             return "[name].js";
           },
         },
@@ -29,7 +30,5 @@ export default defineConfig({
       },
     },
   },
-  // Renderer is NOT bundled by electron-vite — Next.js handles the renderer.
-  // electron-vite only compiles the main + preload processes.
   renderer: undefined,
 });

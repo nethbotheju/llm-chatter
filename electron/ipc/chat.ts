@@ -11,7 +11,7 @@ const runningWorkers = new Map<string, Electron.UtilityProcess>();
 
 function getChatWorkerPath(): string {
   if (app.isPackaged) {
-    return join(__dirname, "chat-worker.mjs");
+    return join(__dirname, "chat-worker.cjs");
   }
   return join(__dirname, "../../dist-electron/main/chat-worker.mjs");
 }
@@ -99,7 +99,8 @@ export function registerChatIpc(getMainWindow: () => BrowserWindow | null) {
       }
     });
 
-    child.on("exit", () => {
+    child.on("exit", (code) => {
+      console.error(`Chat worker exited with code ${code}`);
       runningWorkers.delete(streamId);
     });
 

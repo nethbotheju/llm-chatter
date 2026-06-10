@@ -8,6 +8,7 @@ import {
   Search,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import Link from "next/link";
 import { ConversationList } from "./conversation-list";
 import { SearchDialog } from "./search-dialog";
 import { cn } from "@/lib/utils";
@@ -175,8 +176,8 @@ export function Sidebar({
 
         {/* Footer */}
         <div className={cn("shrink-0 px-2 pb-3 pt-2", isCollapsed ? "pb-6" : "")}>
-          <a
-            href="/settings"
+          <Link
+            href="/settings/general"
             className="group flex w-full items-center rounded-xl py-3 transition-all duration-300 ease-in-out hover:bg-[var(--surface-container-high)]"
             title="Settings"
           >
@@ -191,7 +192,7 @@ export function Sidebar({
                 Providers, models & more
               </span>
             </div>
-          </a>
+          </Link>
         </div>
       </aside>
 

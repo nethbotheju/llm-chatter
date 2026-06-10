@@ -10,6 +10,10 @@ interface StartPayload {
 
 let abortController = new AbortController();
 
+process.on("uncaughtException", (err) => {
+  process.parentPort.postMessage({ type: "error", payload: { code: "WORKER_CRASH", message: String(err?.message ?? err), stack: err?.stack } });
+});
+
 process.parentPort.on("message", (e: { data: unknown }) => {
   const msg = e.data as { type: string; payload?: StartPayload };
   if (msg.type === "abort") {
