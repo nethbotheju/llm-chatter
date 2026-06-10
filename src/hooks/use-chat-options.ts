@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useRef } from "react";
 import type { UIMessage, ChatTransport } from "ai";
 import type { UseChatOptions } from "@ai-sdk/react";
-import { isTauri, isElectron } from "@/lib/services";
+import { isElectron } from "@/lib/services";
 
 export function useChatOptions(
   transport: ChatTransport<UIMessage> | undefined,
@@ -18,18 +18,7 @@ export function useChatOptions(
 
     if (!options.isAbort && !options.isError && currentConversationIdRef.current) {
       try {
-        if (isTauri()) {
-          const { invoke } = await import("@tauri-apps/api/core");
-          await invoke("save_assistant_message", {
-            input: {
-              conversationId: currentConversationIdRef.current,
-              messageId: options.message.id,
-              role: options.message.role,
-              parts: JSON.stringify(options.message.parts),
-              metadata: options.message.metadata ? JSON.stringify(options.message.metadata) : null,
-            },
-          });
-        } else if (isElectron()) {
+        if (isElectron()) {
           await window.electronAPI!.messages.create({
             conversationId: currentConversationIdRef.current,
             role: options.message.role,

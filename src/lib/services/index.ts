@@ -24,13 +24,7 @@ export type {
 
 export type * from "./types";
 
-const isTauri = (): boolean => {
-  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-};
-
-const isElectron = (): boolean => {
-  return typeof window !== "undefined" && !!window.electronAPI;
-};
+import { isElectron } from "@/lib/runtime";
 
 let _provider: IProviderService | null = null;
 let _model: IModelService | null = null;
@@ -43,18 +37,7 @@ let _stats: IStatsService | null = null;
 let _reset: IResetService | null = null;
 
 async function loadAdapter() {
-  if (isTauri()) {
-    const adapter = await import("./adapters/tauri.adapter");
-    _provider = adapter.tauriProviderService;
-    _model = adapter.tauriModelService;
-    _assistant = adapter.tauriAssistantService;
-    _conversation = adapter.tauriConversationService;
-    _message = adapter.tauriMessageService;
-    _search = adapter.tauriSearchService;
-    _export = adapter.tauriExportService;
-    _stats = adapter.tauriStatsService;
-    _reset = adapter.tauriResetService;
-  } else if (isElectron()) {
+  if (isElectron()) {
     const adapter = await import("./adapters/electron.adapter");
     _provider = adapter.electronProviderService;
     _model = adapter.electronModelService;
@@ -126,38 +109,4 @@ export function getResetService(): IResetService {
 }
 
 export { ensureInit };
-export { isTauri, isElectron };
-
-export interface ChatTransportConfig {
-  apiUrl: string;
-  headers?: Record<string, string>;
-}
-
-export async function getChatTransportConfig(): Promise<ChatTransportConfig | null> {
-  if (!isTauri()) return null;
-  const { invoke } = await import("@tauri-apps/api/core");
-  const config = await invoke<{ port: number; token: string }>("get_sidecar_config");
-  return {
-    apiUrl: `http://127.0.0.1:${config.port}/chat`,
-    headers: { Authorization: `Bearer ${config.token}` },
-  };
-}
-
-export interface ResolvedChatConfig {
-  model: string;
-  provider: { type: string; apiKey: string; baseUrl?: string | null };
-  assistantConfig: { systemPrompt: string; temperature: number; topP: number };
-}
-
-export async function resolveChatConfig(
-  modelId: string,
-  conversationId?: string | null,
-): Promise<ResolvedChatConfig> {
-  if (!isTauri()) {
-    throw new Error("resolveChatConfig is only available in desktop mode");
-  }
-  const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<ResolvedChatConfig>("resolve_chat_config", {
-    input: { modelId, conversationId: conversationId ?? null },
-  });
-}
+export { isElectron };

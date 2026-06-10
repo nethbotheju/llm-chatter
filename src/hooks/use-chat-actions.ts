@@ -9,9 +9,6 @@ import {
   getConversationService,
   getMessageService,
   ensureInit,
-  isTauri,
-  isElectron,
-  resolveChatConfig,
 } from "@/lib/services";
 import type { Assistant } from "@/lib/services";
 
@@ -46,17 +43,6 @@ export function useChatActions(options: UseChatActionsOptions) {
   chatMessagesRef.current = options.chat.messages;
 
   const buildRequestBody = useCallback(async (modelId: string, conversationId: string | null) => {
-    if (isTauri()) {
-      const config = await resolveChatConfig(modelId, conversationId);
-      return {
-        model: config.model,
-        provider: config.provider,
-        assistantConfig: config.assistantConfig,
-      };
-    }
-    if (isElectron()) {
-      return { modelId, conversationId };
-    }
     return { modelId, conversationId };
   }, []);
 
@@ -79,8 +65,6 @@ export function useChatActions(options: UseChatActionsOptions) {
     if (!convId) {
       const data = await getConversationService().create({ assistantId: currentAssistant.id });
       convId = data.id;
-      // Signal to useConversationMessages that it should NOT fetch messages
-      // from DB for this new conversation — the useChat hook already has them.
       skipFetchRef.current = true;
       setCurrentConversationId(convId);
       window.history.replaceState(null, '', `/c/${convId}`);
