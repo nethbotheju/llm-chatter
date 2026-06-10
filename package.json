@@ -23,7 +23,7 @@
     "release": "pnpm electron:build:all && pnpm exec electron-builder --publish always"
   },
   "keywords": [],
-  "author": "",
+  "author": "nethbotheju",
   "license": "ISC",
   "packageManager": "pnpm@10.32.1",
   "dependencies": {

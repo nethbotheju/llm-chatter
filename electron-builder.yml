@@ -16,11 +16,7 @@ files:
   - "!**/.{editorconfig,eslintrc*,prettierrc*,gitignore,travis.yml,nycrc}"
   - "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.idea,.vscode,.next,target}"
 
-asar: true
-asarUnpack:
-  - "node_modules/@prisma/**/*"
-  - "node_modules/better-sqlite3/**/*"
-  - "node_modules/prisma/build/**/*"
+asar: false
 
 # macOS
 mac:
