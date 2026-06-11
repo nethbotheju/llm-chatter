@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { isElectron } from "@/lib/runtime";
 import { ArrowLeft, Settings, Server, Bot, Shield } from "lucide-react";
 
 const settingsNav = [
@@ -24,10 +25,10 @@ export default function SettingsLayout({
       {/* Settings Sidebar */}
       <aside className="flex w-64 flex-col bg-[var(--surface-container-low)] tracking-tight">
         {/* Header */}
-        <div className="p-6">
+        <div className={`titlebar-drag p-6 ${isElectron() ? "pt-16" : ""}`}>
           <Link
             href="/"
-            className="flex items-center gap-2 text-sm font-medium text-[var(--on-surface-variant)] transition-colors hover:text-[var(--on-surface)]"
+            className="titlebar-no-drag flex items-center gap-2 text-sm font-medium text-[var(--on-surface-variant)] transition-colors hover:text-[var(--on-surface)]"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Chat
@@ -41,7 +42,7 @@ export default function SettingsLayout({
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 space-y-1 px-3">
+        <nav className="titlebar-drag flex-1 space-y-1 px-3">
           {settingsNav.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -50,7 +51,7 @@ export default function SettingsLayout({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors duration-150",
+                  "titlebar-no-drag flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors duration-150",
                   isActive
                     ? "bg-[var(--surface-container-highest)] text-[var(--on-surface)]"
                     : "text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
