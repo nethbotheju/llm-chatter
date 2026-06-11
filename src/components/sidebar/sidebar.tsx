@@ -115,8 +115,8 @@ export function Sidebar({
         )}
       >
         {/* Header */}
-        <div className="flex h-14 shrink-0 items-center">
-          <div className="flex w-16 shrink-0 items-center justify-center">
+        <div className={`titlebar-drag flex shrink-0 items-center ${isElectron() ? "h-[90px]" : "h-14"}`}>
+          <div className="titlebar-no-drag flex w-16 shrink-0 items-center justify-center">
             <MessageSquare className="h-5 w-5 text-[var(--on-surface)]" />
           </div>
           <div className={labelClass}>
