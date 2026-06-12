@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { UIMessage, ChatTransport } from "ai";
 import type { UseChatOptions } from "@ai-sdk/react";
 import { isElectron } from "@/lib/services";
@@ -11,7 +11,9 @@ export function useChatOptions(
   currentConversationId: string | null,
 ): UseChatOptions<UIMessage> {
   const currentConversationIdRef = useRef(currentConversationId);
-  currentConversationIdRef.current = currentConversationId;
+  useEffect(() => {
+    currentConversationIdRef.current = currentConversationId;
+  });
 
   const onFinish = useCallback(async (options: { message: UIMessage; isAbort: boolean; isError: boolean }) => {
     await fetchConversations();

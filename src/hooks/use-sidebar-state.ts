@@ -1,37 +1,43 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
 const STORAGE_KEY = "llm-chatter:sidebar-collapsed";
 
+function getStoredCollapsed(): boolean {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored === "true";
+  } catch {
+    return false;
+  }
+}
+
+function subscribeToStorage(callback: () => void) {
+  window.addEventListener("storage", callback);
+  return () => window.removeEventListener("storage", callback);
+}
+
 export function useSidebarState() {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored !== null) {
-        setIsCollapsed(stored === "true");
-      }
-    } catch {
-      // localStorage unavailable
-    }
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, String(isCollapsed));
-    } catch {
-      // localStorage unavailable
-    }
-  }, [isCollapsed, mounted]);
+  const isCollapsed = useSyncExternalStore(
+    subscribeToStorage,
+    () => getStoredCollapsed(),
+    () => false,
+  );
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   const toggle = useCallback(() => {
-    setIsCollapsed((prev) => !prev);
-  }, []);
+    try {
+      localStorage.setItem(STORAGE_KEY, String(!isCollapsed));
+      window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY }));
+    } catch {
+      // localStorage unavailable
+    }
+  }, [isCollapsed]);
 
   return { isCollapsed, toggle, mounted } as const;
 }
