@@ -10,6 +10,13 @@ import { ModelSelector } from "@/components/chat/model-selector";
 import { AssistantSelector } from "@/components/chat/assistant-selector";
 import { TopAppBar } from "@/components/layout/top-app-bar";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
   useTransport,
   useModels,
   useAssistants,
@@ -21,6 +28,7 @@ import {
   useSidebarState,
 } from "@/hooks";
 import { toUIConversation } from "@/types";
+import { isElectron } from "@/lib/runtime";
 import type { Assistant } from "@/lib/services";
 
 export default function ChatLayout({
@@ -53,6 +61,7 @@ function ChatLayoutInner({
   children: React.ReactNode;
 }) {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   const {
     models,
@@ -131,6 +140,12 @@ function ChatLayoutInner({
   useKeyboardShortcuts({ onNewChat: handleNewChat, onToggleSidebar: toggleSidebar });
 
   useEffect(() => {
+    if (!isElectron()) return;
+    const cleanup = window.electronAPI!.onAction("open-about", () => setAboutOpen(true));
+    return cleanup;
+  }, []);
+
+  useEffect(() => {
     fetchConversations();
     fetchModels();
     fetchAssistants();
@@ -203,6 +218,28 @@ function ChatLayoutInner({
       </main>
 
       {children}
+
+      {/* About Dialog (Electron only) */}
+      {isElectron() && (
+        <Dialog open={aboutOpen} onOpenChange={setAboutOpen}>
+          <DialogContent className="border-[var(--outline-variant)]/10 bg-[var(--surface-container)] sm:rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="tracking-tight text-[var(--on-surface)]">
+                llm Chatter
+              </DialogTitle>
+              <DialogDescription className="text-[var(--on-surface-variant)]">
+                Multi-provider LLM chat application
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2 text-sm text-[var(--on-surface-variant)]">
+              <p>Version 1.0.0</p>
+              <p>
+                Supports OpenAI, Anthropic, Google, and compatible API providers.
+              </p>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

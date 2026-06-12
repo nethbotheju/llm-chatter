@@ -219,6 +219,17 @@ code {
   background-color: var(--app-bar-bg);
 }
 
+/* ── macOS title bar drag region ── */
+.titlebar-drag {
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+
+.titlebar-no-drag {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
 /* ── Prose / Markdown overrides ── */
 .prose p,
 .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6,

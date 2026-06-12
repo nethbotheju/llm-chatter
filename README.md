@@ -1,6 +1,6 @@
 # llm Chatter
 
-A multi-provider LLM chat application that runs as both a **web app** (Next.js) and a **native desktop app** (Tauri v2). Chat with OpenAI, Anthropic, Google Gemini, and any OpenAI-compatible or Anthropic-compatible API — all with encrypted API key storage, custom assistants, conversation history, and real-time streaming.
+A multi-provider LLM chat application that runs as both a **web app** (Next.js) and a **native desktop app** (Electron). Chat with OpenAI, Anthropic, Google Gemini, and any OpenAI-compatible or Anthropic-compatible API — all with encrypted API key storage, custom assistants, conversation history, and real-time streaming.
 
 ---
 
@@ -39,12 +39,12 @@ A multi-provider LLM chat application that runs as both a **web app** (Next.js) 
 
 ### Backend / Desktop
 - **Web:** Next.js API Routes + Prisma + SQLite
-- **Desktop:** Tauri v2 (Rust) + rusqlite + Node.js SEA sidecar
+- **Desktop:** Electron + better-sqlite3 + utility process for AI streaming
 
 ### Database
 - SQLite (shared schema across web and desktop)
 - Prisma ORM (web mode)
-- rusqlite with migrations (desktop mode)
+- better-sqlite3 (desktop mode)
 
 ---
 
@@ -62,13 +62,13 @@ React Frontend
 ### Desktop Mode
 ```
 React Frontend
-  ├── Data: Service Layer → Tauri Adapter → invoke() → Rust Commands → rusqlite → SQLite
-  └── Chat: useChat → POST localhost:{port}/chat → Node.js Sidecar → streamChatRuntime() → AI Provider API
+  ├── Data: Service Layer → Electron Adapter → IPC → Electron Main → better-sqlite3 → SQLite
+  └── Chat: useChat → ElectronChatTransport → IPC → Utility Process → streamChatRuntime() → AI Provider API
 ```
 
 Key architectural decisions:
 - **Shared streaming engine** — `streamChatRuntime()` in `src/lib/chat-runtime/stream.ts` is the only module shared directly between web and desktop
-- **Pre-resolved config** — In desktop mode, Rust resolves and decrypts provider config before sending it to the sidecar; the sidecar never touches the database
+- **Pre-resolved config** — In desktop mode, the Electron main process resolves and decrypts provider config before sending it to the utility process; the utility process never touches the database
 - **Static export compatibility** — Desktop build uses `output: "export"` with client-side `window.history.pushState` navigation
 
 ---
@@ -79,7 +79,6 @@ Key architectural decisions:
 
 - **Node.js** v18+ (v22 recommended)
 - **pnpm** v10+
-- **Rust** 1.85.0+ (for desktop development)
 
 ### Install Dependencies
 
@@ -113,7 +112,30 @@ MASTER_SECRET=your-encryption-secret-here
 |---|---|---|
 | `DATABASE_URL` | Yes | SQLite database file path |
 | `MASTER_SECRET` | Yes | AES-256-GCM encryption key for API keys |
-| `BUILD_TARGET` | No | Set to `desktop` for static export builds |
+
+---
+
+## Desktop App
+
+llm Chatter ships as a native desktop app for macOS, Windows, and Linux, built with [Electron](https://www.electronjs.org/). The web and desktop apps share 100% of the same TypeScript/React/Next.js code.
+
+### Development
+
+```bash
+pnpm electron:dev
+```
+
+### Production Build
+
+```bash
+pnpm electron:build:mac       # .dmg + .zip
+pnpm electron:build:win       # .exe installer + portable
+pnpm electron:build:linux     # .AppImage + .deb + .rpm
+```
+
+### Auto-Update
+
+The desktop app auto-updates via GitHub Releases. New versions are detected on launch; users are prompted to restart to apply.
 
 ---
 
@@ -138,15 +160,16 @@ MASTER_SECRET=your-encryption-secret-here
 | `pnpm db:seed` | Seed database with defaults |
 | `pnpm db:studio` | Open Prisma Studio |
 
-### Desktop Development
+### Desktop
 
 | Command | Description |
 |---|---|
-| `pnpm desktop-runtime:build` | Build sidecar with esbuild |
-| `pnpm desktop-runtime:build-sea` | Build sidecar as Node.js SEA |
-| `pnpm build:desktop` | Full desktop build (sidecar + static export) |
-| `pnpm tauri:dev` | Run Tauri in dev mode |
-| `pnpm tauri:build` | Build Tauri desktop app |
+| `pnpm electron:dev` | Run Electron in dev mode |
+| `pnpm electron:build` | Build Electron renderer (static export) |
+| `pnpm electron:build:dist` | Build and package (current platform) |
+| `pnpm electron:build:mac` | Build and package for macOS |
+| `pnpm electron:build:win` | Build and package for Windows |
+| `pnpm electron:build:linux` | Build and package for Linux |
 
 ---
 
@@ -180,21 +203,15 @@ chat-llm-web/
 │   │   ├── contracts/            # Zod schemas & DTOs
 │   │   ├── db/                   # Prisma client singleton
 │   │   ├── models.ts             # Model capability helpers
+│   │   ├── runtime/              # Runtime detection (web vs desktop)
 │   │   └── services/             # Service layer with adapters
 │   └── types/                    # UI-facing type definitions
-├── src-tauri/                    # Tauri v2 desktop app (Rust)
-│   ├── src/
-│   │   ├── lib.rs                # App setup & command registration
-│   │   ├── crypto.rs             # AES-256-GCM encryption
-│   │   ├── db.rs                 # SQLite schema & migrations
-│   │   ├── desktop_runtime.rs    # Sidecar process management
-│   │   └── commands/             # Tauri IPC command modules
-│   ├── Cargo.toml
-│   └── tauri.conf.json
-├── desktop-runtime/              # Node.js sidecar for desktop streaming
-│   ├── src/server.ts             # HTTP server with /chat endpoint
-│   ├── build.mjs                 # esbuild bundler
-│   └── build-sea.mjs             # Node.js SEA builder
+├── electron/                     # Electron desktop app
+│   ├── main.ts                   # Main process entry
+│   ├── preload.ts                # Preload script (IPC bridge)
+│   ├── chat-worker.ts            # Utility process for AI streaming
+│   ├── db/                       # Database layer (better-sqlite3)
+│   └── ipc/                      # IPC command handlers
 ├── prisma/
 │   ├── schema.prisma             # SQLite database schema
 │   └── seed.ts                   # Database seed script
@@ -207,9 +224,9 @@ chat-llm-web/
 
 - **API keys are encrypted at rest** using AES-256-GCM
   - **Web:** Node.js `crypto` module with `MASTER_SECRET` env var
-  - **Desktop:** Rust `aes-gcm` crate with a UUID-based secret stored in app data directory
+  - **Desktop:** Node.js `crypto` with a UUID-based secret stored in app data directory
 - **Frontend never sees API keys** — only a `hasApiKey: boolean` flag is exposed
-- Desktop sidecar receives **pre-resolved, decrypted config** from Rust and never accesses the database directly
+- Desktop utility process receives **pre-resolved, decrypted config** from the main process and never accesses the database directly
 
 ---
 
@@ -229,7 +246,7 @@ chat-llm-web/
 
 ### Adding a New AI Provider Type
 
-1. Add the provider type to `prisma/schema.prisma` and `src-tauri/src/db.rs`
+1. Add the provider type to `prisma/schema.prisma` and the Electron DB schema in `electron/db/`
 2. Add the runtime case in `src/lib/chat-runtime/provider-client.ts`
 3. Update Zod schemas in `src/lib/contracts/schemas.ts`
 4. Update the provider settings UI in `src/app/settings/providers/page.tsx`
@@ -237,7 +254,7 @@ chat-llm-web/
 ### Modifying the Database Schema
 
 1. Update `prisma/schema.prisma` for web mode
-2. Update `src-tauri/src/db.rs` for desktop mode (schema + migrations)
+2. Update the Electron DB schema in `electron/db/` for desktop mode
 3. Run `pnpm db:push` to apply Prisma changes
 4. Update Zod schemas, service interfaces, and both adapter implementations
 
