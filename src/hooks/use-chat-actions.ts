@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { UIMessage } from "ai";
 import type { UseChatHelpers } from "@ai-sdk/react";
 import type { MutableRefObject } from "react";
@@ -37,10 +37,11 @@ export function useChatActions(options: UseChatActionsOptions) {
   } = options;
 
   const chatRef = useRef(options.chat);
-  chatRef.current = options.chat;
-
   const chatMessagesRef = useRef(options.chat.messages);
-  chatMessagesRef.current = options.chat.messages;
+  useEffect(() => {
+    chatRef.current = options.chat;
+    chatMessagesRef.current = options.chat.messages;
+  });
 
   const buildRequestBody = useCallback(async (modelId: string, conversationId: string | null) => {
     return { modelId, conversationId };
@@ -81,7 +82,7 @@ export function useChatActions(options: UseChatActionsOptions) {
 
     const body = await buildRequestBody(selectedModelId, convId);
     chatRef.current.sendMessage({ text: message }, { body });
-  }, [currentConversationId, selectedModelId, currentAssistant, fetchConversations, buildRequestBody]);
+  }, [currentConversationId, selectedModelId, currentAssistant, setCurrentConversationId, fetchConversations, buildRequestBody, skipFetchRef]);
 
   const handleEditMessage = useCallback(async (messageId: string, newContent: string) => {
     if (!currentConversationId || !selectedModelId || !currentAssistant) return;

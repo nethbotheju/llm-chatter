@@ -57,15 +57,17 @@ export function ModelSelector({
     if (open && inputRef.current) {
       inputRef.current.focus();
     }
-    if (!open) {
-      setSearchQuery("");
-    }
   }, [open]);
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (!nextOpen) setSearchQuery("");
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (ref.current && !ref.current.contains(event.target as Node)) {
-        setOpen(false);
+        handleOpenChange(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -92,7 +94,7 @@ export function ModelSelector({
       <div ref={ref} className={cn("relative", className)}>
         <button
           type="button"
-          onClick={() => !disabled && setOpen(!open)}
+          onClick={() => !disabled && handleOpenChange(!open)}
           disabled={disabled}
           className="flex items-center gap-1 text-sm font-semibold text-[var(--on-surface)] transition-colors hover:text-[var(--primary)] disabled:opacity-50"
         >
@@ -144,7 +146,7 @@ export function ModelSelector({
                           type="button"
                           onClick={() => {
                             onSelectModel(model.id);
-                            setOpen(false);
+                            handleOpenChange(false);
                           }}
                           className={cn(
                             "group flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-all duration-200",
@@ -175,7 +177,7 @@ export function ModelSelector({
     <div ref={ref} className={cn("relative", className)}>
       <button
         type="button"
-        onClick={() => !disabled && setOpen(!open)}
+        onClick={() => !disabled && handleOpenChange(!open)}
         disabled={disabled}
         className={cn(
           "flex h-11 w-full items-center justify-between rounded-xl border border-[var(--outline-variant)]/30 bg-[var(--surface-container-low)] px-4 py-2 text-sm transition-all duration-300",
@@ -246,7 +248,7 @@ export function ModelSelector({
                         type="button"
                         onClick={() => {
                           onSelectModel(model.id);
-                          setOpen(false);
+                          handleOpenChange(false);
                         }}
                         className={cn(
                           "group flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-all duration-200",
