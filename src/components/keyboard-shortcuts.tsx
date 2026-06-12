@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { Keyboard } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -14,18 +14,14 @@ const shortcuts = [
   { keys: ["Esc"], description: "Close dialogs" },
 ];
 
-function isMac() {
-  if (typeof window === "undefined") return false;
-  return navigator.platform.toUpperCase().indexOf("MAC") >= 0;
-}
 
 export function KeyboardShortcutsHelp() {
   const [open, setOpen] = useState(false);
-  const [mac, setMac] = useState(false);
-
-  useEffect(() => {
-    setMac(isMac());
-  }, []);
+  const mac = useSyncExternalStore(
+    () => () => {},
+    () => navigator.platform.toUpperCase().indexOf("MAC") >= 0,
+    () => false,
+  );
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
