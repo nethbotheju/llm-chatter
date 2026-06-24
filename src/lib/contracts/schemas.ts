@@ -17,6 +17,8 @@ export const providerSchema = z.object({
   baseUrl: z.string().nullable().optional(),
   hasApiKey: z.boolean(),
   enabled: z.boolean(),
+  catalogId: z.string().nullable().optional(),
+  lastSyncedAt: isoDateSchema.nullable().optional(),
   createdAt: isoDateSchema,
   updatedAt: isoDateSchema,
 });
@@ -35,6 +37,8 @@ export const modelSchema = z.object({
   name: z.string(),
   providerId: z.string(),
   capabilities: z.string(),
+  catalogModelId: z.string().nullable().optional(),
+  metadata: z.string().nullable().optional(),
   enabled: z.boolean(),
   createdAt: isoDateSchema,
   updatedAt: isoDateSchema,
@@ -224,6 +228,46 @@ export const validateProviderInputSchema = z.object({
   apiKey: z.string().optional(),
 });
 
+export const providerCatalogItemSchema = z.object({
+  catalogId: z.string(),
+  name: z.string(),
+  type: providerTypeSchema,
+  baseUrl: z.string().nullable(),
+  modelCount: z.number(),
+  doc: z.string().nullable(),
+});
+
+export const providerCatalogListSchema = z.array(providerCatalogItemSchema);
+
+export const modelCatalogItemSchema = z.object({
+  id: z.string(),
+  displayName: z.string(),
+  capabilities: z.array(z.string()),
+  contextLimit: z.number(),
+  cost: z.any().nullable(),
+});
+
+export const modelCatalogListSchema = z.array(modelCatalogItemSchema);
+
+export const catalogImportInputSchema = z.object({
+  catalogId: z.string().min(1),
+  apiKey: z.string().min(1),
+  baseUrlOverride: z.string().nullable().optional(),
+});
+
+export const catalogImportResultSchema = z.object({
+  providerId: z.string(),
+  created: z.boolean(),
+  modelCount: z.number(),
+});
+
+export const catalogSyncResultSchema = z.object({
+  providerId: z.string(),
+  inserted: z.number(),
+  updated: z.number(),
+  disabled: z.number(),
+});
+
 export type ProviderDTO = z.infer<typeof providerSchema>;
 export type ModelDTO = z.infer<typeof modelSchema>;
 export type AssistantDTO = z.infer<typeof assistantSchema>;
@@ -248,6 +292,11 @@ export type CreateAssistantInputDTO = z.infer<typeof createAssistantInputSchema>
 export type UpdateAssistantInputDTO = z.infer<typeof updateAssistantInputSchema>;
 export type CreateConversationInputDTO = z.infer<typeof createConversationInputSchema>;
 export type ValidateProviderInputDTO = z.infer<typeof validateProviderInputSchema>;
+export type ProviderCatalogItemDTO = z.infer<typeof providerCatalogItemSchema>;
+export type ModelCatalogItemDTO = z.infer<typeof modelCatalogItemSchema>;
+export type CatalogImportInputDTO = z.infer<typeof catalogImportInputSchema>;
+export type CatalogImportResultDTO = z.infer<typeof catalogImportResultSchema>;
+export type CatalogSyncResultDTO = z.infer<typeof catalogSyncResultSchema>;
 
 export function parseProvider(input: unknown): ProviderDTO {
   return providerSchema.parse(input);
@@ -311,6 +360,22 @@ export function parseStats(input: unknown): StatsDTO {
 
 export function parseChatRequest(input: unknown): ChatRequestDTO {
   return chatRequestSchema.parse(input);
+}
+
+export function parseProviderCatalogItems(input: unknown): ProviderCatalogItemDTO[] {
+  return providerCatalogListSchema.parse(input);
+}
+
+export function parseModelCatalogItems(input: unknown): ModelCatalogItemDTO[] {
+  return modelCatalogListSchema.parse(input);
+}
+
+export function parseCatalogImportResult(input: unknown): CatalogImportResultDTO {
+  return catalogImportResultSchema.parse(input);
+}
+
+export function parseCatalogSyncResult(input: unknown): CatalogSyncResultDTO {
+  return catalogSyncResultSchema.parse(input);
 }
 
 

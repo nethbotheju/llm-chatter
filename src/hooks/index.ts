@@ -7,3 +7,4 @@ export { useChatOptions } from "./use-chat-options";
 export { useChatActions } from "./use-chat-actions";
 export { useKeyboardShortcuts } from "./use-keyboard-shortcuts";
 export { useSidebarState } from "./use-sidebar-state";
+export { useCatalogSync } from "./use-catalog-sync";

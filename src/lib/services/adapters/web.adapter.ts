@@ -8,6 +8,7 @@ import type {
   IExportService,
   IStatsService,
   IResetService,
+  IProviderCatalogService,
 } from "../interfaces";
 import type {
   Provider,
@@ -27,6 +28,11 @@ import type {
   UpdateAssistantInput,
   CreateConversationInput,
   ValidateProviderInput,
+  ProviderCatalogItem,
+  ModelCatalogItem,
+  CatalogImportInput,
+  CatalogImportResult,
+  CatalogSyncResult,
 } from "../types";
 import {
   parseProvider,
@@ -39,6 +45,10 @@ import {
   parseSearchResults,
   parseExportData,
   parseStats,
+  parseProviderCatalogItems,
+  parseModelCatalogItems,
+  parseCatalogImportResult,
+  parseCatalogSyncResult,
 } from "@/lib/contracts";
 
 class WebProviderService implements IProviderService {
@@ -233,6 +243,59 @@ class WebResetService implements IResetService {
   }
 }
 
+class WebProviderCatalogService implements IProviderCatalogService {
+  async listProviders(query?: string): Promise<ProviderCatalogItem[]> {
+    const params = new URLSearchParams();
+    if (query) params.set("q", query);
+    const res = await fetch(`/api/catalog/providers?${params}`);
+    const data = await res.json();
+    return parseProviderCatalogItems(data);
+  }
+  async listModels(catalogProviderId: string): Promise<ModelCatalogItem[]> {
+    const res = await fetch(
+      `/api/catalog/providers/${encodeURIComponent(catalogProviderId)}/models`,
+    );
+    const data = await res.json();
+    return parseModelCatalogItems(data);
+  }
+  async importProvider(input: CatalogImportInput): Promise<CatalogImportResult> {
+    const res = await fetch("/api/catalog/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || "Failed to import provider");
+    }
+    return parseCatalogImportResult(await res.json());
+  }
+  async syncProvider(providerId: string): Promise<CatalogSyncResult> {
+    const res = await fetch("/api/catalog/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ providerId }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || "Failed to sync provider");
+    }
+    return parseCatalogSyncResult(await res.json());
+  }
+  async syncAll(): Promise<CatalogSyncResult[]> {
+    const res = await fetch("/api/catalog/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ all: true }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || "Failed to sync providers");
+    }
+    return (await res.json()) as CatalogSyncResult[];
+  }
+}
+
 export const webProviderService = new WebProviderService();
 export const webModelService = new WebModelService();
 export const webAssistantService = new WebAssistantService();
@@ -242,3 +305,4 @@ export const webSearchService = new WebSearchService();
 export const webExportService = new WebExportService();
 export const webStatsService = new WebStatsService();
 export const webResetService = new WebResetService();
+export const webProviderCatalogService = new WebProviderCatalogService();

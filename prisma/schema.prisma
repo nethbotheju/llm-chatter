@@ -18,6 +18,8 @@ model Provider {
   type            String   // "openai" | "anthropic" | "google" | "openai-compatible" | "anthropic-compatible"
   baseUrl         String?
   apiKeyEncrypted String?
+  catalogId       String?  @unique // models.dev provider id for catalog-imported providers
+  lastSyncedAt    DateTime? // last successful catalog sync
   enabled         Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -25,14 +27,16 @@ model Provider {
 }
 
 model Model {
-  id           String   @id @default(cuid())
-  name         String
-  providerId   String
-  provider     Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  capabilities String   // JSON array: ["chat", "vision", "tools"]
-  enabled      Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             String   @id @default(cuid())
+  name           String
+  providerId     String
+  provider       Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  capabilities   String   // JSON array: ["chat", "vision", "tools", "reasoning", "structured"]
+  catalogModelId String?  // models.dev model id for catalog-imported models
+  metadata       String?  // JSON blob: displayName, modalities, limit, cost, etc.
+  enabled        Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@unique([providerId, name])
 }

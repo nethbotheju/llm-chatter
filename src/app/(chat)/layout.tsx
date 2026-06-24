@@ -26,6 +26,7 @@ import {
   useChatActions,
   useKeyboardShortcuts,
   useSidebarState,
+  useCatalogSync,
 } from "@/hooks";
 import { toUIConversation } from "@/types";
 import { isElectron } from "@/lib/runtime";
@@ -37,6 +38,7 @@ export default function ChatLayout({
   children: React.ReactNode;
 }) {
   const { transport, transportReady } = useTransport();
+  useCatalogSync();
 
   if (!transportReady) {
     return (

@@ -23,6 +23,7 @@ import { registerChatIpc } from "./chat";
 import { registerDialogsIpc } from "./dialogs";
 import { registerNotificationsIpc } from "./notifications";
 import { registerAutoLaunchIpc } from "./auto-launch";
+import { registerCatalogIpc } from "./catalog";
 
 export function registerAllIpc() {
   registerProvidersIpc();
@@ -37,4 +38,5 @@ export function registerAllIpc() {
   registerDialogsIpc();
   registerNotificationsIpc();
   registerAutoLaunchIpc();
+  registerCatalogIpc();
 }

@@ -8,6 +8,7 @@ import type {
   IExportService,
   IStatsService,
   IResetService,
+  IProviderCatalogService,
 } from "./interfaces";
 
 export type {
@@ -20,6 +21,7 @@ export type {
   IExportService,
   IStatsService,
   IResetService,
+  IProviderCatalogService,
 };
 
 export type * from "./types";
@@ -35,6 +37,7 @@ let _search: ISearchService | null = null;
 let _export: IExportService | null = null;
 let _stats: IStatsService | null = null;
 let _reset: IResetService | null = null;
+let _providerCatalog: IProviderCatalogService | null = null;
 
 async function loadAdapter() {
   if (isElectron()) {
@@ -48,6 +51,7 @@ async function loadAdapter() {
     _export = adapter.electronExportService;
     _stats = adapter.electronStatsService;
     _reset = adapter.electronResetService;
+    _providerCatalog = adapter.electronProviderCatalogService;
   } else {
     const adapter = await import("./adapters/web.adapter");
     _provider = adapter.webProviderService;
@@ -59,6 +63,7 @@ async function loadAdapter() {
     _export = adapter.webExportService;
     _stats = adapter.webStatsService;
     _reset = adapter.webResetService;
+    _providerCatalog = adapter.webProviderCatalogService;
   }
 }
 
@@ -106,6 +111,11 @@ export function getStatsService(): IStatsService {
 export function getResetService(): IResetService {
   if (!_reset) throw new Error("Services not initialized");
   return _reset;
+}
+
+export function getProviderCatalogService(): IProviderCatalogService {
+  if (!_providerCatalog) throw new Error("Services not initialized");
+  return _providerCatalog;
 }
 
 export { ensureInit };
