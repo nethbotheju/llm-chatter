@@ -5,8 +5,10 @@ import { decrypt } from "@/lib/ai/encryption";
 import {
   streamChatRuntime,
   resolveChatConfig,
+  persistAssistantMessage,
   ChatError,
   type ChatConfigStore,
+  type ChatPersistenceStore,
 } from "@/lib/chat-runtime";
 
 export const maxDuration = 60;
@@ -29,6 +31,31 @@ export async function POST(request: NextRequest) {
       findConversationWithAssistant: (id) =>
         prisma.conversation.findUnique({ where: { id }, include: { assistant: true } }),
       decrypt,
+    };
+
+    const webPersistenceStore: ChatPersistenceStore = {
+      upsertAssistantMessage: async (rec) => {
+        await prisma.message.upsert({
+          where: { id: rec.id },
+          create: {
+            id: rec.id,
+            conversationId: rec.conversationId,
+            role: "assistant",
+            parts: rec.parts,
+            metadata: rec.metadata,
+          },
+          update: {
+            parts: rec.parts,
+            metadata: rec.metadata,
+          },
+        });
+      },
+      touchConversation: async (conversationId) => {
+        await prisma.conversation.update({
+          where: { id: conversationId },
+          data: { updatedAt: new Date() },
+        });
+      },
     };
 
     let config;
@@ -57,30 +84,19 @@ export async function POST(request: NextRequest) {
         modelName: config.model,
       }),
       onFinish: async ({ responseMessage }) => {
-        if (conversationId) {
-          try {
-            await prisma.message.upsert({
-              where: { id: responseMessage.id },
-              create: {
-                id: responseMessage.id,
-                conversationId,
-                role: "assistant",
-                parts: JSON.stringify(responseMessage.parts),
-                metadata: responseMessage.metadata ? JSON.stringify(responseMessage.metadata) : null,
-              },
-              update: {
-                parts: JSON.stringify(responseMessage.parts),
-                metadata: responseMessage.metadata ? JSON.stringify(responseMessage.metadata) : null,
-              },
-            });
-
-            await prisma.conversation.update({
-              where: { id: conversationId },
-              data: { updatedAt: new Date() },
-            });
-          } catch (error) {
-            console.error("Failed to save assistant message:", error);
-          }
+        if (!conversationId) return;
+        try {
+          await persistAssistantMessage(
+            {
+              messageId: responseMessage.id,
+              conversationId,
+              parts: responseMessage.parts,
+              metadata: responseMessage.metadata,
+            },
+            webPersistenceStore,
+          );
+        } catch (error) {
+          console.error("Failed to save assistant message:", error);
         }
       },
     });

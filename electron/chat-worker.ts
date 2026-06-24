@@ -1,3 +1,4 @@
+import type { UIMessage } from "ai";
 import { streamChatRuntime } from "../src/lib/chat-runtime";
 import { ChatError } from "../src/lib/chat-runtime/errors";
 
@@ -6,6 +7,7 @@ interface StartPayload {
   model: string;
   provider: { type: string; apiKey: string; baseUrl?: string | null };
   assistantConfig?: { systemPrompt: string; temperature: number; topP: number };
+  messageId: string;
 }
 
 let abortController = new AbortController();
@@ -25,7 +27,8 @@ process.parentPort.on("message", (e: { data: unknown }) => {
 
   abortController = new AbortController();
 
-  const { messages, model, provider, assistantConfig } = msg.payload;
+  const { messages, model, provider, assistantConfig, messageId } = msg.payload;
+  let finalMessage: UIMessage | undefined;
 
   (async () => {
     try {
@@ -53,7 +56,14 @@ process.parentPort.on("message", (e: { data: unknown }) => {
         { signal: abortController.signal },
       );
 
-      const stream = result.toUIMessageStream({ sendReasoning: true });
+      const stream = result.toUIMessageStream({
+        generateMessageId: () => messageId,
+        messageMetadata: () => ({ modelName: model }),
+        sendReasoning: true,
+        onFinish: ({ responseMessage }) => {
+          finalMessage = responseMessage;
+        },
+      });
       const reader = stream.getReader();
 
       while (true) {
@@ -62,7 +72,13 @@ process.parentPort.on("message", (e: { data: unknown }) => {
         process.parentPort.postMessage({ type: "chunk", payload: value });
       }
 
-      process.parentPort.postMessage({ type: "done" });
+      process.parentPort.postMessage({
+        type: "done",
+        payload: {
+          parts: finalMessage?.parts ?? [],
+          metadata: finalMessage?.metadata ?? null,
+        },
+      });
     } catch (err) {
       const error =
         err instanceof ChatError

@@ -11,3 +11,9 @@ export type {
   ChatConfigConversationRow,
   ResolvedChatConfig,
 } from "./resolve";
+export { persistAssistantMessage } from "./persistence";
+export type {
+  ChatPersistenceStore,
+  AssistantMessageRecord,
+  PersistAssistantMessageInput,
+} from "./persistence";
