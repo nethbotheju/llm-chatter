@@ -1,26 +1,7 @@
-import { getPrisma } from "./client";
+import { runEmbeddedMigrations } from "./migrator";
 import { seedDatabase } from "./seed";
 
-const SCHEMA_STATEMENTS: string[] = [
-  `CREATE TABLE IF NOT EXISTS Provider (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL, type TEXT NOT NULL, baseUrl TEXT, apiKeyEncrypted TEXT, enabled BOOLEAN NOT NULL DEFAULT 1, createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
-  `CREATE TABLE IF NOT EXISTS Model (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL, providerId TEXT NOT NULL, capabilities TEXT NOT NULL, enabled BOOLEAN NOT NULL DEFAULT 1, createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (providerId) REFERENCES Provider(id) ON DELETE CASCADE ON UPDATE CASCADE, UNIQUE(providerId, name))`,
-  `CREATE TABLE IF NOT EXISTS Assistant (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL, image TEXT, systemPrompt TEXT NOT NULL, temperature REAL NOT NULL DEFAULT 0.7, topP REAL NOT NULL DEFAULT 1.0, enabled BOOLEAN NOT NULL DEFAULT 1, isDefault BOOLEAN NOT NULL DEFAULT 0, createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
-  `CREATE TABLE IF NOT EXISTS Conversation (id TEXT PRIMARY KEY NOT NULL, title TEXT, assistantId TEXT NOT NULL, createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (assistantId) REFERENCES Assistant(id) ON DELETE RESTRICT ON UPDATE CASCADE)`,
-  `CREATE TABLE IF NOT EXISTS Message (id TEXT PRIMARY KEY NOT NULL, conversationId TEXT NOT NULL, role TEXT NOT NULL, parts TEXT NOT NULL, metadata TEXT, createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (conversationId) REFERENCES Conversation(id) ON DELETE CASCADE ON UPDATE CASCADE)`,
-  `CREATE INDEX IF NOT EXISTS Conversation_assistantId_idx ON Conversation(assistantId)`,
-  `CREATE INDEX IF NOT EXISTS Conversation_createdAt_idx ON Conversation(createdAt)`,
-  `CREATE INDEX IF NOT EXISTS Message_conversationId_idx ON Message(conversationId)`,
-  `CREATE INDEX IF NOT EXISTS Message_createdAt_idx ON Message(createdAt)`,
-  `CREATE TRIGGER IF NOT EXISTS Provider_updatedAt AFTER UPDATE ON Provider BEGIN UPDATE Provider SET updatedAt = CURRENT_TIMESTAMP WHERE id = NEW.id; END`,
-  `CREATE TRIGGER IF NOT EXISTS Model_updatedAt AFTER UPDATE ON Model BEGIN UPDATE Model SET updatedAt = CURRENT_TIMESTAMP WHERE id = NEW.id; END`,
-  `CREATE TRIGGER IF NOT EXISTS Assistant_updatedAt AFTER UPDATE ON Assistant BEGIN UPDATE Assistant SET updatedAt = CURRENT_TIMESTAMP WHERE id = NEW.id; END`,
-  `CREATE TRIGGER IF NOT EXISTS Conversation_updatedAt AFTER UPDATE ON Conversation BEGIN UPDATE Conversation SET updatedAt = CURRENT_TIMESTAMP WHERE id = NEW.id; END`,
-];
-
 export async function runMigrations() {
-  const prisma = getPrisma();
-  for (const stmt of SCHEMA_STATEMENTS) {
-    await prisma.$executeRawUnsafe(stmt);
-  }
+  await runEmbeddedMigrations();
   await seedDatabase();
 }
