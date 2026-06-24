@@ -33,6 +33,13 @@ export {
   updateAssistantInputSchema,
   createConversationInputSchema,
   validateProviderInputSchema,
+  providerCatalogItemSchema,
+  providerCatalogListSchema,
+  modelCatalogItemSchema,
+  modelCatalogListSchema,
+  catalogImportInputSchema,
+  catalogImportResultSchema,
+  catalogSyncResultSchema,
   parseProvider,
   parseProviders,
   parseModel,
@@ -49,6 +56,10 @@ export {
   parseExportData,
   parseStats,
   parseChatRequest,
+  parseProviderCatalogItems,
+  parseModelCatalogItems,
+  parseCatalogImportResult,
+  parseCatalogSyncResult,
 } from "./schemas";
 
 export type {
@@ -75,4 +86,9 @@ export type {
   UpdateAssistantInputDTO,
   CreateConversationInputDTO,
   ValidateProviderInputDTO,
+  ProviderCatalogItemDTO,
+  ModelCatalogItemDTO,
+  CatalogImportInputDTO,
+  CatalogImportResultDTO,
+  CatalogSyncResultDTO,
 } from "./schemas";

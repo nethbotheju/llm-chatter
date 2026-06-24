@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 
 import type { ModelWithProvider } from "@/types";
+import { getModelDisplayName } from "@/lib/models";
 
 interface ModelSelectorProps {
   models: ModelWithProvider[];
@@ -30,10 +31,15 @@ export function ModelSelector({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const selectedModel = models.find((m) => m.id === selectedModelId);
+  const selectedDisplayName = selectedModel
+    ? getModelDisplayName(selectedModel.name, selectedModel.metadata)
+    : null;
 
   const filteredModels = useMemo(() => {
     return models.filter((m) =>
-      m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      getModelDisplayName(m.name, m.metadata)
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
       m.provider?.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [models, searchQuery]);
@@ -98,7 +104,7 @@ export function ModelSelector({
           disabled={disabled}
           className="flex items-center gap-1 text-sm font-semibold text-[var(--on-surface)] transition-colors hover:text-[var(--primary)] disabled:opacity-50"
         >
-          {selectedModel ? selectedModel.name : "Select a model"}
+          {selectedDisplayName ?? selectedModel?.name ?? "Select a model"}
           <ChevronDown className={cn("h-4 w-4 text-[var(--on-surface-variant)] transition-transform", open && "rotate-180")} />
         </button>
 
@@ -155,7 +161,7 @@ export function ModelSelector({
                               : "text-[var(--on-surface)] hover:bg-[var(--surface-container-highest)]"
                           )}
                         >
-                          <span className="truncate">{model.name}</span>
+                          <span className="truncate">{getModelDisplayName(model.name, model.metadata)}</span>
                           {model.id === selectedModelId && (
                             <Check className="h-3.5 w-3.5 shrink-0" />
                           )}
@@ -191,7 +197,7 @@ export function ModelSelector({
           {selectedModel ? (
             <>
               <span className="truncate font-semibold text-[var(--on-surface)]">
-                {selectedModel.name}
+                {selectedDisplayName ?? selectedModel.name}
               </span>
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--on-surface-variant)] opacity-40">
                 {selectedModel.provider?.name}
@@ -257,7 +263,7 @@ export function ModelSelector({
                             : "text-[var(--on-surface)] hover:bg-[var(--surface-container-highest)]"
                         )}
                       >
-                        <span className="truncate font-medium">{model.name}</span>
+                        <span className="truncate font-medium">{getModelDisplayName(model.name, model.metadata)}</span>
                         {model.id === selectedModelId && (
                           <Check className="h-4 w-4 shrink-0" />
                         )}

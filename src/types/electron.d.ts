@@ -52,6 +52,17 @@ declare global {
       reset: {
         data: () => Promise<void>;
       };
+      catalog: {
+        listProviders: (query?: string) => Promise<unknown[]>;
+        listModels: (catalogProviderId: string) => Promise<unknown[]>;
+        importProvider: (input: {
+          catalogId: string;
+          apiKey: string;
+          baseUrlOverride?: string | null;
+        }) => Promise<unknown>;
+        syncProvider: (providerId: string) => Promise<unknown>;
+        syncAll: () => Promise<unknown[]>;
+      };
       // Phase 3: chat streaming
       chat?: {
         resolve: (input: {

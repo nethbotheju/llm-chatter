@@ -18,6 +18,11 @@ import type {
   UpdateAssistantInputDTO,
   CreateConversationInputDTO,
   ValidateProviderInputDTO,
+  ProviderCatalogItemDTO,
+  ModelCatalogItemDTO,
+  CatalogImportInputDTO,
+  CatalogImportResultDTO,
+  CatalogSyncResultDTO,
 } from "@/lib/contracts";
 
 export type Provider = ProviderDTO;
@@ -57,3 +62,13 @@ export type UpdateAssistantInput = UpdateAssistantInputDTO;
 export type CreateConversationInput = CreateConversationInputDTO;
 
 export type ValidateProviderInput = ValidateProviderInputDTO;
+
+export type ProviderCatalogItem = ProviderCatalogItemDTO;
+
+export type ModelCatalogItem = ModelCatalogItemDTO;
+
+export type CatalogImportInput = CatalogImportInputDTO;
+
+export type CatalogImportResult = CatalogImportResultDTO;
+
+export type CatalogSyncResult = CatalogSyncResultDTO;

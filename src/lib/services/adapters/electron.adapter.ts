@@ -8,6 +8,7 @@ import type {
   IExportService,
   IStatsService,
   IResetService,
+  IProviderCatalogService,
 } from "../interfaces";
 import type {
   Provider,
@@ -27,6 +28,11 @@ import type {
   UpdateAssistantInput,
   CreateConversationInput,
   ValidateProviderInput,
+  ProviderCatalogItem,
+  ModelCatalogItem,
+  CatalogImportInput,
+  CatalogImportResult,
+  CatalogSyncResult,
 } from "../types";
 import {
   parseProvider,
@@ -39,6 +45,10 @@ import {
   parseSearchResults,
   parseExportData,
   parseStats,
+  parseProviderCatalogItems,
+  parseModelCatalogItems,
+  parseCatalogImportResult,
+  parseCatalogSyncResult,
 } from "@/lib/contracts";
 
 function getAPI() {
@@ -173,6 +183,27 @@ class ElectronResetService implements IResetService {
   }
 }
 
+class ElectronProviderCatalogService implements IProviderCatalogService {
+  async listProviders(query?: string): Promise<ProviderCatalogItem[]> {
+    const data = await getAPI().catalog!.listProviders(query);
+    return parseProviderCatalogItems(data);
+  }
+  async listModels(catalogProviderId: string): Promise<ModelCatalogItem[]> {
+    const data = await getAPI().catalog!.listModels(catalogProviderId);
+    return parseModelCatalogItems(data);
+  }
+  async importProvider(input: CatalogImportInput): Promise<CatalogImportResult> {
+    return parseCatalogImportResult(await getAPI().catalog!.importProvider(input));
+  }
+  async syncProvider(providerId: string): Promise<CatalogSyncResult> {
+    return parseCatalogSyncResult(await getAPI().catalog!.syncProvider(providerId));
+  }
+  async syncAll(): Promise<CatalogSyncResult[]> {
+    const data = await getAPI().catalog!.syncAll();
+    return (data as unknown[]).map((r) => parseCatalogSyncResult(r));
+  }
+}
+
 export const electronProviderService = new ElectronProviderService();
 export const electronModelService = new ElectronModelService();
 export const electronAssistantService = new ElectronAssistantService();
@@ -182,3 +213,4 @@ export const electronSearchService = new ElectronSearchService();
 export const electronExportService = new ElectronExportService();
 export const electronStatsService = new ElectronStatsService();
 export const electronResetService = new ElectronResetService();
+export const electronProviderCatalogService = new ElectronProviderCatalogService();

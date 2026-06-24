@@ -16,6 +16,11 @@ import type {
   UpdateAssistantInput,
   CreateConversationInput,
   ValidateProviderInput,
+  ProviderCatalogItem,
+  ModelCatalogItem,
+  CatalogImportInput,
+  CatalogImportResult,
+  CatalogSyncResult,
 } from "./types";
 
 export interface IProviderService {
@@ -70,4 +75,12 @@ export interface IStatsService {
 
 export interface IResetService {
   reset(): Promise<void>;
+}
+
+export interface IProviderCatalogService {
+  listProviders(query?: string): Promise<ProviderCatalogItem[]>;
+  listModels(catalogProviderId: string): Promise<ModelCatalogItem[]>;
+  importProvider(input: CatalogImportInput): Promise<CatalogImportResult>;
+  syncProvider(providerId: string): Promise<CatalogSyncResult>;
+  syncAll(): Promise<CatalogSyncResult[]>;
 }

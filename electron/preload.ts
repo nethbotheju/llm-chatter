@@ -51,6 +51,19 @@ contextBridge.exposeInMainWorld("electronAPI", {
   reset: {
     data: () => invoke("reset:data"),
   },
+  catalog: {
+    listProviders: (query?: string) => invoke("catalog:listProviders", query),
+    listModels: (catalogProviderId: string) =>
+      invoke("catalog:listModels", catalogProviderId),
+    importProvider: (input: {
+      catalogId: string;
+      apiKey: string;
+      baseUrlOverride?: string | null;
+    }) => invoke("catalog:importProvider", input),
+    syncProvider: (providerId: string) =>
+      invoke("catalog:syncProvider", providerId),
+    syncAll: () => invoke("catalog:syncAll"),
+  },
   // Phase 3: chat streaming
   chat: {
     resolve: (input: { modelId: string; conversationId?: string | null }) =>

@@ -25,15 +25,20 @@ import {
   Cpu,
   Key,
   Globe,
+  RefreshCw,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   getProviderService,
   getModelService,
+  getProviderCatalogService,
   ensureInit,
 } from "@/lib/services";
 import type { Provider, Model } from "@/lib/services";
 import type { CreateProviderInput, UpdateProviderInput, CreateModelInput, UpdateModelInput, ValidateProviderInput } from "@/lib/services";
+import { CatalogBrowseDialog } from "@/components/settings/catalog-browse-dialog";
+import { formatDistanceToNow } from "date-fns";
 
 interface ProviderWithModels extends Provider {
   models: Model[];
@@ -73,6 +78,8 @@ export default function ProvidersSettingsPage() {
   const [expandedProvider, setExpandedProvider] = useState<string | null>(null);
   const [newModelName, setNewModelName] = useState("");
   const [addingModel, setAddingModel] = useState(false);
+  const [showCatalog, setShowCatalog] = useState(false);
+  const [syncingId, setSyncingId] = useState<string | null>(null);
 
   const fetchProviders = async () => {
     try {
@@ -268,6 +275,19 @@ export default function ProvidersSettingsPage() {
     }
   };
 
+  const handleSyncProvider = async (provider: Provider) => {
+    setSyncingId(provider.id);
+    try {
+      await ensureInit();
+      await getProviderCatalogService().syncProvider(provider.id);
+      await fetchProviders();
+    } catch (error) {
+      console.error("Failed to sync provider:", error);
+    } finally {
+      setSyncingId(null);
+    }
+  };
+
   const handleAddDefaultModels = async (provider: Provider) => {
     const models = defaultModels[provider.type] || [];
     await ensureInit();
@@ -307,13 +327,23 @@ export default function ProvidersSettingsPage() {
             Configure AI providers and their models
           </p>
         </div>
-        <Button
-          onClick={() => handleOpenForm()}
-          className="flex items-center gap-2 rounded-full bg-[var(--primary)] px-5 py-2.5 font-semibold text-[var(--primary-foreground)] transition-all hover:opacity-90 active:scale-95"
-        >
-          <Plus className="h-4 w-4" />
-          Add Provider
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setShowCatalog(true)}
+            variant="outline"
+            className="flex items-center gap-2 rounded-full border-[var(--outline-variant)]/15 px-5 py-2.5 font-semibold text-[var(--on-surface-variant)] transition-all hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)] active:scale-95"
+          >
+            <Sparkles className="h-4 w-4" />
+            Browse Catalog
+          </Button>
+          <Button
+            onClick={() => handleOpenForm()}
+            className="flex items-center gap-2 rounded-full bg-[var(--primary)] px-5 py-2.5 font-semibold text-[var(--primary-foreground)] transition-all hover:opacity-90 active:scale-95"
+          >
+            <Plus className="h-4 w-4" />
+            Add Provider
+          </Button>
+        </div>
       </div>
 
       {/* Add/Edit Provider Dialog */}
@@ -480,6 +510,11 @@ export default function ProvidersSettingsPage() {
                       {provider.type}
                       {provider.baseUrl && ` · ${provider.baseUrl}`}
                     </p>
+                    {provider.catalogId && (
+                      <p className="mt-0.5 text-[10px] text-[var(--on-surface-variant)] opacity-60">
+                        Catalog{provider.lastSyncedAt ? ` · synced ${formatDistanceToNow(new Date(provider.lastSyncedAt), { addSuffix: true })}` : " · never synced"}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -498,6 +533,17 @@ export default function ProvidersSettingsPage() {
                     checked={provider.enabled}
                     onCheckedChange={() => handleToggleEnabled(provider)}
                   />
+                  {provider.catalogId && (
+                    <button
+                      type="button"
+                      title="Sync from catalog"
+                      onClick={() => handleSyncProvider(provider)}
+                      disabled={syncingId === provider.id}
+                      className="rounded-lg p-2 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)] disabled:opacity-50"
+                    >
+                      <RefreshCw className={cn("h-4 w-4", syncingId === provider.id && "animate-spin")} />
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() =>
@@ -593,6 +639,12 @@ export default function ProvidersSettingsPage() {
           ))
         )}
       </div>
+
+      <CatalogBrowseDialog
+        open={showCatalog}
+        onOpenChange={setShowCatalog}
+        onImported={fetchProviders}
+      />
     </div>
   );
 }

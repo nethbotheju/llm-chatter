@@ -11,6 +11,9 @@ out
 *.db-journal
 prisma/dev.db
 
+# Catalog cache (runtime-fetched from models.dev)
+catalog/
+
 # Environment
 .env
 .env.local
