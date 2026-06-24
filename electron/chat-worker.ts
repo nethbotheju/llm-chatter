@@ -1,6 +1,5 @@
 import type { UIMessage } from "ai";
-import { streamChatRuntime } from "../src/lib/chat-runtime";
-import { ChatError } from "../src/lib/chat-runtime/errors";
+import { streamChatRuntime, ChatError } from "./chat-runtime";
 
 interface StartPayload {
   messages: { id: string; role: string; parts: unknown }[];
