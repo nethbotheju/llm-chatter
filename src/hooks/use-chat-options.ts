@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { UIMessage, ChatTransport } from "ai";
 import type { UseChatOptions } from "@ai-sdk/react";
-import { isTauri } from "@/lib/services";
+import { isElectron } from "@/lib/services";
 
 export function useChatOptions(
   transport: ChatTransport<UIMessage> | undefined,
@@ -11,23 +11,33 @@ export function useChatOptions(
   currentConversationId: string | null,
 ): UseChatOptions<UIMessage> {
   const currentConversationIdRef = useRef(currentConversationId);
-  currentConversationIdRef.current = currentConversationId;
+  useEffect(() => {
+    currentConversationIdRef.current = currentConversationId;
+  });
 
   const onFinish = useCallback(async (options: { message: UIMessage; isAbort: boolean; isError: boolean }) => {
     await fetchConversations();
 
-    if (isTauri() && !options.isAbort && !options.isError && currentConversationIdRef.current) {
+    if (!options.isAbort && !options.isError && currentConversationIdRef.current) {
       try {
-        const { invoke } = await import("@tauri-apps/api/core");
-        await invoke("save_assistant_message", {
-          input: {
+        if (isElectron()) {
+          await window.electronAPI!.messages.create({
             conversationId: currentConversationIdRef.current,
-            messageId: options.message.id,
             role: options.message.role,
             parts: JSON.stringify(options.message.parts),
             metadata: options.message.metadata ? JSON.stringify(options.message.metadata) : null,
-          },
-        });
+          });
+
+          const preview = options.message.parts
+            .filter((p) => p.type === "text")
+            .map((p) => (p as { text: string }).text)
+            .join("")
+            .slice(0, 120);
+          await window.electronAPI!.notifications.show({
+            title: "New response",
+            body: preview || "(empty response)",
+          });
+        }
       } catch (error) {
         console.error("Failed to save assistant message:", error);
       }

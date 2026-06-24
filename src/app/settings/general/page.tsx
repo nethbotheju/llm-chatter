@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore, useState } from "react";
 import { useTheme } from "next-themes";
 import { Sun, Moon, Monitor } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isElectron } from "@/lib/runtime";
 
 const themeOptions = [
   { value: "light", label: "Light", icon: Sun },
@@ -13,9 +14,25 @@ const themeOptions = [
 
 export default function GeneralSettingsPage() {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+  const [openAtLogin, setOpenAtLogin] = useState(false);
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    if (isElectron()) {
+      window.electronAPI!.autoLaunch.get().then(setOpenAtLogin);
+    }
+  }, []);
+
+  const handleToggleOpenAtLogin = async (checked: boolean) => {
+    setOpenAtLogin(checked);
+    if (isElectron()) {
+      await window.electronAPI!.autoLaunch.set(checked);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -66,6 +83,49 @@ export default function GeneralSettingsPage() {
           })}
         </div>
       </div>
+
+      {/* Desktop Settings (Electron only) */}
+      {mounted && isElectron() && (
+        <div className="glass-card p-6">
+          <div className="mb-4">
+            <h2 className="text-sm font-bold tracking-tight text-[var(--on-surface)]">
+              Desktop
+            </h2>
+            <p className="text-xs text-[var(--on-surface-variant)]">
+              Native integration settings
+            </p>
+          </div>
+          <div className="flex items-center justify-between rounded-xl bg-[var(--surface-container-high)] p-4">
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium text-[var(--on-surface)]">
+                Open at login
+              </p>
+              <p className="text-xs text-[var(--on-surface-variant)] opacity-60">
+                Launch llm Chatter automatically when you sign in
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={openAtLogin}
+              onClick={() => handleToggleOpenAtLogin(!openAtLogin)}
+              className={cn(
+                "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors",
+                openAtLogin
+                  ? "bg-[var(--primary)]"
+                  : "bg-[var(--surface-container-highest)]"
+              )}
+            >
+              <span
+                className={cn(
+                  "pointer-events-none inline-block h-5 w-5 rounded-full bg-[var(--on-primary)] shadow-lg transition-transform",
+                  openAtLogin ? "translate-x-5" : "translate-x-0"
+                )}
+              />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

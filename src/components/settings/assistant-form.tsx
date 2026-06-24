@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,34 +33,27 @@ export function AssistantForm({
   onCancel,
   isLoading,
 }: AssistantFormProps) {
-  const [name, setName] = useState(assistant?.name || "");
-  const [image, setImage] = useState<string | null>(assistant?.image || null);
-  const [systemPrompt, setSystemPrompt] = useState(assistant?.systemPrompt || "");
-  const [temperature, setTemperature] = useState(assistant?.temperature ?? 0.7);
-  const [topP, setTopP] = useState(assistant?.topP ?? 1.0);
-  const [isDefault, setIsDefault] = useState(assistant?.isDefault ?? false);
-  const [enabled, setEnabled] = useState(assistant?.enabled ?? true);
+  const [name, setName] = useState("");
+  const [image, setImage] = useState<string | null>(null);
+  const [systemPrompt, setSystemPrompt] = useState("");
+  const [temperature, setTemperature] = useState(0.7);
+  const [topP, setTopP] = useState(1.0);
+  const [isDefault, setIsDefault] = useState(false);
+  const [enabled, setEnabled] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (assistant) {
-      setName(assistant.name);
-      setImage(assistant.image || null);
-      setSystemPrompt(assistant.systemPrompt);
-      setTemperature(assistant.temperature);
-      setTopP(assistant.topP);
-      setIsDefault(assistant.isDefault);
-      setEnabled(assistant.enabled);
-    } else {
-      setName("");
-      setImage(null);
-      setSystemPrompt("");
-      setTemperature(0.7);
-      setTopP(1.0);
-      setIsDefault(false);
-      setEnabled(true);
-    }
-  }, [assistant]);
+  const currentId = assistant?.id ?? null;
+  const [prevId, setPrevId] = useState(currentId);
+  if (currentId !== prevId) {
+    setPrevId(currentId);
+    setName(assistant?.name || "");
+    setImage(assistant?.image || null);
+    setSystemPrompt(assistant?.systemPrompt || "");
+    setTemperature(assistant?.temperature ?? 0.7);
+    setTopP(assistant?.topP ?? 1.0);
+    setIsDefault(assistant?.isDefault ?? false);
+    setEnabled(assistant?.enabled ?? true);
+  }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

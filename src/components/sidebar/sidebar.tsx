@@ -8,9 +8,11 @@ import {
   Search,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import Link from "next/link";
 import { ConversationList } from "./conversation-list";
 import { SearchDialog } from "./search-dialog";
 import { cn } from "@/lib/utils";
+import { isElectron } from "@/lib/runtime";
 
 import type { UIConversation } from "@/types";
 
@@ -72,6 +74,12 @@ export function Sidebar({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  useEffect(() => {
+    if (!isElectron()) return;
+    const cleanup = window.electronAPI!.onAction("open-search", () => setSearchOpen(true));
+    return cleanup;
+  }, []);
+
   const labelClass = cn(
     "overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out",
     isCollapsed ? "max-w-0 opacity-0" : "max-w-[200px] flex-1 opacity-100"
@@ -107,8 +115,8 @@ export function Sidebar({
         )}
       >
         {/* Header */}
-        <div className="flex h-14 shrink-0 items-center">
-          <div className="flex w-16 shrink-0 items-center justify-center">
+        <div className={`titlebar-drag flex shrink-0 items-center ${isElectron() ? "h-[90px]" : "h-14"}`}>
+          <div className="titlebar-no-drag flex w-16 shrink-0 items-center justify-center">
             <MessageSquare className="h-5 w-5 text-[var(--on-surface)]" />
           </div>
           <div className={labelClass}>
@@ -168,8 +176,8 @@ export function Sidebar({
 
         {/* Footer */}
         <div className={cn("shrink-0 px-2 pb-3 pt-2", isCollapsed ? "pb-6" : "")}>
-          <a
-            href="/settings"
+          <Link
+            href="/settings/general"
             className="group flex w-full items-center rounded-xl py-3 transition-all duration-300 ease-in-out hover:bg-[var(--surface-container-high)]"
             title="Settings"
           >
@@ -184,7 +192,7 @@ export function Sidebar({
                 Providers, models & more
               </span>
             </div>
-          </a>
+          </Link>
         </div>
       </aside>
 

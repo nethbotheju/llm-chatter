@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Trash2, Download, AlertTriangle, Database, MessageSquare, HardDrive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +19,7 @@ import {
   getExportService,
   ensureInit,
 } from "@/lib/services";
+import { isElectron } from "@/lib/runtime";
 import type { Stats } from "@/lib/services";
 
 export default function PrivacySettingsPage() {
@@ -71,28 +72,41 @@ export default function PrivacySettingsPage() {
     }
   };
 
-  const handleExport = async () => {
+  const handleExport = useCallback(async () => {
     setExporting(true);
     try {
       await ensureInit();
       const data = await getExportService().export();
-      const blob = new Blob([JSON.stringify(data, null, 2)], {
-        type: "application/json",
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `chat-export-${new Date().toISOString().split("T")[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      const json = JSON.stringify(data, null, 2);
+
+      if (isElectron()) {
+        await window.electronAPI!.dialogs.saveExport({
+          defaultName: `chat-export-${new Date().toISOString().split("T")[0]}.json`,
+          json,
+        });
+      } else {
+        const blob = new Blob([json], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `chat-export-${new Date().toISOString().split("T")[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
     } catch (error) {
       console.error("Failed to export:", error);
     } finally {
       setExporting(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!isElectron()) return;
+    const cleanup = window.electronAPI!.onAction("export-data", handleExport);
+    return cleanup;
+  }, [handleExport]);
 
   return (
     <div className="space-y-8">
