@@ -4,7 +4,13 @@ import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { getPrisma } from "../db/client";
 import { decrypt } from "../db/encryption";
-import { resolveChatConfig, type ChatConfigStore } from "../../src/lib/chat-runtime";
+import { nanoid } from "nanoid";
+import {
+  resolveChatConfig,
+  persistAssistantMessage,
+  type ChatConfigStore,
+  type ChatPersistenceStore,
+} from "../../src/lib/chat-runtime";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -36,11 +42,46 @@ export function registerChatIpc(getMainWindow: () => BrowserWindow | null) {
     },
   );
 
-  ipcMain.handle("chat:start", async (event, payload) => {
+  ipcMain.handle("chat:start", async (event, payload: {
+    messages: { id: string; role: string; parts: unknown }[];
+    model: string;
+    provider: { type: string; apiKey: string; baseUrl: string | null };
+    assistantConfig: { systemPrompt: string; temperature: number; topP: number };
+    conversationId?: string | null;
+  }) => {
     const streamId = randomUUID();
     const win =
       BrowserWindow.fromWebContents(event.sender) ?? getMainWindow();
     if (!win) throw new Error("No active window");
+
+    const conversationId = payload.conversationId ?? null;
+    const messageId = nanoid();
+
+    const prisma = getPrisma();
+    const persistenceStore: ChatPersistenceStore = {
+      upsertAssistantMessage: async (rec) => {
+        await prisma.message.upsert({
+          where: { id: rec.id },
+          create: {
+            id: rec.id,
+            conversationId: rec.conversationId,
+            role: "assistant",
+            parts: rec.parts,
+            metadata: rec.metadata,
+          },
+          update: {
+            parts: rec.parts,
+            metadata: rec.metadata,
+          },
+        });
+      },
+      touchConversation: async (id) => {
+        await prisma.conversation.update({
+          where: { id },
+          data: { updatedAt: new Date() },
+        });
+      },
+    };
 
     const child = utilityProcess.fork(getChatWorkerPath(), [], {
       serviceName: "chat-worker",
@@ -53,11 +94,31 @@ export function registerChatIpc(getMainWindow: () => BrowserWindow | null) {
         win.webContents.send(`chat:chunk:${streamId}`, msg.payload);
       }
       if (msg.type === "done") {
-        if (win && !win.isDestroyed()) {
-          win.webContents.send(`chat:done:${streamId}`);
-        }
-        runningWorkers.delete(streamId);
-        child.kill();
+        (async () => {
+          const donePayload = msg.payload as
+            | { parts?: unknown; metadata?: unknown }
+            | undefined;
+          if (conversationId && donePayload?.parts != null) {
+            try {
+              await persistAssistantMessage(
+                {
+                  messageId,
+                  conversationId,
+                  parts: donePayload.parts,
+                  metadata: donePayload.metadata,
+                },
+                persistenceStore,
+              );
+            } catch (error) {
+              console.error("Failed to save assistant message:", error);
+            }
+          }
+          if (win && !win.isDestroyed()) {
+            win.webContents.send(`chat:done:${streamId}`);
+          }
+          runningWorkers.delete(streamId);
+          child.kill();
+        })();
       }
       if (msg.type === "error") {
         if (win && !win.isDestroyed()) {
@@ -80,6 +141,7 @@ export function registerChatIpc(getMainWindow: () => BrowserWindow | null) {
         model: payload.model,
         provider: payload.provider,
         assistantConfig: payload.assistantConfig,
+        messageId,
       },
     });
 
