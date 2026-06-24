@@ -1,0 +1,20 @@
+export {
+  streamChatRuntime,
+  resolveChatConfig,
+  persistAssistantMessage,
+  ChatError,
+} from "../src/lib/chat-runtime";
+
+export type {
+  ChatRuntimeInput,
+  ChatConfigInput,
+  ChatConfigStore,
+  ChatConfigModelRow,
+  ChatConfigProviderRow,
+  ChatConfigAssistantRow,
+  ChatConfigConversationRow,
+  ResolvedChatConfig,
+  ChatPersistenceStore,
+  AssistantMessageRecord,
+  PersistAssistantMessageInput,
+} from "../src/lib/chat-runtime";

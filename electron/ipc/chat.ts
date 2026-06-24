@@ -10,7 +10,7 @@ import {
   persistAssistantMessage,
   type ChatConfigStore,
   type ChatPersistenceStore,
-} from "../../src/lib/chat-runtime";
+} from "../chat-runtime";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
