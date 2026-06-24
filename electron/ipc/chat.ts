@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { getPrisma } from "../db/client";
 import { decrypt } from "../db/encryption";
+import { resolveChatConfig, type ChatConfigStore } from "../../src/lib/chat-runtime";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -24,46 +25,14 @@ export function registerChatIpc(getMainWindow: () => BrowserWindow | null) {
       input: { modelId: string; conversationId?: string | null },
     ) => {
       const prisma = getPrisma();
-      const model = await prisma.model.findUnique({
-        where: { id: input.modelId },
-        include: { provider: true },
-      });
-      if (!model || !model.provider) throw new Error("Model not found");
-      if (!model.enabled || !model.provider.enabled)
-        throw new Error("Model disabled");
-
-      const apiKeyEncrypted = model.provider.apiKeyEncrypted;
-      if (!apiKeyEncrypted) throw new Error("API key not configured");
-      const apiKey = decrypt(apiKeyEncrypted);
-
-      let assistantConfig = {
-        systemPrompt: "",
-        temperature: 0.7,
-        topP: 1.0,
+      const store: ChatConfigStore = {
+        findModelWithProvider: (id) =>
+          prisma.model.findUnique({ where: { id }, include: { provider: true } }),
+        findConversationWithAssistant: (id) =>
+          prisma.conversation.findUnique({ where: { id }, include: { assistant: true } }),
+        decrypt,
       };
-      if (input.conversationId) {
-        const conv = await prisma.conversation.findUnique({
-          where: { id: input.conversationId },
-          include: { assistant: true },
-        });
-        if (conv?.assistant) {
-          assistantConfig = {
-            systemPrompt: conv.assistant.systemPrompt,
-            temperature: conv.assistant.temperature,
-            topP: conv.assistant.topP,
-          };
-        }
-      }
-
-      return {
-        model: model.name,
-        provider: {
-          type: model.provider.type,
-          apiKey,
-          baseUrl: model.provider.baseUrl,
-        },
-        assistantConfig,
-      };
+      return resolveChatConfig(input, store);
     },
   );
 
