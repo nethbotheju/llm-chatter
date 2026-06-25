@@ -58,3 +58,8 @@ plans
 AGENTS.md
 .pi
 !plans/migrating-to-electron
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+.beads-credential-key
+.beads/proxieddb/
