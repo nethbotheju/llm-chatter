@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, providerId, capabilities, enabled } = body;
+    const { name, providerId, capabilities, metadata, enabled } = body;
 
     if (!name || !providerId) {
       return NextResponse.json(
@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
         name,
         providerId,
         capabilities: JSON.stringify(capabilities || ["chat"]),
+        metadata: metadata ?? null,
         enabled: enabled ?? true,
       },
       include: {
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, name, capabilities, enabled } = body;
+    const { id, name, capabilities, metadata, enabled } = body;
 
     if (!id) {
       return NextResponse.json({ error: "Model ID is required" }, { status: 400 });
@@ -109,6 +110,7 @@ export async function PATCH(request: NextRequest) {
     const updateData: {
       name?: string;
       capabilities?: string;
+      metadata?: string | null;
       enabled?: boolean;
     } = {};
 
@@ -116,6 +118,7 @@ export async function PATCH(request: NextRequest) {
     if (capabilities !== undefined) {
       updateData.capabilities = JSON.stringify(capabilities);
     }
+    if (metadata !== undefined) updateData.metadata = metadata;
     if (enabled !== undefined) updateData.enabled = enabled;
 
     const model = await prisma.model.update({

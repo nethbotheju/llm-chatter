@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
 
@@ -60,10 +61,17 @@ function DialogTrigger({
 
 function DialogPortal({ children }: { children: React.ReactNode }) {
   const { open } = useDialog();
-  
-  if (!open) return null;
-  
-  return <>{children}</>;
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => setMounted(true), []);
+
+  if (!mounted || !open) return null;
+
+  // Portal to <body> so the overlay escapes any ancestor scroll container,
+  // transform, or filter. Without this, position:fixed + backdrop-filter get
+  // clipped to the ancestor box and the overlay fails to cover the full
+  // viewport (e.g. a light strip at the bottom edge).
+  return createPortal(children, document.body);
 }
 
 function DialogOverlay({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
@@ -72,7 +80,7 @@ function DialogOverlay({ className, ...props }: React.HTMLAttributes<HTMLDivElem
   return (
     <div
       className={cn(
-        "fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        "fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         className
       )}
       onClick={() => onOpenChange(false)}
