@@ -190,6 +190,7 @@ export const createModelInputSchema = z.object({
   name: z.string().min(1),
   providerId: z.string(),
   capabilities: z.array(z.string()).optional(),
+  metadata: z.string().nullable().optional(),
   enabled: z.boolean().optional(),
 });
 
@@ -197,6 +198,7 @@ export const updateModelInputSchema = z.object({
   id: z.string(),
   name: z.string().optional(),
   capabilities: z.array(z.string()).optional(),
+  metadata: z.string().nullable().optional(),
   enabled: z.boolean().optional(),
 });
 

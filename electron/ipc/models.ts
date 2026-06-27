@@ -27,6 +27,7 @@ export function registerModelsIpc() {
     name: string;
     providerId: string;
     capabilities?: string[];
+    metadata?: string | null;
     enabled?: boolean;
   }) => {
     const prisma = getPrisma();
@@ -36,6 +37,7 @@ export function registerModelsIpc() {
         name: input.name,
         providerId: input.providerId,
         capabilities: JSON.stringify(input.capabilities || ["chat"]),
+        metadata: input.metadata ?? null,
         enabled: input.enabled ?? true,
       },
       include: {
@@ -48,12 +50,14 @@ export function registerModelsIpc() {
     id: string;
     name?: string;
     capabilities?: string[];
+    metadata?: string | null;
     enabled?: boolean;
   }) => {
     const prisma = getPrisma();
     const data: Record<string, unknown> = {};
     if (input.name !== undefined) data.name = input.name;
     if (input.capabilities !== undefined) data.capabilities = JSON.stringify(input.capabilities);
+    if (input.metadata !== undefined) data.metadata = input.metadata;
     if (input.enabled !== undefined) data.enabled = input.enabled;
     return prisma.model.update({
       where: { id: input.id },

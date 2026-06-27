@@ -2,31 +2,16 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Eye,
-  EyeOff,
   Loader2,
-  Pencil,
   Trash2,
   Plus,
-  Check,
-  X,
   Server,
-  Cpu,
-  Key,
-  Globe,
   RefreshCw,
-  Sparkles,
+  ChevronDown,
+  ChevronUp,
+  Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -36,49 +21,37 @@ import {
   ensureInit,
 } from "@/lib/services";
 import type { Provider, Model } from "@/lib/services";
-import type { CreateProviderInput, UpdateProviderInput, CreateModelInput, UpdateModelInput, ValidateProviderInput } from "@/lib/services";
-import { CatalogBrowseDialog } from "@/components/settings/catalog-browse-dialog";
+import type { UpdateProviderInput, CreateModelInput, UpdateModelInput } from "@/lib/services";
+import type { ModelMetadata } from "@/lib/models";
 import { formatDistanceToNow } from "date-fns";
+import { ProviderDialog } from "@/components/settings/provider-dialog";
+import { AddModelDialog } from "@/components/settings/add-model-dialog";
+import { ModelCard } from "@/components/settings/model-card";
+import { Monogram } from "@/components/settings/monogram";
 
 interface ProviderWithModels extends Provider {
   models: Model[];
 }
 
-const providerTypes = [
-  { value: "openai", label: "OpenAI" },
-  { value: "anthropic", label: "Anthropic" },
-  { value: "google", label: "Google" },
-  { value: "openai-compatible", label: "OpenAI Compatible" },
-  { value: "anthropic-compatible", label: "Anthropic Compatible" },
-];
-
-const defaultModels: Record<string, string[]> = {
-  openai: ["gpt-4o", "gpt-4o-mini", "o1", "o1-mini"],
-  anthropic: ["claude-3-5-sonnet-latest", "claude-3-opus-latest", "claude-3-haiku-latest"],
-  google: ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"],
-  "openai-compatible": [],
-  "anthropic-compatible": [],
+const typeLabel: Record<string, string> = {
+  openai: "OpenAI",
+  anthropic: "Anthropic",
+  google: "Google",
+  "openai-compatible": "OpenAI Compatible",
+  "anthropic-compatible": "Anthropic Compatible",
 };
 
 export default function ProvidersSettingsPage() {
   const [providers, setProviders] = useState<ProviderWithModels[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+
+  const [showProviderDialog, setShowProviderDialog] = useState(false);
   const [editingProvider, setEditingProvider] = useState<Provider | null>(null);
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [validating, setValidating] = useState(false);
-  const [validationResult, setValidationResult] = useState<{ valid: boolean; error?: string } | null>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    type: "openai",
-    baseUrl: "",
-    apiKey: "",
-    enabled: true,
-  });
+
   const [expandedProvider, setExpandedProvider] = useState<string | null>(null);
-  const [newModelName, setNewModelName] = useState("");
-  const [addingModel, setAddingModel] = useState(false);
-  const [showCatalog, setShowCatalog] = useState(false);
+  const [showAddModel, setShowAddModel] = useState(false);
+  const [addModelProviderId, setAddModelProviderId] = useState<string | null>(null);
+  const [editingModel, setEditingModel] = useState<Model | null>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null);
 
   const fetchProviders = async () => {
@@ -104,7 +77,7 @@ export default function ProvidersSettingsPage() {
         providerData.map((provider) => ({
           ...provider,
           models: modelsByProvider.get(provider.id) ?? [],
-        }))
+        })),
       );
     } catch (error) {
       console.error("Failed to fetch providers:", error);
@@ -117,94 +90,14 @@ export default function ProvidersSettingsPage() {
     fetchProviders();
   }, []);
 
-  const resetForm = () => {
-    setFormData({ name: "", type: "openai", baseUrl: "", apiKey: "", enabled: true });
-    setShowApiKey(false);
-    setValidationResult(null);
+  const handleOpenAdd = () => {
     setEditingProvider(null);
+    setShowProviderDialog(true);
   };
 
-  const handleOpenForm = (provider?: Provider) => {
-    if (provider) {
-      setEditingProvider(provider);
-      setFormData({
-        name: provider.name,
-        type: provider.type,
-        baseUrl: provider.baseUrl || "",
-        apiKey: "",
-        enabled: provider.enabled,
-      });
-    } else {
-      resetForm();
-    }
-    setShowForm(true);
-  };
-
-  const handleCloseForm = () => {
-    setShowForm(false);
-    resetForm();
-  };
-
-  const handleValidate = async () => {
-    setValidating(true);
-    setValidationResult(null);
-    try {
-      await ensureInit();
-      const result = await getProviderService().validate({
-        providerId: editingProvider?.id,
-        type: formData.type,
-        baseUrl: formData.baseUrl,
-        apiKey: formData.apiKey,
-      } as ValidateProviderInput);
-      setValidationResult({ valid: result.valid, error: result.error });
-    } catch {
-      setValidationResult({ valid: false, error: "Validation failed" });
-    } finally {
-      setValidating(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await ensureInit();
-      const service = getProviderService();
-      if (editingProvider) {
-        await service.update({
-          id: editingProvider.id,
-          name: formData.name,
-          type: formData.type,
-          baseUrl: formData.baseUrl,
-          apiKey: formData.apiKey || undefined,
-          enabled: formData.enabled,
-        } as UpdateProviderInput);
-      } else {
-        const createdProvider = await service.create({
-          name: formData.name,
-          type: formData.type,
-          baseUrl: formData.baseUrl,
-          apiKey: formData.apiKey,
-          enabled: formData.enabled,
-        } as CreateProviderInput);
-
-        const defaults = defaultModels[createdProvider.type] || [];
-        for (const modelName of defaults) {
-          try {
-            await getModelService().create({
-              name: modelName,
-              providerId: createdProvider.id,
-              capabilities: ["chat"],
-            } as CreateModelInput);
-          } catch (error) {
-            console.error(`Failed to add model ${modelName}:`, error);
-          }
-        }
-      }
-      handleCloseForm();
-      fetchProviders();
-    } catch (error) {
-      console.error("Failed to save provider:", error);
-    }
+  const handleEditProvider = (provider: Provider) => {
+    setEditingProvider(provider);
+    setShowProviderDialog(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -233,33 +126,29 @@ export default function ProvidersSettingsPage() {
     }
   };
 
-  const handleAddModel = async (providerId: string) => {
-    if (!newModelName.trim()) return;
-    setAddingModel(true);
+  const handleSyncProvider = async (provider: Provider) => {
+    setSyncingId(provider.id);
     try {
       await ensureInit();
-      await getModelService().create({
-        name: newModelName.trim(),
-        providerId,
-        capabilities: ["chat"],
-      } as CreateModelInput);
-      setNewModelName("");
-      fetchProviders();
+      await getProviderCatalogService().syncProvider(provider.id);
+      await fetchProviders();
     } catch (error) {
-      console.error("Failed to add model:", error);
+      console.error("Failed to sync provider:", error);
     } finally {
-      setAddingModel(false);
+      setSyncingId(null);
     }
   };
 
-  const handleDeleteModel = async (modelId: string) => {
-    try {
-      await ensureInit();
-      await getModelService().delete(modelId);
-      fetchProviders();
-    } catch (error) {
-      console.error("Failed to delete model:", error);
-    }
+  const handleOpenAddModel = (providerId: string) => {
+    setEditingModel(null);
+    setAddModelProviderId(providerId);
+    setShowAddModel(true);
+  };
+
+  const handleEditModel = (model: Model) => {
+    setEditingModel(model);
+    setAddModelProviderId(model.providerId);
+    setShowAddModel(true);
   };
 
   const handleToggleModel = async (model: Model) => {
@@ -275,37 +164,41 @@ export default function ProvidersSettingsPage() {
     }
   };
 
-  const handleSyncProvider = async (provider: Provider) => {
-    setSyncingId(provider.id);
+  const handleDeleteModel = async (modelId: string) => {
     try {
       await ensureInit();
-      await getProviderCatalogService().syncProvider(provider.id);
-      await fetchProviders();
+      await getModelService().delete(modelId);
+      fetchProviders();
     } catch (error) {
-      console.error("Failed to sync provider:", error);
-    } finally {
-      setSyncingId(null);
+      console.error("Failed to delete model:", error);
     }
   };
 
-  const handleAddDefaultModels = async (provider: Provider) => {
-    const models = defaultModels[provider.type] || [];
-    await ensureInit();
-    for (const modelName of models) {
-      try {
-        await getModelService().create({
-          name: modelName,
-          providerId: provider.id,
-          capabilities: ["chat"],
-        } as CreateModelInput);
-      } catch (error) {
-        console.error(`Failed to add model ${modelName}:`, error);
-      }
+  const handleSubmitModel = async (input: {
+    name: string;
+    displayName: string;
+    capabilities: string[];
+    metadata: ModelMetadata;
+  }) => {
+    if (!addModelProviderId) return;
+    const metadataStr = Object.keys(input.metadata).length > 0 ? JSON.stringify(input.metadata) : null;
+    if (editingModel) {
+      await getModelService().update({
+        id: editingModel.id,
+        name: input.name,
+        capabilities: input.capabilities,
+        metadata: metadataStr,
+      } as UpdateModelInput);
+    } else {
+      await getModelService().create({
+        name: input.name,
+        providerId: addModelProviderId,
+        capabilities: input.capabilities,
+        metadata: metadataStr,
+      } as CreateModelInput);
     }
-    fetchProviders();
+    await fetchProviders();
   };
-
-  const isCompatible = formData.type === "openai-compatible" || formData.type === "anthropic-compatible";
 
   if (loading) {
     return (
@@ -327,145 +220,14 @@ export default function ProvidersSettingsPage() {
             Configure AI providers and their models
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => setShowCatalog(true)}
-            variant="outline"
-            className="flex items-center gap-2 rounded-full border-[var(--outline-variant)]/15 px-5 py-2.5 font-semibold text-[var(--on-surface-variant)] transition-all hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)] active:scale-95"
-          >
-            <Sparkles className="h-4 w-4" />
-            Browse Catalog
-          </Button>
-          <Button
-            onClick={() => handleOpenForm()}
-            className="flex items-center gap-2 rounded-full bg-[var(--primary)] px-5 py-2.5 font-semibold text-[var(--primary-foreground)] transition-all hover:opacity-90 active:scale-95"
-          >
-            <Plus className="h-4 w-4" />
-            Add Provider
-          </Button>
-        </div>
+        <Button
+          onClick={handleOpenAdd}
+          className="flex items-center gap-2 rounded-full bg-[var(--primary)] px-5 py-2.5 font-semibold text-[var(--primary-foreground)] transition-all hover:opacity-90 active:scale-95"
+        >
+          <Plus className="h-4 w-4" />
+          Add Provider
+        </Button>
       </div>
-
-      {/* Add/Edit Provider Dialog */}
-      <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="border-[var(--outline-variant)]/10 bg-[var(--surface-container)] sm:rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="tracking-tight text-[var(--on-surface)]">
-              {editingProvider ? "Edit Provider" : "Add Provider"}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-[var(--on-surface-variant)] opacity-60">
-                Name
-              </Label>
-              <Input
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Provider name"
-                required
-                className="border-[var(--outline-variant)]/15 bg-[var(--surface-container-high)] text-[var(--on-surface)] placeholder:text-[var(--on-surface-variant)]/40 focus-visible:ring-[var(--primary)]/30"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-[var(--on-surface-variant)] opacity-60">
-                Type
-              </Label>
-              <select
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                className="flex h-9 w-full rounded-lg border border-[var(--outline-variant)]/15 bg-[var(--surface-container-high)] px-3 py-1 text-sm text-[var(--on-surface)] shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--primary)]/30"
-              >
-                {providerTypes.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {isCompatible && (
-              <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider text-[var(--on-surface-variant)] opacity-60">
-                  Base URL
-                </Label>
-                <Input
-                  value={formData.baseUrl}
-                  onChange={(e) => setFormData({ ...formData, baseUrl: e.target.value })}
-                  placeholder="https://api.example.com/v1"
-                  className="border-[var(--outline-variant)]/15 bg-[var(--surface-container-high)] text-[var(--on-surface)] placeholder:text-[var(--on-surface-variant)]/40 focus-visible:ring-[var(--primary)]/30"
-                />
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-[var(--on-surface-variant)] opacity-60">
-                API Key
-              </Label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    type={showApiKey ? "text" : "password"}
-                    value={formData.apiKey}
-                    onChange={(e) => {
-                      setFormData({ ...formData, apiKey: e.target.value });
-                      setValidationResult(null);
-                    }}
-                    placeholder={editingProvider?.hasApiKey ? "Leave empty to keep existing" : "Enter your API key"}
-                    className="border-[var(--outline-variant)]/15 bg-[var(--surface-container-high)] pr-10 text-[var(--on-surface)] placeholder:text-[var(--on-surface-variant)]/40 focus-visible:ring-[var(--primary)]/30"
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--on-surface-variant)] transition-colors hover:text-[var(--on-surface)]"
-                    onClick={() => setShowApiKey(!showApiKey)}
-                  >
-                    {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleValidate}
-                  disabled={validating || !formData.apiKey}
-                  className="border-[var(--outline-variant)]/15 text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
-                >
-                  {validating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test"}
-                </Button>
-              </div>
-              {validationResult && (
-                <p className={cn("text-xs font-medium", validationResult.valid ? "text-[var(--tertiary)]" : "text-[var(--destructive)]")}>
-                  {validationResult.valid ? (
-                    <span className="flex items-center gap-1"><Check className="h-3 w-3" /> Connection successful</span>
-                  ) : (
-                    <span className="flex items-center gap-1"><X className="h-3 w-3" /> {validationResult.error}</span>
-                  )}
-                </p>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              <Switch
-                checked={formData.enabled}
-                onCheckedChange={(checked) => setFormData({ ...formData, enabled: checked })}
-              />
-              <Label className="text-sm text-[var(--on-surface)]">Enabled</Label>
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCloseForm}
-                className="border-[var(--outline-variant)]/15 text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                className="bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90"
-              >
-                {editingProvider ? "Save Changes" : "Create Provider"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
 
       {/* Provider List */}
       <div className="space-y-4">
@@ -482,168 +244,156 @@ export default function ProvidersSettingsPage() {
             </p>
             <Button
               className="mt-6 rounded-full bg-[var(--primary)] px-6 py-2.5 font-semibold text-[var(--primary-foreground)] hover:opacity-90"
-              onClick={() => handleOpenForm()}
+              onClick={handleOpenAdd}
             >
               Add your first provider
             </Button>
           </div>
         ) : (
-          providers.map((provider) => (
-            <div
-              key={provider.id}
-              className={cn(
-                "glass-card overflow-hidden transition-opacity",
-                !provider.enabled && "opacity-50"
-              )}
-            >
-              {/* Provider Header */}
-              <div className="flex items-center justify-between p-5">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--surface-container-high)]">
-                    <Globe className="h-5 w-5 text-[var(--on-surface-variant)]" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold tracking-tight text-[var(--on-surface)]">
-                      {provider.name}
-                    </h3>
-                    <p className="text-xs text-[var(--on-surface-variant)]">
-                      {provider.type}
-                      {provider.baseUrl && ` · ${provider.baseUrl}`}
-                    </p>
-                    {provider.catalogId && (
-                      <p className="mt-0.5 text-[10px] text-[var(--on-surface-variant)] opacity-60">
-                        Catalog{provider.lastSyncedAt ? ` · synced ${formatDistanceToNow(new Date(provider.lastSyncedAt), { addSuffix: true })}` : " · never synced"}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold",
-                      provider.hasApiKey
-                        ? "bg-[var(--tertiary)]/10 text-[var(--tertiary)]"
-                        : "bg-[var(--destructive)]/10 text-[var(--destructive)]"
-                    )}
-                  >
-                    <Key className="h-3 w-3" />
-                    {provider.hasApiKey ? "Key Set" : "No Key"}
-                  </div>
-                  <Switch
-                    checked={provider.enabled}
-                    onCheckedChange={() => handleToggleEnabled(provider)}
-                  />
-                  {provider.catalogId && (
-                    <button
-                      type="button"
-                      title="Sync from catalog"
-                      onClick={() => handleSyncProvider(provider)}
-                      disabled={syncingId === provider.id}
-                      className="rounded-lg p-2 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)] disabled:opacity-50"
-                    >
-                      <RefreshCw className={cn("h-4 w-4", syncingId === provider.id && "animate-spin")} />
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpandedProvider(expandedProvider === provider.id ? null : provider.id)
-                    }
-                    className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
-                  >
-                    <Cpu className="h-3.5 w-3.5" />
-                    {provider.models.length}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleOpenForm(provider)}
-                    className="rounded-lg p-2 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(provider.id)}
-                    className="rounded-lg p-2 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--destructive)]/10 hover:text-[var(--destructive)]"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Expanded Models Section */}
-              {expandedProvider === provider.id && (
-                <div className="border-t border-[var(--outline-variant)]/10 p-5">
-                  <div className="mb-4 flex items-center justify-between">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--on-surface-variant)] opacity-60">
-                      Models
-                    </h4>
-                    {defaultModels[provider.type]?.length > 0 && provider.models.length === 0 && (
-                      <button
-                        type="button"
-                        onClick={() => handleAddDefaultModels(provider)}
-                        className="rounded-lg px-3 py-1.5 text-xs font-semibold text-[var(--primary)] transition-colors hover:bg-[var(--primary)]/10"
-                      >
-                        Add defaults
-                      </button>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    {provider.models.map((model) => (
-                      <div
-                        key={model.id}
-                        className="flex items-center justify-between rounded-xl bg-[var(--surface-container)] px-4 py-2.5"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Switch
-                            checked={model.enabled}
-                            onCheckedChange={() => handleToggleModel(model)}
-                          />
-                          <span className="text-sm text-[var(--on-surface)]">{model.name}</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteModel(model.id)}
-                          className="rounded-md p-1.5 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-[var(--destructive)]"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
+          providers.map((provider) => {
+            const isExpanded = expandedProvider === provider.id;
+            return (
+              <div
+                key={provider.id}
+                className={cn(
+                  "glass-card overflow-hidden transition-opacity",
+                  !provider.enabled && "opacity-50",
+                )}
+              >
+                {/* Provider Header */}
+                <div className="flex items-center justify-between gap-3 p-5">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Monogram name={provider.name} className="h-10 w-10" />
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-sm font-bold tracking-tight text-[var(--on-surface)]">
+                          {provider.name}
+                        </h3>
+                        {!provider.hasApiKey && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-[var(--destructive)]/10 px-2 py-0.5 text-[10px] font-bold text-[var(--destructive)]">
+                            No key
+                          </span>
+                        )}
                       </div>
-                    ))}
-                    <div className="flex gap-2 pt-1">
-                      <Input
-                        value={newModelName}
-                        onChange={(e) => setNewModelName(e.target.value)}
-                        placeholder="Add new model..."
-                        className="h-9 border-[var(--outline-variant)]/15 bg-[var(--surface-container)] text-sm text-[var(--on-surface)] placeholder:text-[var(--on-surface-variant)]/40 focus-visible:ring-[var(--primary)]/30"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            handleAddModel(provider.id);
-                          }
-                        }}
-                      />
-                      <Button
-                        onClick={() => handleAddModel(provider.id)}
-                        disabled={addingModel || !newModelName.trim()}
-                        className="rounded-xl bg-[var(--surface-container-high)] px-4 text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
-                        style={{ background: "var(--surface-container-high)" }}
-                      >
-                        {addingModel ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add"}
-                      </Button>
+                      <p className="mt-0.5 truncate text-xs text-[var(--on-surface-variant)]">
+                        {typeLabel[provider.type] ?? provider.type}
+                        {provider.baseUrl && ` · ${provider.baseUrl}`}
+                      </p>
+                      {provider.catalogId && (
+                        <p className="mt-0.5 text-[10px] text-[var(--on-surface-variant)] opacity-50">
+                          {provider.lastSyncedAt
+                            ? `Synced ${formatDistanceToNow(new Date(provider.lastSyncedAt), { addSuffix: true })}`
+                            : "Not yet synced"}
+                        </p>
+                      )}
                     </div>
                   </div>
+
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Switch
+                      checked={provider.enabled}
+                      onCheckedChange={() => handleToggleEnabled(provider)}
+                    />
+                    {provider.catalogId && (
+                      <button
+                        type="button"
+                        title="Sync from models.dev"
+                        onClick={() => handleSyncProvider(provider)}
+                        disabled={syncingId === provider.id}
+                        className="rounded-lg p-2 text-[var(--on-surface-variant)] opacity-60 transition-all hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)] hover:opacity-100 disabled:opacity-50"
+                      >
+                        <RefreshCw className={cn("h-4 w-4", syncingId === provider.id && "animate-spin")} />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      title={isExpanded ? "Collapse" : "Expand models"}
+                      onClick={() =>
+                        setExpandedProvider(isExpanded ? null : provider.id)
+                      }
+                      className="flex items-center gap-1 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
+                    >
+                      {provider.models.length} models
+                      {isExpanded ? (
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      ) : (
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      title="Edit provider"
+                      onClick={() => handleEditProvider(provider)}
+                      className="rounded-lg p-2 text-[var(--on-surface-variant)] opacity-60 transition-all hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)] hover:opacity-100"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      title="Delete provider"
+                      onClick={() => handleDelete(provider.id)}
+                      className="rounded-lg p-2 text-[var(--on-surface-variant)] opacity-60 transition-all hover:bg-[var(--destructive)]/10 hover:text-[var(--destructive)] hover:opacity-100"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
-              )}
-            </div>
-          ))
+
+                {/* Expanded Models Section */}
+                {isExpanded && (
+                  <div className="border-t border-[var(--outline-variant)]/10 p-5">
+                    <div className="mb-3 flex items-center justify-between">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--on-surface-variant)] opacity-60">
+                        Models
+                      </h4>
+                      <Button
+                        type="button"
+                        onClick={() => handleOpenAddModel(provider.id)}
+                        className="flex items-center gap-1.5 rounded-lg bg-[var(--surface-container-high)] px-3 py-1.5 text-xs font-semibold text-[var(--on-surface-variant)] transition-colors hover:text-[var(--on-surface)]"
+                      >
+                        <Plus className="h-3 w-3" />
+                        Add Model
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      {provider.models.length === 0 ? (
+                        <p className="py-6 text-center text-xs text-[var(--on-surface-variant)] opacity-60">
+                          No models yet. Add one manually or
+                          {provider.catalogId ? " sync from models.dev." : " import from models.dev."}
+                        </p>
+                      ) : (
+                        provider.models.map((model) => (
+                          <ModelCard
+                            key={model.id}
+                            model={model}
+                            onToggle={handleToggleModel}
+                            onEdit={handleEditModel}
+                            onDelete={handleDeleteModel}
+                          />
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
 
-      <CatalogBrowseDialog
-        open={showCatalog}
-        onOpenChange={setShowCatalog}
-        onImported={fetchProviders}
+      <ProviderDialog
+        open={showProviderDialog}
+        onOpenChange={setShowProviderDialog}
+        editingProvider={editingProvider}
+        onSaved={fetchProviders}
+      />
+
+      <AddModelDialog
+        open={showAddModel}
+        onOpenChange={setShowAddModel}
+        providerId={addModelProviderId ?? ""}
+        editingModel={editingModel}
+        onSubmit={handleSubmitModel}
       />
     </div>
   );
