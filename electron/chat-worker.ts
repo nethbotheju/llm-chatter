@@ -1,5 +1,6 @@
 import type { UIMessage } from "ai";
 import { streamChatRuntime, ChatError } from "./chat-runtime";
+import type { ResolvedToolSource, ChatToolStore } from "./chat-runtime";
 
 interface StartPayload {
   messages: { id: string; role: string; parts: unknown }[];
@@ -7,6 +8,8 @@ interface StartPayload {
   provider: { type: string; apiKey: string; baseUrl?: string | null };
   assistantConfig?: { systemPrompt: string; temperature: number; topP: number };
   messageId: string;
+  modelSupportsTools?: boolean;
+  toolSources?: ResolvedToolSource[];
 }
 
 let abortController = new AbortController();
@@ -26,8 +29,12 @@ process.parentPort.on("message", (e: { data: unknown }) => {
 
   abortController = new AbortController();
 
-  const { messages, model, provider, assistantConfig, messageId } = msg.payload;
+  const { messages, model, provider, assistantConfig, messageId, modelSupportsTools, toolSources } = msg.payload;
   let finalMessage: UIMessage | undefined;
+
+  const toolStore: ChatToolStore | undefined = toolSources
+    ? { listEnabledToolSources: async () => toolSources }
+    : undefined;
 
   (async () => {
     try {
@@ -51,6 +58,8 @@ process.parentPort.on("message", (e: { data: unknown }) => {
                 topP: assistantConfig.topP,
               }
             : undefined,
+          modelSupportsTools,
+          toolStore,
         },
         { signal: abortController.signal },
       );

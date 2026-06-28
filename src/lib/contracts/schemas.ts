@@ -270,6 +270,34 @@ export const catalogSyncResultSchema = z.object({
   disabled: z.number(),
 });
 
+export const mcpTransportSchema = z.enum(["builtin", "stdio", "http", "sse"]);
+
+export const mcpServerSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  transport: mcpTransportSchema,
+  command: z.string().nullable().optional(),
+  args: z.array(z.string()).nullable().optional(),
+  env: z.record(z.string(), z.string()).nullable().optional(),
+  url: z.string().nullable().optional(),
+  headers: z.record(z.string(), z.string()).nullable().optional(),
+  config: z.any().nullable().optional(),
+  enabled: z.boolean(),
+  isBuiltin: z.boolean(),
+  createdAt: isoDateSchema,
+  updatedAt: isoDateSchema,
+});
+
+export const mcpServerListSchema = z.array(mcpServerSchema);
+
+export const updateMcpServerInputSchema = z.object({
+  id: z.string(),
+  name: z.string().optional(),
+  enabled: z.boolean().optional(),
+  config: z.any().optional(),
+});
+
 export type ProviderDTO = z.infer<typeof providerSchema>;
 export type ModelDTO = z.infer<typeof modelSchema>;
 export type AssistantDTO = z.infer<typeof assistantSchema>;
@@ -299,6 +327,10 @@ export type ModelCatalogItemDTO = z.infer<typeof modelCatalogItemSchema>;
 export type CatalogImportInputDTO = z.infer<typeof catalogImportInputSchema>;
 export type CatalogImportResultDTO = z.infer<typeof catalogImportResultSchema>;
 export type CatalogSyncResultDTO = z.infer<typeof catalogSyncResultSchema>;
+
+export type McpTransportDTO = z.infer<typeof mcpTransportSchema>;
+export type McpServerDTO = z.infer<typeof mcpServerSchema>;
+export type UpdateMcpServerInputDTO = z.infer<typeof updateMcpServerInputSchema>;
 
 export function parseProvider(input: unknown): ProviderDTO {
   return providerSchema.parse(input);
@@ -378,6 +410,14 @@ export function parseCatalogImportResult(input: unknown): CatalogImportResultDTO
 
 export function parseCatalogSyncResult(input: unknown): CatalogSyncResultDTO {
   return catalogSyncResultSchema.parse(input);
+}
+
+export function parseMcpServer(input: unknown): McpServerDTO {
+  return mcpServerSchema.parse(input);
+}
+
+export function parseMcpServers(input: unknown): McpServerDTO[] {
+  return mcpServerListSchema.parse(input);
 }
 
 

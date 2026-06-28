@@ -1,0 +1,105 @@
+import type { BuiltinToolMeta } from "./types";
+import type { BuiltinConfig } from "./types";
+import { builtinCatalog } from "./catalog";
+
+export interface ConfigCipher {
+  encrypt(plain: string): string;
+  decrypt(cipher: string): string;
+}
+
+export const ENC_PREFIX = "enc:";
+export const REDACTED = "__redacted__";
+
+export function isEncrypted(value: unknown): boolean {
+  return typeof value === "string" && value.startsWith(ENC_PREFIX);
+}
+
+function secretKeys(metas: BuiltinToolMeta[]): Map<string, Set<string>> {
+  const map = new Map<string, Set<string>>();
+  for (const m of metas) {
+    const keys = new Set<string>();
+    for (const f of m.configFields) if (f.type === "secret") keys.add(f.key);
+    map.set(m.id, keys);
+  }
+  return map;
+}
+
+const catalogSecrets = secretKeys(builtinCatalog);
+
+export function encryptConfigSecrets(
+  config: BuiltinConfig,
+  cipher: ConfigCipher,
+): BuiltinConfig {
+  const configs: Record<string, Record<string, unknown>> = {};
+  for (const [toolId, toolCfg] of Object.entries(config.configs)) {
+    const secrets = catalogSecrets.get(toolId);
+    const out: Record<string, unknown> = { ...toolCfg };
+    if (secrets) {
+      for (const key of secrets) {
+        const v = out[key];
+        if (typeof v === "string" && v !== REDACTED && !isEncrypted(v) && v.length > 0) {
+          out[key] = ENC_PREFIX + cipher.encrypt(v);
+        }
+      }
+    }
+    configs[toolId] = out;
+  }
+  return { enabled: config.enabled, configs };
+}
+
+export function decryptConfigSecrets(
+  config: BuiltinConfig,
+  cipher: ConfigCipher,
+): BuiltinConfig {
+  const configs: Record<string, Record<string, unknown>> = {};
+  for (const [toolId, toolCfg] of Object.entries(config.configs)) {
+    const out: Record<string, unknown> = { ...toolCfg };
+    for (const [key, v] of Object.entries(toolCfg)) {
+      if (typeof v === "string" && v.startsWith(ENC_PREFIX)) {
+        out[key] = cipher.decrypt(v.slice(ENC_PREFIX.length));
+      }
+    }
+    configs[toolId] = out;
+  }
+  return { enabled: config.enabled, configs };
+}
+
+export function redactConfigSecrets(config: BuiltinConfig): BuiltinConfig {
+  const configs: Record<string, Record<string, unknown>> = {};
+  for (const [toolId, toolCfg] of Object.entries(config.configs)) {
+    const secrets = catalogSecrets.get(toolId);
+    const out: Record<string, unknown> = { ...toolCfg };
+    if (secrets) {
+      for (const key of secrets) {
+        if (isEncrypted(out[key])) out[key] = REDACTED;
+      }
+    }
+    configs[toolId] = out;
+  }
+  return { enabled: config.enabled, configs };
+}
+
+export function mergeClientConfig(
+  existing: BuiltinConfig,
+  incoming: BuiltinConfig,
+): BuiltinConfig {
+  const configs: Record<string, Record<string, unknown>> = {};
+  for (const [toolId, incomingCfg] of Object.entries(incoming.configs)) {
+    const secrets = catalogSecrets.get(toolId);
+    const existingCfg = existing.configs[toolId] ?? {};
+    const out: Record<string, unknown> = { ...incomingCfg };
+    if (secrets) {
+      for (const key of secrets) {
+        const v = out[key];
+        if (v === REDACTED) {
+          if (existingCfg[key] !== undefined) out[key] = existingCfg[key];
+          else delete out[key];
+        } else if (typeof v === "string" && v.length === 0) {
+          delete out[key];
+        }
+      }
+    }
+    configs[toolId] = out;
+  }
+  return { enabled: incoming.enabled, configs };
+}

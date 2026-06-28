@@ -44,6 +44,7 @@ export class ElectronChatTransport implements ChatTransport<UIMessage> {
       provider: config.provider,
       assistantConfig: config.assistantConfig,
       conversationId: conversationId ?? null,
+      modelSupportsTools: config.modelSupportsTools,
     });
 
     return new ReadableStream<UIMessageChunk>({

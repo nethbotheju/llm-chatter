@@ -23,6 +23,8 @@ import type {
   CatalogImportInputDTO,
   CatalogImportResultDTO,
   CatalogSyncResultDTO,
+  McpServerDTO,
+  UpdateMcpServerInputDTO,
 } from "@/lib/contracts";
 
 export type Provider = ProviderDTO;
@@ -72,3 +74,7 @@ export type CatalogImportInput = CatalogImportInputDTO;
 export type CatalogImportResult = CatalogImportResultDTO;
 
 export type CatalogSyncResult = CatalogSyncResultDTO;
+
+export type McpServer = McpServerDTO;
+
+export type UpdateMcpServerInput = UpdateMcpServerInputDTO;

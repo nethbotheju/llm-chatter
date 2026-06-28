@@ -17,6 +17,7 @@ export interface ChatConfigProviderRow {
 export interface ChatConfigModelRow {
   name: string;
   enabled: boolean;
+  capabilities?: string | null;
   provider: ChatConfigProviderRow | null;
 }
 
@@ -40,6 +41,7 @@ export interface ResolvedChatConfig {
   model: string;
   provider: ChatProviderConfigDTO;
   assistantConfig: ChatAssistantConfigDTO;
+  modelSupportsTools: boolean;
 }
 
 const DEFAULT_ASSISTANT_CONFIG: ChatAssistantConfigDTO = {
@@ -87,6 +89,9 @@ export async function resolveChatConfig(
     baseUrl: model.provider.baseUrl,
   };
 
+  const capabilities = parseCapabilities(model.capabilities);
+  const modelSupportsTools = capabilities.includes("tools");
+
   let assistantConfig: ChatAssistantConfigDTO = { ...DEFAULT_ASSISTANT_CONFIG };
   if (input.conversationId) {
     const conversation = await store.findConversationWithAssistant(input.conversationId);
@@ -99,5 +104,15 @@ export async function resolveChatConfig(
     }
   }
 
-  return { model: model.name, provider, assistantConfig };
+  return { model: model.name, provider, assistantConfig, modelSupportsTools };
+}
+
+function parseCapabilities(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((c): c is string => typeof c === "string") : [];
+  } catch {
+    return [];
+  }
 }

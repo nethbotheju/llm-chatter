@@ -5,6 +5,7 @@ import type { UIMessage } from "ai";
 import { Copy, Pencil, Check, X, Sparkles } from "lucide-react";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
 import { ThinkingBlock } from "./thinking-block";
+import { ToolInvocationBlock } from "./tool-invocation-block";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -161,6 +162,17 @@ export function ChatMessage({
                   />
                 );
               default:
+                if (
+                  typeof part.type === "string" &&
+                  (part.type === "dynamic-tool" || part.type.startsWith("tool-"))
+                ) {
+                  return (
+                    <ToolInvocationBlock
+                      key={index}
+                      part={part as unknown as Parameters<typeof ToolInvocationBlock>[0]["part"]}
+                    />
+                  );
+                }
                 return null;
             }
           })}

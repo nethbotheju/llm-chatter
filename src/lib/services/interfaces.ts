@@ -21,6 +21,8 @@ import type {
   CatalogImportInput,
   CatalogImportResult,
   CatalogSyncResult,
+  McpServer,
+  UpdateMcpServerInput,
 } from "./types";
 
 export interface IProviderService {
@@ -75,6 +77,11 @@ export interface IStatsService {
 
 export interface IResetService {
   reset(): Promise<void>;
+}
+
+export interface IMcpServerService {
+  getAll(): Promise<McpServer[]>;
+  update(input: UpdateMcpServerInput): Promise<McpServer>;
 }
 
 export interface IProviderCatalogService {

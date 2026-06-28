@@ -18,6 +18,15 @@ export interface SeedAssistant {
   isDefault: boolean;
 }
 
+export interface SeedMcpServer {
+  name: string;
+  slug: string;
+  transport: string;
+  config: Record<string, unknown>;
+  enabled: boolean;
+  isBuiltin: boolean;
+}
+
 export const seedProviders: SeedProvider[] = [
   {
     name: "OpenAI",
@@ -81,5 +90,19 @@ export const seedAssistants: SeedAssistant[] = [
     temperature: 0.5,
     topP: 0.9,
     isDefault: false,
+  },
+];
+
+export const seedMcpServers: SeedMcpServer[] = [
+  {
+    name: "Web Tools",
+    slug: "web-tools",
+    transport: "builtin",
+    enabled: true,
+    isBuiltin: true,
+    config: {
+      enabled: ["web_search", "web_fetch"],
+      configs: {},
+    },
   },
 ];

@@ -9,6 +9,7 @@ import type {
   IStatsService,
   IResetService,
   IProviderCatalogService,
+  IMcpServerService,
 } from "./interfaces";
 
 export type {
@@ -22,6 +23,7 @@ export type {
   IStatsService,
   IResetService,
   IProviderCatalogService,
+  IMcpServerService,
 };
 
 export type * from "./types";
@@ -38,6 +40,7 @@ let _export: IExportService | null = null;
 let _stats: IStatsService | null = null;
 let _reset: IResetService | null = null;
 let _providerCatalog: IProviderCatalogService | null = null;
+let _mcpServer: IMcpServerService | null = null;
 
 async function loadAdapter() {
   if (isElectron()) {
@@ -52,6 +55,7 @@ async function loadAdapter() {
     _stats = adapter.electronStatsService;
     _reset = adapter.electronResetService;
     _providerCatalog = adapter.electronProviderCatalogService;
+    _mcpServer = adapter.electronMcpServerService;
   } else {
     const adapter = await import("./adapters/web.adapter");
     _provider = adapter.webProviderService;
@@ -64,6 +68,7 @@ async function loadAdapter() {
     _stats = adapter.webStatsService;
     _reset = adapter.webResetService;
     _providerCatalog = adapter.webProviderCatalogService;
+    _mcpServer = adapter.webMcpServerService;
   }
 }
 
@@ -116,6 +121,11 @@ export function getResetService(): IResetService {
 export function getProviderCatalogService(): IProviderCatalogService {
   if (!_providerCatalog) throw new Error("Services not initialized");
   return _providerCatalog;
+}
+
+export function getMcpServerService(): IMcpServerService {
+  if (!_mcpServer) throw new Error("Services not initialized");
+  return _mcpServer;
 }
 
 export { ensureInit };

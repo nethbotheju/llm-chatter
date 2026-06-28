@@ -40,6 +40,10 @@ export {
   catalogImportInputSchema,
   catalogImportResultSchema,
   catalogSyncResultSchema,
+  mcpTransportSchema,
+  mcpServerSchema,
+  mcpServerListSchema,
+  updateMcpServerInputSchema,
   parseProvider,
   parseProviders,
   parseModel,
@@ -60,6 +64,8 @@ export {
   parseModelCatalogItems,
   parseCatalogImportResult,
   parseCatalogSyncResult,
+  parseMcpServer,
+  parseMcpServers,
 } from "./schemas";
 
 export type {
@@ -91,4 +97,7 @@ export type {
   CatalogImportInputDTO,
   CatalogImportResultDTO,
   CatalogSyncResultDTO,
+  McpTransportDTO,
+  McpServerDTO,
+  UpdateMcpServerInputDTO,
 } from "./schemas";
