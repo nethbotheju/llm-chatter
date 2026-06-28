@@ -9,6 +9,7 @@ import type {
   IStatsService,
   IResetService,
   IProviderCatalogService,
+  IMcpServerService,
 } from "../interfaces";
 import type {
   Provider,
@@ -33,6 +34,8 @@ import type {
   CatalogImportInput,
   CatalogImportResult,
   CatalogSyncResult,
+  McpServer,
+  UpdateMcpServerInput,
 } from "../types";
 import {
   parseProvider,
@@ -49,6 +52,8 @@ import {
   parseModelCatalogItems,
   parseCatalogImportResult,
   parseCatalogSyncResult,
+  parseMcpServer,
+  parseMcpServers,
 } from "@/lib/contracts";
 
 class WebProviderService implements IProviderService {
@@ -296,6 +301,22 @@ class WebProviderCatalogService implements IProviderCatalogService {
   }
 }
 
+class WebMcpServerService implements IMcpServerService {
+  async getAll(): Promise<McpServer[]> {
+    const res = await fetch("/api/mcp-servers");
+    const data = await res.json();
+    return parseMcpServers(data);
+  }
+  async update(input: UpdateMcpServerInput): Promise<McpServer> {
+    const res = await fetch("/api/mcp-servers", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    return parseMcpServer(await res.json());
+  }
+}
+
 export const webProviderService = new WebProviderService();
 export const webModelService = new WebModelService();
 export const webAssistantService = new WebAssistantService();
@@ -306,3 +327,4 @@ export const webExportService = new WebExportService();
 export const webStatsService = new WebStatsService();
 export const webResetService = new WebResetService();
 export const webProviderCatalogService = new WebProviderCatalogService();
+export const webMcpServerService = new WebMcpServerService();

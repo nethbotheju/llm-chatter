@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { nanoid } from "nanoid";
 import { prisma } from "@/lib/db/client";
 import { decrypt } from "@/lib/ai/encryption";
+import { encrypt } from "@/lib/ai/encryption";
 import {
   streamChatRuntime,
   resolveChatConfig,
@@ -9,7 +10,14 @@ import {
   ChatError,
   type ChatConfigStore,
   type ChatPersistenceStore,
+  type ChatToolStore,
+  type ResolvedToolSource,
 } from "@/lib/chat-runtime";
+import {
+  parseBuiltinConfig,
+  decryptConfigSecrets,
+  type ConfigCipher,
+} from "@/lib/builtin-tools";
 
 export const maxDuration = 60;
 
@@ -58,6 +66,23 @@ export async function POST(request: NextRequest) {
       },
     };
 
+    const cipher: ConfigCipher = { encrypt, decrypt };
+    const webToolStore: ChatToolStore = {
+      listEnabledToolSources: async (): Promise<ResolvedToolSource[]> => {
+        const rows = await prisma.mcpServer.findMany({ where: { enabled: true } });
+        return rows
+          .filter((r) => r.transport === "builtin")
+          .map((r) => ({
+            id: r.id,
+            slug: r.slug,
+            transport: "builtin" as const,
+            enabled: r.enabled,
+            isBuiltin: r.isBuiltin,
+            builtinConfig: decryptConfigSecrets(parseBuiltinConfig(r.config), cipher),
+          }));
+      },
+    };
+
     let config;
     try {
       config = await resolveChatConfig({ modelId, conversationId }, webStore);
@@ -76,6 +101,8 @@ export async function POST(request: NextRequest) {
       model: config.model,
       provider: config.provider,
       assistantConfig: config.assistantConfig,
+      modelSupportsTools: config.modelSupportsTools,
+      toolStore: webToolStore,
     });
 
     return result.toUIMessageStreamResponse({

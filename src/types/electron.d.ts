@@ -63,6 +63,10 @@ declare global {
         syncProvider: (providerId: string) => Promise<unknown>;
         syncAll: () => Promise<unknown[]>;
       };
+      mcpServers: {
+        getAll: () => Promise<unknown[]>;
+        update: (input: unknown) => Promise<unknown>;
+      };
       // Phase 3: chat streaming
       chat?: {
         resolve: (input: {
@@ -76,6 +80,7 @@ declare global {
             temperature: number;
             topP: number;
           };
+          modelSupportsTools: boolean;
         }>;
         start: (payload: unknown) => Promise<string>;
         abort: (streamId: string) => void;

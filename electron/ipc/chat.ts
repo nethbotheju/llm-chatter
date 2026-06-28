@@ -3,14 +3,20 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { getPrisma } from "../db/client";
-import { decrypt } from "../db/encryption";
+import { decrypt, encrypt } from "../db/encryption";
 import { nanoid } from "nanoid";
 import {
   resolveChatConfig,
   persistAssistantMessage,
   type ChatConfigStore,
   type ChatPersistenceStore,
+  type ResolvedToolSource,
 } from "../chat-runtime";
+import {
+  parseBuiltinConfig,
+  decryptConfigSecrets,
+  type ConfigCipher,
+} from "../../src/lib/builtin-tools";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -48,6 +54,7 @@ export function registerChatIpc(getMainWindow: () => BrowserWindow | null) {
     provider: { type: string; apiKey: string; baseUrl: string | null };
     assistantConfig: { systemPrompt: string; temperature: number; topP: number };
     conversationId?: string | null;
+    modelSupportsTools?: boolean;
   }) => {
     const streamId = randomUUID();
     const win =
@@ -88,6 +95,26 @@ export function registerChatIpc(getMainWindow: () => BrowserWindow | null) {
     });
 
     runningWorkers.set(streamId, child);
+
+    let toolSources: ResolvedToolSource[] = [];
+    if (payload.modelSupportsTools) {
+      try {
+        const cipher: ConfigCipher = { encrypt, decrypt };
+        const rows = await prisma.mcpServer.findMany({ where: { enabled: true } });
+        toolSources = rows
+          .filter((r) => r.transport === "builtin")
+          .map((r) => ({
+            id: r.id,
+            slug: r.slug,
+            transport: "builtin" as const,
+            enabled: r.enabled,
+            isBuiltin: r.isBuiltin,
+            builtinConfig: decryptConfigSecrets(parseBuiltinConfig(r.config), cipher),
+          }));
+      } catch (error) {
+        console.error("Failed to resolve tool sources:", error);
+      }
+    }
 
     child.on("message", (msg: { type: string; payload?: unknown }) => {
       if (msg.type === "chunk" && win && !win.isDestroyed()) {
@@ -142,6 +169,8 @@ export function registerChatIpc(getMainWindow: () => BrowserWindow | null) {
         provider: payload.provider,
         assistantConfig: payload.assistantConfig,
         messageId,
+        modelSupportsTools: payload.modelSupportsTools,
+        toolSources,
       },
     });
 

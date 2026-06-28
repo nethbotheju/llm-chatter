@@ -1,5 +1,6 @@
 export { streamChatRuntime } from "./stream";
-export type { ChatRuntimeInput } from "./types";
+export type { ChatRuntimeInput, ChatToolStore, ResolvedToolSource, McpTransport } from "./types";
+export { MAX_TOOL_STEPS } from "./types";
 export { ChatError } from "./errors";
 export { resolveChatConfig } from "./resolve";
 export type {

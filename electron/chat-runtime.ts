@@ -7,6 +7,9 @@ export {
 
 export type {
   ChatRuntimeInput,
+  ChatToolStore,
+  ResolvedToolSource,
+  McpTransport,
   ChatConfigInput,
   ChatConfigStore,
   ChatConfigModelRow,

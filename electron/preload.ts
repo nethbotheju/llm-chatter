@@ -64,6 +64,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
       invoke("catalog:syncProvider", providerId),
     syncAll: () => invoke("catalog:syncAll"),
   },
+  mcpServers: {
+    getAll: () => invoke("mcpServers:getAll"),
+    update: (input: unknown) => invoke("mcpServers:update", input),
+  },
   // Phase 3: chat streaming
   chat: {
     resolve: (input: { modelId: string; conversationId?: string | null }) =>

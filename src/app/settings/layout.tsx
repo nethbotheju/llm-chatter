@@ -4,11 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { isElectron } from "@/lib/runtime";
-import { ArrowLeft, Settings, Server, Bot, Shield } from "lucide-react";
+import { ArrowLeft, Settings, Server, Bot, Shield, Wrench } from "lucide-react";
 
 const settingsNav = [
   { href: "/settings/general", label: "General", icon: Settings },
   { href: "/settings/providers", label: "Providers", icon: Server },
+  { href: "/settings/tools", label: "Tools", icon: Wrench },
   { href: "/settings/assistants", label: "Assistants", icon: Bot },
   { href: "/settings/privacy", label: "Privacy", icon: Shield },
 ];

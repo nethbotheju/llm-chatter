@@ -24,6 +24,7 @@ import { registerDialogsIpc } from "./dialogs";
 import { registerNotificationsIpc } from "./notifications";
 import { registerAutoLaunchIpc } from "./auto-launch";
 import { registerCatalogIpc } from "./catalog";
+import { registerMcpServersIpc } from "./mcp-servers";
 
 export function registerAllIpc() {
   registerProvidersIpc();
@@ -39,4 +40,5 @@ export function registerAllIpc() {
   registerNotificationsIpc();
   registerAutoLaunchIpc();
   registerCatalogIpc();
+  registerMcpServersIpc();
 }

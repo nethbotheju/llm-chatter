@@ -9,6 +9,7 @@ import type {
   IStatsService,
   IResetService,
   IProviderCatalogService,
+  IMcpServerService,
 } from "../interfaces";
 import type {
   Provider,
@@ -33,6 +34,8 @@ import type {
   CatalogImportInput,
   CatalogImportResult,
   CatalogSyncResult,
+  McpServer,
+  UpdateMcpServerInput,
 } from "../types";
 import {
   parseProvider,
@@ -49,6 +52,8 @@ import {
   parseModelCatalogItems,
   parseCatalogImportResult,
   parseCatalogSyncResult,
+  parseMcpServer,
+  parseMcpServers,
 } from "@/lib/contracts";
 
 function getAPI() {
@@ -204,6 +209,16 @@ class ElectronProviderCatalogService implements IProviderCatalogService {
   }
 }
 
+class ElectronMcpServerService implements IMcpServerService {
+  async getAll(): Promise<McpServer[]> {
+    const data = await getAPI().mcpServers.getAll();
+    return parseMcpServers(data);
+  }
+  async update(input: UpdateMcpServerInput): Promise<McpServer> {
+    return parseMcpServer(await getAPI().mcpServers.update(input));
+  }
+}
+
 export const electronProviderService = new ElectronProviderService();
 export const electronModelService = new ElectronModelService();
 export const electronAssistantService = new ElectronAssistantService();
@@ -214,3 +229,4 @@ export const electronExportService = new ElectronExportService();
 export const electronStatsService = new ElectronStatsService();
 export const electronResetService = new ElectronResetService();
 export const electronProviderCatalogService = new ElectronProviderCatalogService();
+export const electronMcpServerService = new ElectronMcpServerService();
