@@ -65,7 +65,10 @@ declare global {
       };
       mcpServers: {
         getAll: () => Promise<unknown[]>;
+        create: (input: unknown) => Promise<unknown>;
         update: (input: unknown) => Promise<unknown>;
+        delete: (id: string) => Promise<void>;
+        discover: (input: unknown) => Promise<unknown[]>;
       };
       // Phase 3: chat streaming
       chat?: {

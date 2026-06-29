@@ -79,6 +79,90 @@ export function redactConfigSecrets(config: BuiltinConfig): BuiltinConfig {
   return { enabled: config.enabled, configs };
 }
 
+// ── Generic map-level secret helpers (env / headers) ──
+
+type StringMap = Record<string, string>;
+
+export function encryptSecretMap(
+  map: StringMap,
+  secretKeys: Set<string>,
+  cipher: ConfigCipher,
+): StringMap {
+  const out: StringMap = { ...map };
+  for (const key of secretKeys) {
+    const v = out[key];
+    if (typeof v === "string" && v !== REDACTED && !isEncrypted(v) && v.length > 0) {
+      out[key] = ENC_PREFIX + cipher.encrypt(v);
+    }
+  }
+  return out;
+}
+
+export function decryptSecretMap(map: StringMap, cipher: ConfigCipher): StringMap {
+  const out: StringMap = { ...map };
+  for (const key of Object.keys(out)) {
+    if (isEncrypted(out[key])) {
+      out[key] = cipher.decrypt(out[key].slice(ENC_PREFIX.length));
+    }
+  }
+  return out;
+}
+
+export function redactSecretMap(map: StringMap, secretKeys: Set<string>): StringMap {
+  const out: StringMap = { ...map };
+  for (const key of secretKeys) {
+    if (isEncrypted(out[key])) out[key] = REDACTED;
+  }
+  return out;
+}
+
+export function mergeSecretMap(
+  existing: StringMap,
+  incoming: StringMap,
+  secretKeys: Set<string>,
+): StringMap {
+  const out: StringMap = { ...incoming };
+  for (const key of secretKeys) {
+    const v = out[key];
+    if (v === REDACTED) {
+      if (existing[key] !== undefined) out[key] = existing[key];
+      else delete out[key];
+    } else if (typeof v === "string" && v.length === 0) {
+      delete out[key];
+    }
+  }
+  return out;
+}
+
+export interface McpSecretConfig {
+  envSecretKeys: string[];
+  headersSecretKeys: string[];
+}
+
+export const EMPTY_MCP_SECRET_CONFIG: McpSecretConfig = {
+  envSecretKeys: [],
+  headersSecretKeys: [],
+};
+
+export function parseMcpSecretConfig(
+  raw: string | null | undefined,
+): McpSecretConfig {
+  if (!raw) return { ...EMPTY_MCP_SECRET_CONFIG };
+  try {
+    const parsed = JSON.parse(raw) as Partial<McpSecretConfig>;
+    return {
+      envSecretKeys: Array.isArray(parsed?.envSecretKeys)
+        ? parsed.envSecretKeys.filter((x): x is string => typeof x === "string")
+        : [],
+      headersSecretKeys: Array.isArray(parsed?.headersSecretKeys)
+        ? parsed.headersSecretKeys.filter((x): x is string => typeof x === "string")
+        : [],
+    };
+  } catch {
+    return { ...EMPTY_MCP_SECRET_CONFIG };
+  }
+}
+
 export function mergeClientConfig(
   existing: BuiltinConfig,
   incoming: BuiltinConfig,

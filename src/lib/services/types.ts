@@ -24,8 +24,10 @@ import type {
   CatalogImportResultDTO,
   CatalogSyncResultDTO,
   McpServerDTO,
+  CreateMcpServerInputDTO,
   UpdateMcpServerInputDTO,
-} from "@/lib/contracts";
+  DiscoverMcpToolsInputDTO,
+} from "../contracts";
 
 export type Provider = ProviderDTO;
 
@@ -77,4 +79,13 @@ export type CatalogSyncResult = CatalogSyncResultDTO;
 
 export type McpServer = McpServerDTO;
 
+export type CreateMcpServerInput = CreateMcpServerInputDTO;
+
 export type UpdateMcpServerInput = UpdateMcpServerInputDTO;
+
+export type DiscoverMcpToolsInput = DiscoverMcpToolsInputDTO;
+
+export interface DiscoveredTool {
+  name: string;
+  description?: string;
+}

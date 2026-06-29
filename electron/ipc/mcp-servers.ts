@@ -1,61 +1,23 @@
 import { ipcMain } from "electron";
 import { getPrisma } from "../db/client";
 import { encrypt, decrypt } from "../db/encryption";
+import { nanoid } from "nanoid";
+import { type ConfigCipher } from "../../src/lib/builtin-tools";
+import type {
+  CreateMcpServerInputDTO as CreateMcpServerInput,
+  UpdateMcpServerInputDTO as UpdateMcpServerInput,
+  DiscoverMcpToolsInputDTO as DiscoverMcpToolsInput,
+} from "../../src/lib/contracts";
 import {
-  parseBuiltinConfig,
-  redactConfigSecrets,
-  mergeClientConfig,
-  encryptConfigSecrets,
-  type ConfigCipher,
-} from "../../src/lib/builtin-tools";
-import type { BuiltinConfig } from "../../src/lib/builtin-tools";
-import type { McpServerDTO } from "../../src/lib/contracts";
+  slugify,
+  validateUserTransport,
+  buildCreateData,
+  buildUpdateData,
+  toMcpServerDTO,
+} from "../../src/lib/mcp/server-config";
+import { discoverMcpTools } from "../../src/lib/mcp/discover";
 
 const cipher: ConfigCipher = { encrypt, decrypt };
-
-function parseJsonField<T>(raw: string | null): T | null {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
-}
-
-function toDTO(row: {
-  id: string;
-  name: string;
-  slug: string;
-  transport: string;
-  command: string | null;
-  args: string | null;
-  env: string | null;
-  url: string | null;
-  headers: string | null;
-  config: string | null;
-  enabled: boolean;
-  isBuiltin: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}): McpServerDTO {
-  const config = redactConfigSecrets(parseBuiltinConfig(row.config));
-  return {
-    id: row.id,
-    name: row.name,
-    slug: row.slug,
-    transport: row.transport as McpServerDTO["transport"],
-    command: row.command,
-    args: parseJsonField<string[]>(row.args),
-    env: parseJsonField<Record<string, string>>(row.env),
-    url: row.url,
-    headers: parseJsonField<Record<string, string>>(row.headers),
-    config: row.transport === "builtin" ? config : null,
-    enabled: row.enabled,
-    isBuiltin: row.isBuiltin,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  };
-}
 
 export function registerMcpServersIpc() {
   ipcMain.handle("mcpServers:getAll", async () => {
@@ -63,33 +25,49 @@ export function registerMcpServersIpc() {
     const rows = await prisma.mcpServer.findMany({
       orderBy: [{ isBuiltin: "desc" }, { createdAt: "asc" }],
     });
-    return rows.map(toDTO);
+    return rows.map(toMcpServerDTO);
   });
 
-  ipcMain.handle("mcpServers:update", async (_e, input: {
-    id: string;
-    name?: string;
-    enabled?: boolean;
-    config?: BuiltinConfig;
-  }) => {
+  ipcMain.handle("mcpServers:create", async (_e, input: CreateMcpServerInput) => {
+    const error = validateUserTransport(input);
+    if (error) throw new Error(error);
+
     const prisma = getPrisma();
-    const { id, name, enabled, config } = input;
-
-    const existing = await prisma.mcpServer.findUnique({ where: { id } });
-    if (!existing) throw new Error("MCP server not found");
-
-    const data: { name?: string; enabled?: boolean; config?: string } = {};
-    if (name !== undefined) data.name = name;
-    if (enabled !== undefined) data.enabled = enabled;
-
-    if (config !== undefined && existing.transport === "builtin") {
-      const existingConfig = parseBuiltinConfig(existing.config);
-      const merged = mergeClientConfig(existingConfig, config);
-      const encrypted = encryptConfigSecrets(merged, cipher);
-      data.config = JSON.stringify(encrypted);
+    const baseSlug = slugify(input.name);
+    let slug = baseSlug;
+    let suffix = 1;
+    while (await prisma.mcpServer.findUnique({ where: { slug } })) {
+      suffix += 1;
+      slug = `${baseSlug}-${suffix}`;
     }
 
-    const updated = await prisma.mcpServer.update({ where: { id }, data });
-    return toDTO(updated);
+    const created = await prisma.mcpServer.create({
+      data: { id: nanoid(), ...buildCreateData(input, slug, cipher) },
+    });
+    return toMcpServerDTO(created);
+  });
+
+  ipcMain.handle("mcpServers:update", async (_e, input: UpdateMcpServerInput) => {
+    const prisma = getPrisma();
+    const existing = await prisma.mcpServer.findUnique({ where: { id: input.id } });
+    if (!existing) throw new Error("MCP server not found");
+
+    const data = buildUpdateData(existing, input, cipher);
+    const updated = await prisma.mcpServer.update({ where: { id: input.id }, data });
+    return toMcpServerDTO(updated);
+  });
+
+  ipcMain.handle("mcpServers:delete", async (_e, id: string) => {
+    const prisma = getPrisma();
+    const existing = await prisma.mcpServer.findUnique({ where: { id } });
+    if (!existing) throw new Error("MCP server not found");
+    if (existing.isBuiltin) throw new Error("Built-in servers cannot be deleted");
+    await prisma.mcpServer.delete({ where: { id } });
+  });
+
+  ipcMain.handle("mcpServers:discover", async (_e, input: DiscoverMcpToolsInput) => {
+    const error = validateUserTransport(input);
+    if (error) throw new Error(error);
+    return discoverMcpTools(input);
   });
 }

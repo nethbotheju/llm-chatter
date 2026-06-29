@@ -36,6 +36,9 @@ import type {
   CatalogSyncResult,
   McpServer,
   UpdateMcpServerInput,
+  CreateMcpServerInput,
+  DiscoverMcpToolsInput,
+  DiscoveredTool,
 } from "../types";
 import {
   parseProvider,
@@ -55,6 +58,18 @@ import {
   parseMcpServer,
   parseMcpServers,
 } from "@/lib/contracts";
+
+async function assertOk(res: Response): Promise<void> {
+  if (res.ok) return;
+  let message = `Request failed (${res.status})`;
+  try {
+    const body = await res.json();
+    if (body && typeof body.error === "string") message = body.error;
+  } catch {
+    // non-JSON response; keep default message
+  }
+  throw new Error(message);
+}
 
 class WebProviderService implements IProviderService {
   async getAll(): Promise<Provider[]> {
@@ -304,8 +319,17 @@ class WebProviderCatalogService implements IProviderCatalogService {
 class WebMcpServerService implements IMcpServerService {
   async getAll(): Promise<McpServer[]> {
     const res = await fetch("/api/mcp-servers");
-    const data = await res.json();
-    return parseMcpServers(data);
+    await assertOk(res);
+    return parseMcpServers(await res.json());
+  }
+  async create(input: CreateMcpServerInput): Promise<McpServer> {
+    const res = await fetch("/api/mcp-servers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    await assertOk(res);
+    return parseMcpServer(await res.json());
   }
   async update(input: UpdateMcpServerInput): Promise<McpServer> {
     const res = await fetch("/api/mcp-servers", {
@@ -313,7 +337,21 @@ class WebMcpServerService implements IMcpServerService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
+    await assertOk(res);
     return parseMcpServer(await res.json());
+  }
+  async delete(id: string): Promise<void> {
+    const res = await fetch(`/api/mcp-servers?id=${id}`, { method: "DELETE" });
+    await assertOk(res);
+  }
+  async discover(input: DiscoverMcpToolsInput): Promise<DiscoveredTool[]> {
+    const res = await fetch("/api/mcp-servers/discover", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    await assertOk(res);
+    return (await res.json()) as DiscoveredTool[];
   }
 }
 

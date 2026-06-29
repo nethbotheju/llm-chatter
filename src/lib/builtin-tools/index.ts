@@ -20,8 +20,14 @@ export {
   decryptConfigSecrets,
   redactConfigSecrets,
   mergeClientConfig,
+  encryptSecretMap,
+  decryptSecretMap,
+  redactSecretMap,
+  mergeSecretMap,
+  parseMcpSecretConfig,
   isEncrypted,
   ENC_PREFIX,
   REDACTED,
 } from "./secrets";
-export type { ConfigCipher } from "./secrets";
+export type { ConfigCipher, McpSecretConfig } from "./secrets";
+export { EMPTY_MCP_SECRET_CONFIG } from "./secrets";
