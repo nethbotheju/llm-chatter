@@ -12,11 +12,8 @@ import {
   type ChatPersistenceStore,
   type ResolvedToolSource,
 } from "../chat-runtime";
-import {
-  parseBuiltinConfig,
-  decryptConfigSecrets,
-  type ConfigCipher,
-} from "../../src/lib/builtin-tools";
+import { type ConfigCipher } from "../../src/lib/builtin-tools";
+import { toResolvedToolSource } from "../../src/lib/mcp/server-config";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -101,16 +98,7 @@ export function registerChatIpc(getMainWindow: () => BrowserWindow | null) {
       try {
         const cipher: ConfigCipher = { encrypt, decrypt };
         const rows = await prisma.mcpServer.findMany({ where: { enabled: true } });
-        toolSources = rows
-          .filter((r) => r.transport === "builtin")
-          .map((r) => ({
-            id: r.id,
-            slug: r.slug,
-            transport: "builtin" as const,
-            enabled: r.enabled,
-            isBuiltin: r.isBuiltin,
-            builtinConfig: decryptConfigSecrets(parseBuiltinConfig(r.config), cipher),
-          }));
+        toolSources = rows.map((r) => toResolvedToolSource(r, cipher));
       } catch (error) {
         console.error("Failed to resolve tool sources:", error);
       }

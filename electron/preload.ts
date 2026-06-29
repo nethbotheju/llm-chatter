@@ -66,7 +66,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   mcpServers: {
     getAll: () => invoke("mcpServers:getAll"),
+    create: (input: unknown) => invoke("mcpServers:create", input),
     update: (input: unknown) => invoke("mcpServers:update", input),
+    delete: (id: string) => invoke("mcpServers:delete", id),
+    discover: (input: unknown) => invoke("mcpServers:discover", input),
   },
   // Phase 3: chat streaming
   chat: {

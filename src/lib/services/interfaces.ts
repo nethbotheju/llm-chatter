@@ -23,6 +23,9 @@ import type {
   CatalogSyncResult,
   McpServer,
   UpdateMcpServerInput,
+  CreateMcpServerInput,
+  DiscoverMcpToolsInput,
+  DiscoveredTool,
 } from "./types";
 
 export interface IProviderService {
@@ -81,7 +84,11 @@ export interface IResetService {
 
 export interface IMcpServerService {
   getAll(): Promise<McpServer[]>;
+  create(input: CreateMcpServerInput): Promise<McpServer>;
   update(input: UpdateMcpServerInput): Promise<McpServer>;
+  delete(id: string): Promise<void>;
+  discover(input: DiscoverMcpToolsInput): Promise<DiscoveredTool[]
+>;
 }
 
 export interface IProviderCatalogService {

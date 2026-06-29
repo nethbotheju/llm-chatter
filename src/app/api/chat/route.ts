@@ -11,13 +11,9 @@ import {
   type ChatConfigStore,
   type ChatPersistenceStore,
   type ChatToolStore,
-  type ResolvedToolSource,
 } from "@/lib/chat-runtime";
-import {
-  parseBuiltinConfig,
-  decryptConfigSecrets,
-  type ConfigCipher,
-} from "@/lib/builtin-tools";
+import { type ConfigCipher } from "@/lib/builtin-tools";
+import { toResolvedToolSource } from "@/lib/mcp/server-config";
 
 export const maxDuration = 60;
 
@@ -68,18 +64,9 @@ export async function POST(request: NextRequest) {
 
     const cipher: ConfigCipher = { encrypt, decrypt };
     const webToolStore: ChatToolStore = {
-      listEnabledToolSources: async (): Promise<ResolvedToolSource[]> => {
+      listEnabledToolSources: async () => {
         const rows = await prisma.mcpServer.findMany({ where: { enabled: true } });
-        return rows
-          .filter((r) => r.transport === "builtin")
-          .map((r) => ({
-            id: r.id,
-            slug: r.slug,
-            transport: "builtin" as const,
-            enabled: r.enabled,
-            isBuiltin: r.isBuiltin,
-            builtinConfig: decryptConfigSecrets(parseBuiltinConfig(r.config), cipher),
-          }));
+        return rows.map((r) => toResolvedToolSource(r, cipher));
       },
     };
 

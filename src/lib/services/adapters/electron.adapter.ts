@@ -34,8 +34,11 @@ import type {
   CatalogImportInput,
   CatalogImportResult,
   CatalogSyncResult,
-  McpServer,
+  CreateMcpServerInput,
   UpdateMcpServerInput,
+  DiscoverMcpToolsInput,
+  DiscoveredTool,
+  McpServer,
 } from "../types";
 import {
   parseProvider,
@@ -214,8 +217,18 @@ class ElectronMcpServerService implements IMcpServerService {
     const data = await getAPI().mcpServers.getAll();
     return parseMcpServers(data);
   }
+  async create(input: CreateMcpServerInput): Promise<McpServer> {
+    return parseMcpServer(await getAPI().mcpServers.create(input));
+  }
   async update(input: UpdateMcpServerInput): Promise<McpServer> {
     return parseMcpServer(await getAPI().mcpServers.update(input));
+  }
+  async delete(id: string): Promise<void> {
+    await getAPI().mcpServers.delete(id);
+  }
+  async discover(input: DiscoverMcpToolsInput): Promise<DiscoveredTool[]> {
+    const data = await getAPI().mcpServers.discover(input);
+    return (data as unknown[]).map((d) => d as DiscoveredTool);
   }
 }
 

@@ -271,6 +271,7 @@ export const catalogSyncResultSchema = z.object({
 });
 
 export const mcpTransportSchema = z.enum(["builtin", "stdio", "http", "sse"]);
+export const mcpUserTransportSchema = z.enum(["stdio", "http", "sse"]);
 
 export const mcpServerSchema = z.object({
   id: z.string(),
@@ -291,12 +292,32 @@ export const mcpServerSchema = z.object({
 
 export const mcpServerListSchema = z.array(mcpServerSchema);
 
+const mcpTransportFieldsSchema = z.object({
+  command: z.string().optional(),
+  args: z.array(z.string()).optional(),
+  env: z.record(z.string(), z.string()).optional(),
+  url: z.string().optional(),
+  headers: z.record(z.string(), z.string()).optional(),
+  envSecretKeys: z.array(z.string()).optional(),
+  headersSecretKeys: z.array(z.string()).optional(),
+});
+
+export const createMcpServerInputSchema = z.object({
+  name: z.string().min(1),
+  transport: mcpUserTransportSchema,
+  enabled: z.boolean().optional(),
+}).merge(mcpTransportFieldsSchema);
+
 export const updateMcpServerInputSchema = z.object({
   id: z.string(),
   name: z.string().optional(),
   enabled: z.boolean().optional(),
   config: z.any().optional(),
-});
+}).merge(mcpTransportFieldsSchema);
+
+export const discoverMcpToolsInputSchema = z.object({
+  transport: mcpUserTransportSchema,
+}).merge(mcpTransportFieldsSchema);
 
 export type ProviderDTO = z.infer<typeof providerSchema>;
 export type ModelDTO = z.infer<typeof modelSchema>;
@@ -329,8 +350,11 @@ export type CatalogImportResultDTO = z.infer<typeof catalogImportResultSchema>;
 export type CatalogSyncResultDTO = z.infer<typeof catalogSyncResultSchema>;
 
 export type McpTransportDTO = z.infer<typeof mcpTransportSchema>;
+export type McpUserTransportDTO = z.infer<typeof mcpUserTransportSchema>;
 export type McpServerDTO = z.infer<typeof mcpServerSchema>;
+export type CreateMcpServerInputDTO = z.infer<typeof createMcpServerInputSchema>;
 export type UpdateMcpServerInputDTO = z.infer<typeof updateMcpServerInputSchema>;
+export type DiscoverMcpToolsInputDTO = z.infer<typeof discoverMcpToolsInputSchema>;
 
 export function parseProvider(input: unknown): ProviderDTO {
   return providerSchema.parse(input);

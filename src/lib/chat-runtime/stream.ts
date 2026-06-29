@@ -1,8 +1,10 @@
 import { streamText, convertToModelMessages, stepCountIs } from "ai";
 import type { UIMessage, Tool } from "ai";
+import { createMCPClient, type MCPClient } from "@ai-sdk/mcp";
+import { Experimental_StdioMCPTransport as StdioMCPTransport } from "@ai-sdk/mcp/mcp-stdio";
 import { getRuntimeModel } from "./provider-client";
 import { getBuiltinTools } from "../builtin-tools/registry";
-import type { ChatRuntimeInput } from "./types";
+import type { ChatRuntimeInput, ResolvedToolSource } from "./types";
 import { MAX_TOOL_STEPS } from "./types";
 
 export async function streamChatRuntime(
@@ -31,7 +33,20 @@ export async function streamChatRuntime(
   const temperature = assistantConfig?.temperature ?? 0.7;
   const topP = assistantConfig?.topP ?? 1;
 
-  const tools = await resolveTools(modelSupportsTools ?? false, toolStore);
+  const mcpClients: MCPClient[] = [];
+  let tools: Record<string, Tool> | undefined;
+  try {
+    tools = await resolveTools(
+      modelSupportsTools ?? false,
+      toolStore,
+      mcpClients,
+    );
+  } catch (err) {
+    await closeClients(mcpClients);
+    throw err;
+  }
+
+  const cleanup = () => closeClients(mcpClients);
 
   const result = streamText({
     model,
@@ -41,7 +56,12 @@ export async function streamChatRuntime(
     topP,
     abortSignal: options?.signal,
     ...(tools && Object.keys(tools).length > 0
-      ? { tools, stopWhen: stepCountIs(MAX_TOOL_STEPS) }
+      ? {
+          tools,
+          stopWhen: stepCountIs(MAX_TOOL_STEPS),
+          onFinish: cleanup,
+          onError: cleanup,
+        }
       : {}),
   });
 
@@ -51,6 +71,7 @@ export async function streamChatRuntime(
 async function resolveTools(
   modelSupportsTools: boolean,
   toolStore: ChatRuntimeInput["toolStore"],
+  clients: MCPClient[],
 ): Promise<Record<string, Tool> | undefined> {
   if (!modelSupportsTools || !toolStore) return undefined;
 
@@ -59,14 +80,70 @@ async function resolveTools(
 
   for (const source of sources) {
     if (!source.enabled) continue;
-    if (source.transport === "builtin" && source.builtinConfig) {
-      const builtinTools = getBuiltinTools({
-        enabled: source.builtinConfig.enabled,
-        configs: source.builtinConfig.configs,
-      });
-      Object.assign(merged, builtinTools);
+    try {
+      if (source.transport === "builtin" && source.builtinConfig) {
+        const builtinTools = getBuiltinTools({
+          enabled: source.builtinConfig.enabled,
+          configs: source.builtinConfig.configs,
+        });
+        Object.assign(merged, builtinTools);
+      } else if (
+        source.transport === "stdio" ||
+        source.transport === "http" ||
+        source.transport === "sse"
+      ) {
+        const remoteTools = await connectMcpServer(source, clients);
+        for (const [name, tool] of Object.entries(remoteTools)) {
+          merged[`${source.slug}__${name}`] = tool;
+        }
+      }
+    } catch (err) {
+      console.error(`Failed to load MCP tools from "${source.slug}":`, err);
     }
   }
 
   return merged;
+}
+
+async function connectMcpServer(
+  source: ResolvedToolSource,
+  clients: MCPClient[],
+): Promise<Record<string, Tool>> {
+  const client = await createMCPClient({
+    transport: buildMcpTransport(source),
+    onUncaughtError: (err) =>
+      console.error(`MCP "${source.slug}" uncaught error:`, err),
+  });
+  clients.push(client);
+  const toolset = await client.tools();
+  return toolset as Record<string, Tool>;
+}
+
+function buildMcpTransport(source: ResolvedToolSource) {
+  switch (source.transport) {
+    case "stdio":
+      return new StdioMCPTransport({
+        command: source.command ?? "",
+        args: source.args ?? [],
+        env: source.env,
+      });
+    case "http":
+      return {
+        type: "http" as const,
+        url: source.url ?? "",
+        headers: source.headers,
+      };
+    case "sse":
+      return {
+        type: "sse" as const,
+        url: source.url ?? "",
+        headers: source.headers,
+      };
+    default:
+      throw new Error(`Unsupported MCP transport: ${source.transport}`);
+  }
+}
+
+async function closeClients(clients: MCPClient[]): Promise<void> {
+  await Promise.all(clients.map((c) => c.close().catch(() => {})));
 }
