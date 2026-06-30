@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { Bot, Upload, X } from "lucide-react";
+import { Upload, X } from "lucide-react";
+import { Monogram } from "@/components/settings/monogram";
 
 interface Assistant {
   id: string;
@@ -96,7 +97,7 @@ export function AssistantForm({
             {image ? (
               <img src={image} alt={name} className="h-full w-full object-cover" />
             ) : (
-              <Bot className="h-8 w-8 text-[var(--on-surface-variant)]" />
+              <Monogram name={name || "?"} className="h-full w-full rounded-2xl" />
             )}
           </div>
           {image && (

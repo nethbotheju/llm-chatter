@@ -4,14 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { isElectron } from "@/lib/runtime";
-import { ArrowLeft, Settings, Server, Bot, Shield, Wrench } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 const settingsNav = [
-  { href: "/settings/general", label: "General", icon: Settings },
-  { href: "/settings/providers", label: "Providers", icon: Server },
-  { href: "/settings/tools", label: "Tools", icon: Wrench },
-  { href: "/settings/assistants", label: "Assistants", icon: Bot },
-  { href: "/settings/privacy", label: "Privacy", icon: Shield },
+  { href: "/settings/general", label: "General" },
+  { href: "/settings/providers", label: "Providers" },
+  { href: "/settings/tools", label: "Tools" },
+  { href: "/settings/assistants", label: "Assistants" },
+  { href: "/settings/privacy", label: "Privacy" },
 ];
 
 export default function SettingsLayout({
@@ -43,22 +43,20 @@ export default function SettingsLayout({
         </div>
 
         {/* Navigation */}
-        <nav className="titlebar-drag flex-1 space-y-1 px-3">
+        <nav className="titlebar-drag flex-1 space-y-0.5 px-3">
           {settingsNav.map((item) => {
-            const Icon = item.icon;
             const isActive = pathname === item.href;
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "titlebar-no-drag flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors duration-150",
+                  "titlebar-no-drag flex items-center rounded-xl px-4 py-2.5 text-sm transition-colors duration-150",
                   isActive
-                    ? "bg-[var(--surface-container-highest)] text-[var(--on-surface)]"
-                    : "text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
+                    ? "bg-[var(--surface-container-highest)] font-semibold text-[var(--on-surface)]"
+                    : "font-medium text-[var(--on-surface-variant)] hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
                 )}
               >
-                <Icon className="h-4 w-4" />
                 {item.label}
               </Link>
             );

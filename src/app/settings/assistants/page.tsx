@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, Plus, Star, Bot, Sparkles } from "lucide-react";
+import { Pencil, Trash2, Plus, Star } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { AssistantForm } from "@/components/settings/assistant-form";
+import { Monogram } from "@/components/settings/monogram";
 import { cn } from "@/lib/utils";
 import { getAssistantService, ensureInit } from "@/lib/services";
 import type { Assistant } from "@/lib/services";
@@ -169,7 +170,7 @@ export default function AssistantsSettingsPage() {
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    <Bot className="h-6 w-6 text-[var(--on-surface-variant)]" />
+                    <Monogram name={assistant.name} className="h-full w-full rounded-2xl" />
                   )}
                 </div>
                 <div className="flex-1">
@@ -178,8 +179,7 @@ export default function AssistantsSettingsPage() {
                       {assistant.name}
                     </h3>
                     {assistant.isDefault && (
-                      <span className="flex items-center gap-1 rounded-full bg-[var(--primary)]/15 px-2.5 py-0.5 text-[10px] font-bold text-[var(--primary)]">
-                        <Star className="h-3 w-3" />
+                      <span className="rounded-full bg-[var(--primary)]/15 px-2.5 py-0.5 text-[10px] font-bold text-[var(--primary)]">
                         Default
                       </span>
                     )}
