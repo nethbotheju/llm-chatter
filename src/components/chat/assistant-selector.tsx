@@ -1,7 +1,7 @@
 "use client";
 
-import { Star, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Monogram } from "@/components/settings/monogram";
 import type { Assistant } from "@/lib/services";
 
 interface AssistantSelectorProps {
@@ -27,23 +27,20 @@ export function AssistantSelector({
         Choose an assistant to begin
       </h2>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {enabledAssistants.map((assistant) => (
+        {enabledAssistants.map((assistant) => {
+          const isSelected = selectedAssistant?.id === assistant.id;
+          return (
           <button
             key={assistant.id}
             onClick={() => onSelect(assistant)}
             className={cn(
-              "group relative flex flex-col items-center rounded-2xl border p-4 text-center transition-all hover:border-[var(--primary)]/50",
-              selectedAssistant?.id === assistant.id
-                ? "border-[var(--primary)] bg-[var(--primary)]/5"
-                : "border-[var(--outline-variant)]/20 bg-[var(--surface-container-low)] hover:bg-[var(--surface-container)]"
+              "group relative flex flex-col items-center rounded-2xl border border-[var(--outline-variant)]/20 p-4 text-center transition-all hover:border-[var(--primary)]/50",
+              isSelected
+                ? "border-[var(--outline-variant)]/40 bg-[var(--surface-container-high)]"
+                : "bg-[var(--surface-container-low)] hover:bg-[var(--surface-container)]"
             )}
           >
-            {assistant.isDefault && (
-              <div className="absolute right-1 top-1">
-                <Star className="h-3 w-3 fill-[var(--primary)] text-[var(--primary)]" />
-              </div>
-            )}
-            <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--surface-container-high)]">
+            <div className="mb-2 flex h-12 w-12 items-center justify-center overflow-hidden rounded-full">
               {assistant.image ? (
                 <img
                   src={assistant.image}
@@ -51,7 +48,15 @@ export function AssistantSelector({
                   className="h-full w-full rounded-full object-cover"
                 />
               ) : (
-                <Bot className="h-6 w-6 text-[var(--on-surface-variant)]" />
+                <Monogram
+                  name={assistant.name}
+                  className={cn(
+                    "h-full w-full rounded-full",
+                    isSelected
+                      ? "bg-[var(--surface-container-low)]"
+                      : "bg-[var(--surface-container-high)]"
+                  )}
+                />
               )}
             </div>
             <span className="text-sm font-medium text-[var(--on-surface)]">{assistant.name}</span>
@@ -59,7 +64,8 @@ export function AssistantSelector({
               T: {assistant.temperature}
             </span>
           </button>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
