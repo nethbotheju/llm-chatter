@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import type { UIMessage } from "ai";
-import { Copy, Pencil, Check, X, Sparkles } from "lucide-react";
+import { Copy, Pencil, Check, X } from "lucide-react";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
 import { ThinkingBlock } from "./thinking-block";
 import { ToolInvocationBlock } from "./tool-invocation-block";
+import { TypingDots } from "./typing-dots";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -110,20 +111,16 @@ export function ChatMessage({
   const hasContent = parts.some(
     (p) => p.type === "text" && p.text.trim().length > 0,
   );
+  const hasOutput = parts.some(
+    (p) =>
+      (p.type === "text" && p.text.trim().length > 0) ||
+      p.type === "reasoning" ||
+      (typeof p.type === "string" &&
+        (p.type === "dynamic-tool" || p.type.startsWith("tool-"))),
+  );
 
   return (
-    <div className="flex flex-col items-start gap-4">
-      {/* AI avatar + name */}
-      <div className="flex items-center gap-3">
-        <div className="flex h-6 w-6 items-center justify-center rounded bg-[var(--primary)]">
-          <Sparkles className="h-3.5 w-3.5 text-[var(--primary-foreground)]" />
-        </div>
-        <span className="text-sm font-bold tracking-tight text-[var(--on-surface)]">
-          {messageModelName || "AI"}
-        </span>
-      </div>
-
-      {/* Parts rendering */}
+    <div className="flex flex-col items-start">
       {isEditing ? (
         <div className="w-full space-y-2">
           <Textarea
@@ -144,53 +141,60 @@ export function ChatMessage({
           </div>
         </div>
       ) : (
-        <div className="group relative w-full space-y-3">
-          {parts.map((part, index) => {
-            switch (part.type) {
-              case "text":
-                return part.text ? (
-                  <div key={index}>
-                    <MarkdownRenderer content={part.text} />
-                  </div>
-                ) : null;
-              case "reasoning":
-                return (
-                  <ThinkingBlock
-                    key={index}
-                    content={part.text}
-                    defaultExpanded={part.state === "streaming"}
-                  />
-                );
-              default:
-                if (
-                  typeof part.type === "string" &&
-                  (part.type === "dynamic-tool" || part.type.startsWith("tool-"))
-                ) {
+        <div className="group w-full">
+          <div className="space-y-3">
+            {parts.map((part, index) => {
+              switch (part.type) {
+                case "text":
+                  return part.text ? (
+                    <div key={index}>
+                      <MarkdownRenderer content={part.text} />
+                    </div>
+                  ) : null;
+                case "reasoning":
                   return (
-                    <ToolInvocationBlock
+                    <ThinkingBlock
                       key={index}
-                      part={part as unknown as Parameters<typeof ToolInvocationBlock>[0]["part"]}
+                      content={part.text}
+                      state={part.state ?? "done"}
                     />
                   );
-                }
-                return null;
-            }
-          })}
+                default:
+                  if (
+                    typeof part.type === "string" &&
+                    (part.type === "dynamic-tool" || part.type.startsWith("tool-"))
+                  ) {
+                    return (
+                      <ToolInvocationBlock
+                        key={index}
+                        part={part as unknown as Parameters<typeof ToolInvocationBlock>[0]["part"]}
+                      />
+                    );
+                  }
+                  return null;
+              }
+            })}
 
-          {/* Streaming indicator when no content yet */}
-          {!hasContent && isStreaming && (
-            <span className="animate-pulse text-[var(--on-surface-variant)]">Thinking...</span>
-          )}
+            {!hasOutput && isStreaming && <TypingDots />}
+          </div>
 
-          {/* Action buttons */}
-          {!isStreaming && hasContent && (
-            <div className="absolute -bottom-8 left-0 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-              <button
-                onClick={() => handleCopy(getUserText(message))}
-                className="rounded-md p-1.5 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
-              >
-                {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
-              </button>
+          {!isStreaming && (
+            <div className="mt-2 flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+              {messageModelName && (
+                <span className="px-1 text-xs font-medium text-[var(--on-surface-variant)]/70">
+                  {messageModelName}
+                </span>
+              )}
+              <div className="ml-auto flex items-center gap-0.5">
+                {hasContent && (
+                  <button
+                    onClick={() => handleCopy(getUserText(message))}
+                    className="rounded-md p-1.5 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
+                  >
+                    {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
