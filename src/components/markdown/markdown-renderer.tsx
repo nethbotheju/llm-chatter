@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 interface MarkdownRendererProps {
   content: string;
   className?: string;
+  compact?: boolean;
 }
 
 function CodeBlock({
@@ -57,9 +58,16 @@ function CodeBlock({
   );
 }
 
-export function MarkdownRenderer({ content, className }: MarkdownRendererProps) {
+export function MarkdownRenderer({ content, className, compact = false }: MarkdownRendererProps) {
   return (
-    <div className={cn("prose prose-sm dark:prose-invert max-w-none", className)}>
+    <div
+      className={cn(
+        "prose prose-sm dark:prose-invert max-w-none",
+        compact &&
+          "[&_p]:my-2 [&_p]:text-[13px] [&_li]:my-0.5 [&_li]:text-[13px] [&_ul]:my-2 [&_ol]:my-2 [&_h1]:my-3 [&_h1]:text-base [&_h2]:my-2 [&_h2]:text-sm [&_h3]:my-2 [&_h3]:text-[13px] [&_pre]:my-2 [&_pre]:text-[12px] [&_code]:text-[12px] [&_blockquote]:my-2 [&_blockquote]:text-[13px]",
+        className,
+      )}
+    >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight]}
