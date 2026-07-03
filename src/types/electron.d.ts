@@ -52,6 +52,11 @@ declare global {
       reset: {
         data: () => Promise<void>;
       };
+      appConfig: {
+        getAll: () => Promise<Record<string, unknown>>;
+        set: (input: { key: string; value: unknown }) => Promise<void>;
+        remove: (key: string) => Promise<void>;
+      };
       catalog: {
         listProviders: (query?: string) => Promise<unknown[]>;
         listModels: (catalogProviderId: string) => Promise<unknown[]>;

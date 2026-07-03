@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useSyncExternalStore, useState } from "react";
-import { useTheme } from "next-themes";
+import { useAppTheme } from "@/components/theme-provider";
 import { Sun, Moon, Monitor } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isElectron } from "@/lib/runtime";
@@ -13,7 +13,7 @@ const themeOptions = [
 ];
 
 export default function GeneralSettingsPage() {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme } = useAppTheme();
   const mounted = useSyncExternalStore(
     () => () => {},
     () => true,

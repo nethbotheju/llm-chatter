@@ -98,3 +98,10 @@ export interface IProviderCatalogService {
   syncProvider(providerId: string): Promise<CatalogSyncResult>;
   syncAll(): Promise<CatalogSyncResult[]>;
 }
+
+export interface IAppConfigService {
+  getAll(): Promise<Record<string, unknown>>;
+  get<T = unknown>(key: string): Promise<T | null>;
+  set(key: string, value: unknown): Promise<void>;
+  remove(key: string): Promise<void>;
+}

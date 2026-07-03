@@ -97,3 +97,9 @@ model McpServer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model AppConfig {
+  key       String   @id
+  value     String   // JSON-encoded application-level value
+  updatedAt DateTime @updatedAt
+}

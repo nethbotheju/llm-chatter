@@ -444,4 +444,14 @@ export function parseMcpServers(input: unknown): McpServerDTO[] {
   return mcpServerListSchema.parse(input);
 }
 
+export const appConfigSetSchema = z.object({
+  key: z.string(),
+  value: z.unknown(),
+});
+export type AppConfigSetDTO = z.infer<typeof appConfigSetSchema>;
+
+export function parseAppConfigSet(input: unknown): AppConfigSetDTO {
+  return appConfigSetSchema.parse(input);
+}
+
 

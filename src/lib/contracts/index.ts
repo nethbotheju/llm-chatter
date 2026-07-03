@@ -47,6 +47,7 @@ export {
   createMcpServerInputSchema,
   updateMcpServerInputSchema,
   discoverMcpToolsInputSchema,
+  appConfigSetSchema,
   parseProvider,
   parseProviders,
   parseModel,
@@ -69,6 +70,7 @@ export {
   parseCatalogSyncResult,
   parseMcpServer,
   parseMcpServers,
+  parseAppConfigSet,
 } from "./schemas";
 
 export type {
@@ -106,4 +108,5 @@ export type {
   CreateMcpServerInputDTO,
   UpdateMcpServerInputDTO,
   DiscoverMcpToolsInputDTO,
+  AppConfigSetDTO,
 } from "./schemas";
