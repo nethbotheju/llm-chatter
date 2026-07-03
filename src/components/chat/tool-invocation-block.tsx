@@ -1,112 +1,49 @@
 "use client";
 
 import { useState } from "react";
-import { Wrench, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Disclosure } from "@/components/ui/disclosure";
-
-interface ToolInvocationPart {
-  type: string;
-  toolCallId?: string;
-  toolName?: string;
-  state?: string;
-  input?: unknown;
-  output?: unknown;
-  errorText?: string;
-}
+import { buildTriggerLabel, resolveToolMeta, type ToolInvocationPart } from "./tool-helpers";
+import {
+  GenericContent,
+  ResultView,
+  ToolDisclosure,
+  WebFetchContent,
+  WebSearchContent,
+} from "./tool-parts";
 
 interface ToolInvocationBlockProps {
   part: ToolInvocationPart;
 }
 
-function toolName(part: ToolInvocationPart): string {
-  if (part.toolName) return part.toolName;
-  if (part.type.startsWith("tool-")) return part.type.slice("tool-".length);
-  return "tool";
-}
-
-function summarize(value: unknown, max = 240): string {
-  let text: string;
-  if (typeof value === "string") {
-    text = value;
-  } else {
-    try {
-      text = JSON.stringify(value, null, 2);
-    } catch {
-      text = String(value);
-    }
-  }
-  return text.length > max ? `${text.slice(0, max)}…` : text;
-}
-
-function Section({
-  label,
-  tone,
-  children,
-}: {
-  label: string;
-  tone?: "error";
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <p
-        className={cn(
-          "mb-1 text-[11px] font-medium text-[var(--on-surface-variant)]/70",
-          tone === "error" && "text-[var(--destructive)]/80",
-        )}
-      >
-        {label}
-      </p>
-      <pre className="overflow-auto whitespace-pre-wrap text-[11px] leading-relaxed text-[var(--on-surface-variant)]">
-        {children}
-      </pre>
-    </div>
-  );
-}
-
 export function ToolInvocationBlock({ part }: ToolInvocationBlockProps) {
   const [open, setOpen] = useState(false);
-  const name = toolName(part);
+  const meta = resolveToolMeta(part);
   const state = part.state ?? "input-available";
-
-  const isStreaming = state === "input-streaming";
   const isError = state === "output-error";
-  const isDone = state === "output-available";
+  const running = state !== "output-available" && state !== "output-error";
+  const label = buildTriggerLabel(meta, state, part);
+
+  const header = (
+    <>
+      {running && <Loader2 className="h-3 w-3 shrink-0 animate-spin" />}
+      <span className={cn("text-sm font-medium", isError && "text-[var(--destructive)]")}>
+        {label.text}
+      </span>
+    </>
+  );
 
   return (
-    <Disclosure
-      open={open}
-      onToggle={() => setOpen((o) => !o)}
-      header={
-        <>
-          <Wrench className="h-3.5 w-3.5 shrink-0 text-[var(--on-surface-variant)]" />
-          <span className="truncate text-xs font-semibold tracking-tight text-[var(--on-surface)]">
-            {name}
-          </span>
-          <span className="ml-auto flex items-center">
-            {isStreaming && (
-              <Loader2 className="h-3 w-3 animate-spin text-[var(--on-surface-variant)]" />
-            )}
-            {isDone && <span className="h-1.5 w-1.5 rounded-full bg-green-500" />}
-            {isError && (
-              <span className="h-1.5 w-1.5 rounded-full bg-[var(--destructive)]" />
-            )}
-          </span>
-        </>
-      }
-    >
-      <div className="space-y-2 border-t border-[var(--outline-variant)]/10 px-3 py-2.5">
-        {part.input != null && <Section label="Input">{summarize(part.input)}</Section>}
-        {isError && part.errorText && (
-          <Section label="Error" tone="error">
-            {summarize(part.errorText)}
-          </Section>
-        )}
-        {isDone && part.output != null && (
-          <Section label="Result">{summarize(part.output, 600)}</Section>
-        )}
-      </div>
-    </Disclosure>
+    <ToolDisclosure open={open} onToggle={() => setOpen((o) => !o)} header={header}>
+      {isError ? (
+        <ResultView tone="error" value={part.errorText ?? part.output} />
+      ) : meta.kind === "web_search" ? (
+        <WebSearchContent input={part.input} output={part.output} />
+      ) : meta.kind === "web_fetch" ? (
+        <WebFetchContent input={part.input} output={part.output} />
+      ) : (
+        <GenericContent input={part.input} output={part.output} />
+      )}
+    </ToolDisclosure>
   );
 }

@@ -26,8 +26,11 @@ export const webSearchTool: BuiltinToolDefinition = {
         return {
           provider,
           count: results.length,
-          results: formatSearchResults(results),
+          sources: results,
         };
+      },
+      toModelOutput({ output }) {
+        return { type: "text", value: formatSearchResults(output.sources) };
       },
     });
   },
