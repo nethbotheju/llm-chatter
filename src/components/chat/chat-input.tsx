@@ -11,20 +11,12 @@ export interface Attachment {
   file?: File;
 }
 
-const QUICK_ACTIONS = [
-  { label: "Improve Code", action: "improve-code" },
-  { label: "Summarize", action: "summarize" },
-  { label: "Analyze Math", action: "analyze-math" },
-  { label: "Debug Trace", action: "debug-trace" },
-];
-
 interface ChatInputProps {
   onSend: (message: string, attachments?: Attachment[]) => void;
   onStop?: () => void;
   isLoading?: boolean;
   disabled?: boolean;
   hasVisionModel?: boolean;
-  compact?: boolean;
 }
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
@@ -35,7 +27,6 @@ export function ChatInput({
   isLoading,
   disabled,
   hasVisionModel = true,
-  compact = false,
 }: ChatInputProps) {
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -63,11 +54,6 @@ export function ChatInput({
       e.preventDefault();
       handleSubmit();
     }
-  };
-
-  const handleQuickAction = (label: string) => {
-    setInput((prev) => (prev ? `${prev} ${label}` : label));
-    textareaRef.current?.focus();
   };
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -131,22 +117,6 @@ export function ChatInput({
       <div
         className="chat-input-glass rounded-[32px] border border-[var(--outline-variant)]/30 shadow-2xl"
       >
-        {/* Quick Actions */}
-        {!compact && (
-          <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pl-6 pr-3 pt-3 custom-scrollbar">
-            {QUICK_ACTIONS.map((qa) => (
-              <button
-                key={qa.action}
-                type="button"
-                onClick={() => handleQuickAction(qa.label)}
-                className="shrink-0 rounded-full border border-[var(--outline-variant)]/10 bg-[var(--surface-container-highest)] px-4 py-1.5 text-[10px] font-bold text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-bright)]"
-              >
-                {qa.label}
-              </button>
-            ))}
-          </div>
-        )}
-
         {/* Input row */}
         <div className="flex items-center p-2">
           {hasVisionModel && (
@@ -176,7 +146,7 @@ export function ChatInput({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Message Monolithic AI..."
+              placeholder="Ask anything..."
               disabled={disabled}
               rows={1}
               className="max-h-48 min-h-[44px] w-full resize-none border-none bg-transparent py-2 text-base text-[var(--on-surface)] placeholder:text-[var(--on-surface-variant)]/50 focus:outline-none focus:ring-0"
