@@ -25,6 +25,7 @@ import { registerNotificationsIpc } from "./notifications";
 import { registerAutoLaunchIpc } from "./auto-launch";
 import { registerCatalogIpc } from "./catalog";
 import { registerMcpServersIpc } from "./mcp-servers";
+import { registerAppConfigIpc } from "./app-config";
 
 export function registerAllIpc() {
   registerProvidersIpc();
@@ -41,4 +42,5 @@ export function registerAllIpc() {
   registerAutoLaunchIpc();
   registerCatalogIpc();
   registerMcpServersIpc();
+  registerAppConfigIpc();
 }

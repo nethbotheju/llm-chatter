@@ -10,6 +10,7 @@ import type {
   IResetService,
   IProviderCatalogService,
   IMcpServerService,
+  IAppConfigService,
 } from "./interfaces";
 
 export type {
@@ -24,6 +25,7 @@ export type {
   IResetService,
   IProviderCatalogService,
   IMcpServerService,
+  IAppConfigService,
 };
 
 export type * from "./types";
@@ -41,6 +43,7 @@ let _stats: IStatsService | null = null;
 let _reset: IResetService | null = null;
 let _providerCatalog: IProviderCatalogService | null = null;
 let _mcpServer: IMcpServerService | null = null;
+let _appConfig: IAppConfigService | null = null;
 
 async function loadAdapter() {
   if (isElectron()) {
@@ -56,6 +59,7 @@ async function loadAdapter() {
     _reset = adapter.electronResetService;
     _providerCatalog = adapter.electronProviderCatalogService;
     _mcpServer = adapter.electronMcpServerService;
+    _appConfig = adapter.electronAppConfigService;
   } else {
     const adapter = await import("./adapters/web.adapter");
     _provider = adapter.webProviderService;
@@ -69,11 +73,50 @@ async function loadAdapter() {
     _reset = adapter.webResetService;
     _providerCatalog = adapter.webProviderCatalogService;
     _mcpServer = adapter.webMcpServerService;
+    _appConfig = adapter.webAppConfigService;
   }
 }
 
 let initialized = false;
-const initPromise = loadAdapter().then(() => {
+
+async function migrateLegacyPreferences() {
+  const svc = getAppConfigService();
+  const existing = await svc.getAll();
+  const legacy: Array<{ key: string; oldKey: string; parse?: (raw: string) => unknown }> = [
+    { key: "selected-model-id", oldKey: "llm-chatter:selected-model-id" },
+    {
+      key: "sidebar-collapsed",
+      oldKey: "llm-chatter:sidebar-collapsed",
+      parse: (v) => v === "true",
+    },
+    { key: "theme", oldKey: "theme" },
+  ];
+  for (const { key, oldKey, parse } of legacy) {
+    if (existing[key] !== undefined) continue;
+    let raw: string | null = null;
+    try {
+      raw = localStorage.getItem(oldKey);
+    } catch {
+      // localStorage unavailable
+    }
+    if (raw == null) continue;
+    await svc.set(key, parse ? parse(raw) : raw);
+    try {
+      localStorage.removeItem(oldKey);
+    } catch {
+      // ignore
+    }
+  }
+}
+
+const initPromise = loadAdapter().then(async () => {
+  if (typeof window !== "undefined") {
+    try {
+      await migrateLegacyPreferences();
+    } catch (error) {
+      console.error("Preference migration failed:", error);
+    }
+  }
   initialized = true;
 });
 
@@ -126,6 +169,11 @@ export function getProviderCatalogService(): IProviderCatalogService {
 export function getMcpServerService(): IMcpServerService {
   if (!_mcpServer) throw new Error("Services not initialized");
   return _mcpServer;
+}
+
+export function getAppConfigService(): IAppConfigService {
+  if (!_appConfig) throw new Error("Services not initialized");
+  return _appConfig;
 }
 
 export { ensureInit };

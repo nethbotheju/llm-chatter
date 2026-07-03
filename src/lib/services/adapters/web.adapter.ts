@@ -10,6 +10,7 @@ import type {
   IResetService,
   IProviderCatalogService,
   IMcpServerService,
+  IAppConfigService,
 } from "../interfaces";
 import type {
   Provider,
@@ -355,6 +356,29 @@ class WebMcpServerService implements IMcpServerService {
   }
 }
 
+class WebAppConfigService implements IAppConfigService {
+  async getAll(): Promise<Record<string, unknown>> {
+    const res = await fetch("/api/app-config");
+    return (await res.json()) as Record<string, unknown>;
+  }
+  async get<T = unknown>(key: string): Promise<T | null> {
+    const all = await this.getAll();
+    return (all[key] as T) ?? null;
+  }
+  async set(key: string, value: unknown): Promise<void> {
+    await fetch("/api/app-config", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key, value }),
+    });
+  }
+  async remove(key: string): Promise<void> {
+    await fetch(`/api/app-config?key=${encodeURIComponent(key)}`, {
+      method: "DELETE",
+    });
+  }
+}
+
 export const webProviderService = new WebProviderService();
 export const webModelService = new WebModelService();
 export const webAssistantService = new WebAssistantService();
@@ -366,3 +390,4 @@ export const webStatsService = new WebStatsService();
 export const webResetService = new WebResetService();
 export const webProviderCatalogService = new WebProviderCatalogService();
 export const webMcpServerService = new WebMcpServerService();
+export const webAppConfigService = new WebAppConfigService();

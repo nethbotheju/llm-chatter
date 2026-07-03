@@ -51,6 +51,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
   reset: {
     data: () => invoke("reset:data"),
   },
+  appConfig: {
+    getAll: () => invoke("appConfig:getAll"),
+    set: (input: { key: string; value: unknown }) => invoke("appConfig:set", input),
+    remove: (key: string) => invoke("appConfig:remove", key),
+  },
   catalog: {
     listProviders: (query?: string) => invoke("catalog:listProviders", query),
     listModels: (catalogProviderId: string) =>

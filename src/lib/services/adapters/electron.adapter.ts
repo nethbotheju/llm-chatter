@@ -10,6 +10,7 @@ import type {
   IResetService,
   IProviderCatalogService,
   IMcpServerService,
+  IAppConfigService,
 } from "../interfaces";
 import type {
   Provider,
@@ -232,6 +233,22 @@ class ElectronMcpServerService implements IMcpServerService {
   }
 }
 
+class ElectronAppConfigService implements IAppConfigService {
+  async getAll(): Promise<Record<string, unknown>> {
+    return (await getAPI().appConfig.getAll()) as Record<string, unknown>;
+  }
+  async get<T = unknown>(key: string): Promise<T | null> {
+    const all = await this.getAll();
+    return (all[key] as T) ?? null;
+  }
+  async set(key: string, value: unknown): Promise<void> {
+    await getAPI().appConfig.set({ key, value });
+  }
+  async remove(key: string): Promise<void> {
+    await getAPI().appConfig.remove(key);
+  }
+}
+
 export const electronProviderService = new ElectronProviderService();
 export const electronModelService = new ElectronModelService();
 export const electronAssistantService = new ElectronAssistantService();
@@ -243,3 +260,4 @@ export const electronStatsService = new ElectronStatsService();
 export const electronResetService = new ElectronResetService();
 export const electronProviderCatalogService = new ElectronProviderCatalogService();
 export const electronMcpServerService = new ElectronMcpServerService();
+export const electronAppConfigService = new ElectronAppConfigService();
