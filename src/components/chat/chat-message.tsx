@@ -180,12 +180,7 @@ export function ChatMessage({
 
           {!isStreaming && (
             <div className="mt-2 flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-              {messageModelName && (
-                <span className="px-1 text-xs font-medium text-[var(--on-surface-variant)]/70">
-                  {messageModelName}
-                </span>
-              )}
-              <div className="ml-auto flex items-center gap-0.5">
+              <div className="flex items-center gap-0.5">
                 {hasContent && (
                   <button
                     onClick={() => handleCopy(getUserText(message))}
@@ -195,6 +190,11 @@ export function ChatMessage({
                   </button>
                 )}
               </div>
+              {messageModelName && (
+                <span className="ml-auto px-1 text-xs font-medium text-[var(--on-surface-variant)]/70">
+                  {messageModelName}
+                </span>
+              )}
             </div>
           )}
         </div>
