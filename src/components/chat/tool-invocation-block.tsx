@@ -42,7 +42,7 @@ export function ToolInvocationBlock({ part }: ToolInvocationBlockProps) {
       ) : meta.kind === "web_fetch" ? (
         <WebFetchContent input={part.input} output={part.output} />
       ) : (
-        <GenericContent input={part.input} output={part.output} />
+        <GenericContent input={part.input} output={part.output} kind={meta.kind} />
       )}
     </ToolDisclosure>
   );
