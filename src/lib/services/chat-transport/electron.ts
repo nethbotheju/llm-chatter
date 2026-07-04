@@ -45,6 +45,7 @@ export class ElectronChatTransport implements ChatTransport<UIMessage> {
       assistantConfig: config.assistantConfig,
       conversationId: conversationId ?? null,
       modelSupportsTools: config.modelSupportsTools,
+      acceptedAttachmentKinds: config.acceptedAttachmentKinds,
     });
 
     return new ReadableStream<UIMessageChunk>({

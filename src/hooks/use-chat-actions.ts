@@ -1,10 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import type { UIMessage } from "ai";
+import type { UIMessage, FileUIPart } from "ai";
 import type { UseChatHelpers } from "@ai-sdk/react";
 import type { MutableRefObject } from "react";
-import type { Attachment } from "@/components/chat/chat-input";
 import {
   getConversationService,
   getMessageService,
@@ -58,7 +57,7 @@ export function useChatActions(options: UseChatActionsOptions) {
     window.history.pushState(null, '', '/');
   }, [setCurrentConversationId, setCurrentAssistant, assistants]);
 
-  const handleSendMessage = useCallback(async (message: string, _attachments?: Attachment[]) => {
+  const handleSendMessage = useCallback(async (message: string, attachments?: FileUIPart[]) => {
     if (!selectedModelId || !currentAssistant) return;
 
     await ensureInit();
@@ -71,7 +70,11 @@ export function useChatActions(options: UseChatActionsOptions) {
       window.history.replaceState(null, '', `/c/${convId}`);
     }
 
-    const userParts = [{ type: "text" as const, text: message }];
+    const fileParts = attachments ?? [];
+    const userParts: UIMessage["parts"] = [
+      ...fileParts,
+      { type: "text" as const, text: message },
+    ];
     await getMessageService().create(convId, "user", JSON.stringify(userParts));
 
     if (chatMessagesRef.current.length === 0) {
@@ -81,7 +84,10 @@ export function useChatActions(options: UseChatActionsOptions) {
     }
 
     const body = await buildRequestBody(selectedModelId, convId);
-    chatRef.current.sendMessage({ text: message }, { body });
+    chatRef.current.sendMessage(
+      { text: message, ...(fileParts.length > 0 ? { files: fileParts } : {}) },
+      { body },
+    );
   }, [currentConversationId, selectedModelId, currentAssistant, setCurrentConversationId, fetchConversations, buildRequestBody, skipFetchRef]);
 
   const handleEditMessage = useCallback(async (messageId: string, newContent: string) => {
@@ -92,7 +98,13 @@ export function useChatActions(options: UseChatActionsOptions) {
     if (messageIndex === -1 || messages[messageIndex].role !== "user") return;
 
     const messagesToKeep = messages.slice(0, messageIndex);
-    const editedParts = [{ type: "text" as const, text: newContent }];
+    const existingFileParts = messages[messageIndex].parts.filter(
+      (p): p is FileUIPart => p.type === "file",
+    );
+    const editedParts: UIMessage["parts"] = [
+      ...existingFileParts,
+      { type: "text" as const, text: newContent },
+    ];
 
     try {
       await ensureInit();
@@ -118,7 +130,10 @@ export function useChatActions(options: UseChatActionsOptions) {
     chatRef.current.setMessages([...messagesToKeep, editedMessage]);
 
     const body = await buildRequestBody(selectedModelId, currentConversationId);
-    chatRef.current.sendMessage({ text: newContent, messageId: editedMessage.id }, { body });
+    chatRef.current.sendMessage(
+      { text: newContent, messageId: editedMessage.id, ...(existingFileParts.length > 0 ? { files: existingFileParts } : {}) },
+      { body },
+    );
   }, [currentConversationId, selectedModelId, currentAssistant, buildRequestBody]);
 
   const handleStop = useCallback(() => {

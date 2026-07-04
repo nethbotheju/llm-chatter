@@ -89,6 +89,7 @@ declare global {
             topP: number;
           };
           modelSupportsTools: boolean;
+          acceptedAttachmentKinds: ("image" | "pdf")[];
         }>;
         start: (payload: unknown) => Promise<string>;
         abort: (streamId: string) => void;

@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import type { UIMessage } from "ai";
-import { Copy, Pencil, Check, X } from "lucide-react";
+import type { UIMessage, FileUIPart } from "ai";
+import { Copy, Pencil, Check, X, FileText, ExternalLink } from "lucide-react";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
 import { ThinkingBlock } from "./thinking-block";
 import { ToolInvocationBlock } from "./tool-invocation-block";
 import { TypingDots } from "./typing-dots";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { kindForMediaType } from "@/lib/models";
 
 interface ChatMessageProps {
   message: UIMessage;
@@ -37,6 +38,9 @@ export function ChatMessage({
   const isUser = role === "user";
   const [copied, setCopied] = useState(false);
   const userText = isUser ? getUserText(message) : "";
+  const userFileParts = isUser
+    ? (parts.filter((p): p is FileUIPart => p.type === "file") as FileUIPart[])
+    : [];
   const [editContent, setEditContent] = useState(userText);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -61,6 +65,39 @@ export function ChatMessage({
   if (isUser) {
     return (
       <div className="flex flex-col items-end gap-3">
+        {userFileParts.length > 0 && !isEditing && (
+          <div className="flex max-w-[85%] flex-wrap justify-end gap-2">
+            {userFileParts.map((part, index) => {
+              const kind = kindForMediaType(part.mediaType);
+              if (kind === "image") {
+                return (
+                  <img
+                    key={index}
+                    src={part.url}
+                    alt={part.filename || "Attachment"}
+                    className="max-h-48 max-w-[85%] rounded-xl border border-[var(--outline-variant)]/20 object-contain"
+                  />
+                );
+              }
+              return (
+                <a
+                  key={index}
+                  href={part.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download={part.filename}
+                  className="flex max-w-[85%] items-center gap-3 rounded-xl border border-[var(--outline-variant)]/20 bg-[var(--surface-container-high)]/60 px-4 py-3 transition-colors hover:bg-[var(--surface-container-highest)]/60"
+                >
+                  <FileText className="h-6 w-6 shrink-0 text-[var(--on-surface-variant)]" />
+                  <span className="truncate text-sm text-[var(--on-surface)]">
+                    {part.filename || "Document"}
+                  </span>
+                  <ExternalLink className="h-3.5 w-3.5 shrink-0 text-[var(--on-surface-variant)]" />
+                </a>
+              );
+            })}
+          </div>
+        )}
         {isEditing ? (
           <div className="w-full max-w-[85%] space-y-2">
             <Textarea
@@ -81,27 +118,29 @@ export function ChatMessage({
             </div>
           </div>
         ) : (
-          <div className="group relative max-w-[85%]">
-            <div className="rounded-3xl border border-[var(--outline-variant)]/10 bg-[var(--surface-container-highest)]/60 px-6 py-4 text-base leading-relaxed text-[var(--on-surface)]">
-              {userText}
-            </div>
-            <div className="absolute -bottom-8 right-0 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-              {onEdit && (
+          userText && (
+            <div className="group relative max-w-[85%]">
+              <div className="rounded-3xl border border-[var(--outline-variant)]/10 bg-[var(--surface-container-highest)]/60 px-6 py-4 text-base leading-relaxed text-[var(--on-surface)]">
+                {userText}
+              </div>
+              <div className="absolute -bottom-8 right-0 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                {onEdit && (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="rounded-md p-1.5 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                )}
                 <button
-                  onClick={() => setIsEditing(true)}
+                  onClick={() => handleCopy(userText)}
                   className="rounded-md p-1.5 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
                 >
-                  <Pencil className="h-3.5 w-3.5" />
+                  {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
                 </button>
-              )}
-              <button
-                onClick={() => handleCopy(userText)}
-                className="rounded-md p-1.5 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)]"
-              >
-                {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
-              </button>
+              </div>
             </div>
-          </div>
+          )
         )}
       </div>
     );

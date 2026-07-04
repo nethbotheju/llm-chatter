@@ -75,3 +75,65 @@ export function getAttachmentTypes(metadata?: string | null): string[] {
   const inputs = parseModelMetadata(metadata).modalities?.input ?? [];
   return inputs.filter((m) => m !== "text");
 }
+
+// Attachment kinds supported by the app today. Audio/video modalities are
+// accepted by some models but intentionally out of scope until a later phase.
+export type AttachmentKind = "image" | "pdf";
+
+export const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+export const MAX_PDF_SIZE = 20 * 1024 * 1024;
+
+// Attachment kinds the app will let the user pick for a given model. Image
+// support is inferred from EITHER the "vision" capability OR the image input
+// modality, because catalog data is inconsistent: many vision-capable models
+// carry an empty modalities.input. PDF is only signalled via modalities.
+export function getAcceptedAttachmentKinds(
+  capabilities: string,
+  metadata?: string | null,
+): AttachmentKind[] {
+  const caps = parseModelCapabilities(capabilities);
+  const types = getAttachmentTypes(metadata);
+  const kinds: AttachmentKind[] = [];
+  if (types.includes("image") || caps.includes("vision")) kinds.push("image");
+  if (types.includes("pdf")) kinds.push("pdf");
+  return kinds;
+}
+
+// HTML <input accept> string for the model's accepted kinds (e.g.
+// "image/*,application/pdf"). Empty string means the model accepts nothing.
+export function getAcceptedMimeAccept(
+  capabilities: string,
+  metadata?: string | null,
+): string {
+  const kinds = getAcceptedAttachmentKinds(capabilities, metadata);
+  const parts: string[] = [];
+  if (kinds.includes("image")) parts.push("image/*");
+  if (kinds.includes("pdf")) parts.push("application/pdf");
+  return parts.join(",");
+}
+
+// Map a concrete file MIME type to a supported attachment kind, or null when
+// the type is outside v1 scope (e.g. audio/video).
+export function kindForMediaType(mediaType: string): AttachmentKind | null {
+  if (mediaType.startsWith("image/")) return "image";
+  if (mediaType === "application/pdf") return "pdf";
+  return null;
+}
+
+export interface AttachmentValidation {
+  ok: boolean;
+  error?: string;
+}
+
+export function validateAttachmentFile(file: File): AttachmentValidation {
+  const kind = kindForMediaType(file.type);
+  if (!kind) {
+    return { ok: false, error: `"${file.name}" is not a supported file type` };
+  }
+  const limit = kind === "image" ? MAX_IMAGE_SIZE : MAX_PDF_SIZE;
+  if (file.size > limit) {
+    const mb = Math.round(limit / (1024 * 1024));
+    return { ok: false, error: `"${file.name}" exceeds the ${mb}MB limit` };
+  }
+  return { ok: true };
+}
