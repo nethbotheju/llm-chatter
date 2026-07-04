@@ -5,11 +5,13 @@ import { cn } from "@/lib/utils";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
 import {
   classifyInput,
+  extractMcpResult,
   faviconUrl,
   formatResultText,
   formatScalar,
   getField,
   getHost,
+  type ToolKind,
 } from "./tool-helpers";
 
 interface ToolDisclosureProps {
@@ -185,8 +187,20 @@ function KeyValues({ value }: { value: Record<string, unknown> }) {
   );
 }
 
-export function GenericContent({ input, output }: { input?: unknown; output?: unknown }) {
+export function GenericContent({
+  input,
+  output,
+  kind,
+}: {
+  input?: unknown;
+  output?: unknown;
+  kind?: ToolKind;
+}) {
   const shape = classifyInput(input);
+  const mcp = kind === "mcp" ? extractMcpResult(output) : null;
+  const effectiveOutput = mcp?.text != null ? mcp.text : output;
+  const outputError = mcp?.isError === true;
+
   return (
     <div className="space-y-2">
       {shape === "object" && typeof input === "object" && input !== null ? (
@@ -200,14 +214,14 @@ export function GenericContent({ input, output }: { input?: unknown; output?: un
           <ResultView value={input} />
         </div>
       )}
-      {output != null && (
+      {effectiveOutput != null && (
         <div>
-          {shape !== "empty" && (
+          {shape !== "empty" && !outputError && (
             <p className="mb-1 text-[11px] font-medium text-[var(--on-surface-variant)]/70">
               Result
             </p>
           )}
-          <ResultView value={output} />
+          <ResultView value={effectiveOutput} tone={outputError ? "error" : undefined} />
         </div>
       )}
     </div>
