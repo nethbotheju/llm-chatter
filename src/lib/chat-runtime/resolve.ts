@@ -1,6 +1,10 @@
 import { providerTypeSchema } from "../contracts";
 import type { ChatProviderConfigDTO, ChatAssistantConfigDTO } from "../contracts";
 import { ChatError } from "./errors";
+import {
+  getAcceptedAttachmentKinds,
+  type AttachmentKind,
+} from "../models";
 
 export interface ChatConfigInput {
   modelId: string;
@@ -18,6 +22,7 @@ export interface ChatConfigModelRow {
   name: string;
   enabled: boolean;
   capabilities?: string | null;
+  metadata?: string | null;
   provider: ChatConfigProviderRow | null;
 }
 
@@ -42,6 +47,7 @@ export interface ResolvedChatConfig {
   provider: ChatProviderConfigDTO;
   assistantConfig: ChatAssistantConfigDTO;
   modelSupportsTools: boolean;
+  acceptedAttachmentKinds: AttachmentKind[];
 }
 
 const DEFAULT_ASSISTANT_CONFIG: ChatAssistantConfigDTO = {
@@ -91,6 +97,10 @@ export async function resolveChatConfig(
 
   const capabilities = parseCapabilities(model.capabilities);
   const modelSupportsTools = capabilities.includes("tools");
+  const acceptedAttachmentKinds = getAcceptedAttachmentKinds(
+    model.capabilities ?? "",
+    model.metadata,
+  );
 
   let assistantConfig: ChatAssistantConfigDTO = { ...DEFAULT_ASSISTANT_CONFIG };
   if (input.conversationId) {
@@ -104,7 +114,7 @@ export async function resolveChatConfig(
     }
   }
 
-  return { model: model.name, provider, assistantConfig, modelSupportsTools };
+  return { model: model.name, provider, assistantConfig, modelSupportsTools, acceptedAttachmentKinds };
 }
 
 function parseCapabilities(raw: string | null | undefined): string[] {

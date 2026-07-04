@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import {
-  getModelService,
-  getAppConfigService,
-  ensureInit,
-} from "@/lib/services";
+import { getModelService, getAppConfigService, ensureInit } from "@/lib/services";
 import type { Model } from "@/lib/services";
-import { parseModelCapabilities } from "@/lib/models";
+import {
+  getAcceptedAttachmentKinds,
+  getAcceptedMimeAccept,
+  type AttachmentKind,
+} from "@/lib/models";
 
 const SELECTED_MODEL_KEY = "selected-model-id";
 
@@ -21,9 +21,12 @@ export function useModels() {
   }, []);
 
   const selectedModel = models.find((m) => m.id === selectedModelId);
-  const hasVisionModel = selectedModel
-    ? parseModelCapabilities(selectedModel.capabilities).includes("vision")
-    : false;
+  const acceptedAttachmentKinds: AttachmentKind[] = selectedModel
+    ? getAcceptedAttachmentKinds(selectedModel.capabilities, selectedModel.metadata)
+    : [];
+  const acceptedMimeAccept = selectedModel
+    ? getAcceptedMimeAccept(selectedModel.capabilities, selectedModel.metadata)
+    : "";
 
   const fetchModels = useCallback(async () => {
     try {
@@ -57,7 +60,8 @@ export function useModels() {
     selectedModelId,
     setSelectedModelId,
     selectedModel,
-    hasVisionModel,
+    acceptedAttachmentKinds,
+    acceptedMimeAccept,
     fetchModels,
   };
 }

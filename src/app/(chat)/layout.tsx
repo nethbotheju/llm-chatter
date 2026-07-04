@@ -6,6 +6,7 @@ import type { ChatTransport, UIMessage } from "ai";
 import { Sidebar } from "@/components/sidebar/sidebar";
 import { ChatMessages } from "@/components/chat/chat-messages";
 import { ChatInput } from "@/components/chat/chat-input";
+import { AttachmentMismatchBanner } from "@/components/chat/attachment-mismatch-banner";
 import { ModelSelector } from "@/components/chat/model-selector";
 import { AssistantSelector } from "@/components/chat/assistant-selector";
 import { TopAppBar } from "@/components/layout/top-app-bar";
@@ -70,7 +71,8 @@ function ChatLayoutInner({
     selectedModelId,
     setSelectedModelId,
     selectedModel,
-    hasVisionModel,
+    acceptedAttachmentKinds,
+    acceptedMimeAccept,
     fetchModels,
   } = useModels();
 
@@ -155,6 +157,7 @@ function ChatLayoutInner({
 
   const modelName = selectedModel?.name || null;
   const isLoading = chat.status === "submitted" || chat.status === "streaming";
+  const chatError = chat.error;
 
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--surface)]">
@@ -208,12 +211,26 @@ function ChatLayoutInner({
 
         <footer className="pointer-events-none sticky bottom-0 z-30 pb-6 mt-auto">
           <div className="pointer-events-auto mx-auto max-w-4xl px-6 md:px-12">
+            {chatError && (
+              <div className="mb-2 flex items-start gap-2 rounded-xl border border-[var(--destructive)]/30 bg-[var(--destructive)]/10 px-3 py-2 text-sm text-[var(--on-surface)]">
+                <span className="font-medium">Request failed:</span>
+                <span className="flex-1 break-words text-[var(--on-surface-variant)]">
+                  {chatError.message}
+                </span>
+              </div>
+            )}
+            <AttachmentMismatchBanner
+              messages={chat.messages}
+              acceptedKinds={acceptedAttachmentKinds}
+              modelName={modelName}
+            />
             <ChatInput
               onSend={handleSendMessage}
               onStop={handleStop}
               isLoading={isLoading}
               disabled={models.length === 0 || !currentAssistant}
-              hasVisionModel={hasVisionModel}
+              acceptedKinds={acceptedAttachmentKinds}
+              acceptedMimeAccept={acceptedMimeAccept}
             />
           </div>
         </footer>

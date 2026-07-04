@@ -52,6 +52,7 @@ export function registerChatIpc(getMainWindow: () => BrowserWindow | null) {
     assistantConfig: { systemPrompt: string; temperature: number; topP: number };
     conversationId?: string | null;
     modelSupportsTools?: boolean;
+    acceptedAttachmentKinds?: ("image" | "pdf")[];
   }) => {
     const streamId = randomUUID();
     const win =
@@ -158,6 +159,7 @@ export function registerChatIpc(getMainWindow: () => BrowserWindow | null) {
         assistantConfig: payload.assistantConfig,
         messageId,
         modelSupportsTools: payload.modelSupportsTools,
+        acceptedAttachmentKinds: payload.acceptedAttachmentKinds,
         toolSources,
       },
     });

@@ -9,6 +9,7 @@ interface StartPayload {
   assistantConfig?: { systemPrompt: string; temperature: number; topP: number };
   messageId: string;
   modelSupportsTools?: boolean;
+  acceptedAttachmentKinds?: ("image" | "pdf")[];
   toolSources?: ResolvedToolSource[];
 }
 
@@ -29,7 +30,7 @@ process.parentPort.on("message", (e: { data: unknown }) => {
 
   abortController = new AbortController();
 
-  const { messages, model, provider, assistantConfig, messageId, modelSupportsTools, toolSources } = msg.payload;
+  const { messages, model, provider, assistantConfig, messageId, modelSupportsTools, acceptedAttachmentKinds, toolSources } = msg.payload;
   let finalMessage: UIMessage | undefined;
 
   const toolStore: ChatToolStore | undefined = toolSources
@@ -59,6 +60,7 @@ process.parentPort.on("message", (e: { data: unknown }) => {
               }
             : undefined,
           modelSupportsTools,
+          acceptedAttachmentKinds,
           toolStore,
         },
         { signal: abortController.signal },

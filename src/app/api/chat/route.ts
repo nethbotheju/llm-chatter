@@ -89,6 +89,7 @@ export async function POST(request: NextRequest) {
       provider: config.provider,
       assistantConfig: config.assistantConfig,
       modelSupportsTools: config.modelSupportsTools,
+      acceptedAttachmentKinds: config.acceptedAttachmentKinds,
       toolStore: webToolStore,
     });
 

@@ -1,37 +1,39 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ArrowUp, Square, Plus, Mic, X } from "lucide-react";
+import type { FileUIPart } from "ai";
+import { ArrowUp, Square, Plus, Mic, X, FileText } from "lucide-react";
+import {
+  validateAttachmentFile,
+  kindForMediaType,
+  type AttachmentKind,
+} from "@/lib/models";
 import { cn } from "@/lib/utils";
 
-export interface Attachment {
-  id: string;
-  type: "image";
-  url: string;
-  file?: File;
-}
-
 interface ChatInputProps {
-  onSend: (message: string, attachments?: Attachment[]) => void;
+  onSend: (message: string, attachments?: FileUIPart[]) => void;
   onStop?: () => void;
   isLoading?: boolean;
   disabled?: boolean;
-  hasVisionModel?: boolean;
+  acceptedKinds?: AttachmentKind[];
+  acceptedMimeAccept?: string;
 }
-
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
 export function ChatInput({
   onSend,
   onStop,
   isLoading,
   disabled,
-  hasVisionModel = true,
+  acceptedKinds = [],
+  acceptedMimeAccept = "",
 }: ChatInputProps) {
   const [input, setInput] = useState("");
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [attachments, setAttachments] = useState<FileUIPart[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const attachmentsEnabled = acceptedKinds.length > 0;
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -46,6 +48,7 @@ export function ChatInput({
       onSend(input.trim(), attachments.length > 0 ? attachments : undefined);
       setInput("");
       setAttachments([]);
+      setError(null);
     }
   };
 
@@ -56,37 +59,43 @@ export function ChatInput({
     }
   };
 
-  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
+    const errors: string[] = [];
     for (const file of Array.from(files)) {
-      if (!file.type.startsWith("image/")) continue;
-      if (file.size > MAX_IMAGE_SIZE) {
-        console.warn(`Image ${file.name} exceeds 5MB limit`);
+      const result = validateAttachmentFile(file);
+      if (!result.ok) {
+        errors.push(result.error!);
         continue;
       }
 
-      const reader = new FileReader();
-      reader.onload = () => {
-        const attachment: Attachment = {
-          id: crypto.randomUUID(),
-          type: "image",
-          url: reader.result as string,
-          file,
-        };
-        setAttachments((prev) => [...prev, attachment]);
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+
+      const part: FileUIPart = {
+        type: "file",
+        mediaType: file.type,
+        filename: file.name,
+        url: dataUrl,
       };
-      reader.readAsDataURL(file);
+      setAttachments((prev) => [...prev, part]);
     }
+
+    setError(errors.length > 0 ? errors[0] : null);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
 
-  const handleRemoveAttachment = (id: string) => {
-    setAttachments((prev) => prev.filter((a) => a.id !== id));
+  const handleRemoveAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
   const canSend = (input.trim() || attachments.length > 0) && !disabled;
@@ -95,44 +104,59 @@ export function ChatInput({
     <div className="w-full">
       {attachments.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2 px-2">
-          {attachments.map((att) => (
-            <div key={att.id} className="relative">
-              <img
-                src={att.url}
-                alt="Attachment"
-                className="h-20 w-20 rounded-lg object-cover"
-              />
-              <button
-                type="button"
-                onClick={() => handleRemoveAttachment(att.id)}
-                className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--destructive)] text-[var(--destructive-foreground)] shadow-sm hover:opacity-90"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          ))}
+          {attachments.map((att, index) => {
+            const kind = kindForMediaType(att.mediaType);
+            return (
+              <div key={index} className="relative">
+                {kind === "image" ? (
+                  <img
+                    src={att.url}
+                    alt={att.filename || "Attachment"}
+                    className="h-20 w-20 rounded-lg object-cover"
+                  />
+                ) : (
+                  <div className="flex h-20 w-44 items-center gap-2 rounded-lg border border-[var(--outline-variant)]/30 bg-[var(--surface-container-high)]/60 px-3">
+                    <FileText className="h-6 w-6 shrink-0 text-[var(--on-surface-variant)]" />
+                    <span className="truncate text-xs text-[var(--on-surface)]">
+                      {att.filename || "Document"}
+                    </span>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveAttachment(index)}
+                  className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--destructive)] text-[var(--destructive-foreground)] shadow-sm hover:opacity-90"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 
-      <div
-        className="chat-input-glass rounded-[32px] border border-[var(--outline-variant)]/30 shadow-2xl"
-      >
+      {error && (
+        <div className="mb-2 px-3 text-xs text-[var(--destructive)]">{error}</div>
+      )}
+
+      <div className="chat-input-glass rounded-[32px] border border-[var(--outline-variant)]/30 shadow-2xl">
         {/* Input row */}
         <div className="flex items-center p-2">
-          {hasVisionModel && (
+          {attachmentsEnabled && (
             <>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept={acceptedMimeAccept}
                 multiple
-                onChange={handleImageSelect}
+                onChange={handleFileSelect}
                 className="hidden"
               />
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={disabled || isLoading}
+                title="Attach files"
                 className="ml-2 mr-0 rounded-full p-2 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-high)] hover:text-[var(--on-surface)] disabled:opacity-50"
               >
                 <Plus className="h-5 w-5" />
@@ -140,7 +164,7 @@ export function ChatInput({
             </>
           )}
 
-          <div className={cn("flex flex-1 items-center pr-4", hasVisionModel ? "pl-2" : "pl-6")}>
+          <div className={cn("flex flex-1 items-center pr-4", attachmentsEnabled ? "pl-2" : "pl-6")}>
             <textarea
               ref={textareaRef}
               value={input}
@@ -178,7 +202,7 @@ export function ChatInput({
                   "flex h-10 w-10 items-center justify-center rounded-full transition-all active:scale-95",
                   canSend
                     ? "bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90"
-                    : "bg-[var(--surface-container-highest)] text-[var(--on-surface-variant)] opacity-50"
+                    : "bg-[var(--surface-container-highest)] text-[var(--on-surface-variant)] opacity-50",
                 )}
               >
                 <ArrowUp className="h-5 w-5 font-bold" />

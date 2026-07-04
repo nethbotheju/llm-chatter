@@ -1,6 +1,7 @@
 import type { UIMessage } from "ai";
 import type { ChatProviderConfigDTO, ChatAssistantConfigDTO } from "../contracts";
 import type { BuiltinConfig } from "../builtin-tools";
+import type { AttachmentKind } from "../models";
 
 export interface ChatRuntimeInput {
   messages: UIMessage[];
@@ -8,6 +9,7 @@ export interface ChatRuntimeInput {
   provider: ChatProviderConfigDTO;
   assistantConfig?: ChatAssistantConfigDTO;
   modelSupportsTools?: boolean;
+  acceptedAttachmentKinds?: AttachmentKind[];
   toolStore?: ChatToolStore;
 }
 
