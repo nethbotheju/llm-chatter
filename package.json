@@ -41,7 +41,6 @@
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "ai": "^6.0.116",
-    "better-sqlite3": "^12.8.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -58,7 +57,6 @@
     "react-markdown": "^10.1.0",
     "rehype-highlight": "^7.0.2",
     "remark-gfm": "^4.0.1",
-    "shiki": "^4.0.2",
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.1",
     "turndown": "^7.2.4",
@@ -68,7 +66,6 @@
   "devDependencies": {
     "@electron/notarize": "^3.1.1",
     "@eslint/eslintrc": "^3.3.5",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/jsdom": "^28.0.3",
     "@types/react-dom": "^19.2.3",
     "@types/turndown": "^5.0.6",
@@ -84,7 +81,6 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "@prisma/engines",
-      "better-sqlite3",
       "prisma",
       "esbuild",
       "sharp",
