@@ -7,7 +7,7 @@ import { Sidebar } from "@/components/sidebar/sidebar";
 import { ChatMessages } from "@/components/chat/chat-messages";
 import { ChatInput } from "@/components/chat/chat-input";
 import { AttachmentMismatchBanner } from "@/components/chat/attachment-mismatch-banner";
-import { X } from "lucide-react";
+import { X, AlertCircle } from "lucide-react";
 import { ModelSelector } from "@/components/chat/model-selector";
 import { AssistantSelector } from "@/components/chat/assistant-selector";
 import { TopAppBar } from "@/components/layout/top-app-bar";
@@ -226,8 +226,9 @@ function ChatLayoutInner({
         <footer className="pointer-events-none sticky bottom-0 z-30 pb-6 mt-auto">
           <div className="pointer-events-auto mx-auto max-w-4xl px-6 md:px-12">
             {chat.status === "error" && chatError && (
-              <div className="mb-2 flex items-start gap-2 rounded-2xl border border-[var(--destructive)]/50 bg-[var(--chat-input-bg)] px-3 py-2 text-sm text-[var(--on-surface)] backdrop-blur-xl">
-                <span className="font-medium">Request failed:</span>
+              <div className="mb-2 flex items-start gap-2 rounded-2xl border border-[var(--destructive)] bg-[var(--chat-input-bg)] px-3 py-2 text-sm text-[var(--on-surface)] backdrop-blur-xl">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--destructive)]" />
+                <span className="font-medium text-[var(--destructive)]">Request failed:</span>
                 <span className="flex-1 break-words text-[var(--on-surface-variant)]">
                   {chatError.message}
                 </span>
