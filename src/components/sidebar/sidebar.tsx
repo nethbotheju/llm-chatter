@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from "react";
 import {
   SquarePen,
   Settings,
-  MessageSquare,
   Search,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -80,10 +79,10 @@ export function Sidebar({
     return cleanup;
   }, []);
 
-  const labelClass = cn(
-    "overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out",
-    isCollapsed ? "max-w-0 opacity-0" : "max-w-[200px] flex-1 opacity-100"
-  );
+  const isMacDesktop =
+    isElectron() &&
+    typeof navigator !== "undefined" &&
+    /Mac/i.test(navigator.platform);
 
   const grouped = useMemo(() => {
     const today: UIConversation[] = [];
@@ -114,17 +113,20 @@ export function Sidebar({
           isCollapsed ? "w-16" : "w-[280px]"
         )}
       >
-        {/* Header */}
-        <div className={`titlebar-drag flex shrink-0 items-center ${isElectron() ? "h-[90px]" : "h-14"}`}>
-          <div className="titlebar-no-drag flex w-16 shrink-0 items-center justify-center">
-            <MessageSquare className="h-5 w-5 text-[var(--on-surface)]" />
+        {isMacDesktop ? (
+          <div className="titlebar-drag h-10 shrink-0" />
+        ) : (
+          <div className="shrink-0 pb-3 pt-5">
+            <div className="relative flex items-center">
+              <span className={cn("absolute inset-0 flex items-center justify-center text-base font-bold text-[var(--primary)] transition-opacity duration-300", isCollapsed ? "opacity-100" : "opacity-0")}>
+                lC
+              </span>
+              <h1 className={cn("pl-6 whitespace-nowrap text-base font-semibold tracking-tight text-[var(--on-surface)] transition-all duration-300 ease-in-out", isCollapsed ? "max-w-0 overflow-hidden opacity-0" : "max-w-[200px] opacity-100")}>
+                llm Chatter
+              </h1>
+            </div>
           </div>
-          <div className={labelClass}>
-            <h1 className="text-xl font-bold tracking-tighter text-[var(--on-surface)]">
-              LLM Chatter
-            </h1>
-          </div>
-        </div>
+        )}
 
         {/* Top Actions */}
         <div className="flex flex-col gap-1 px-2 pb-2 pt-2">
