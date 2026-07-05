@@ -109,6 +109,8 @@ function createWindow(): BrowserWindow {
     show: false,
     backgroundColor: "#0e0e0e",
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
+    trafficLightPosition:
+      process.platform === "darwin" ? { x: 8, y: 12 } : undefined,
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       contextIsolation: true,
