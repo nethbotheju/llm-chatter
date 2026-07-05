@@ -19,6 +19,11 @@ interface ChatInputProps {
   acceptedMimeAccept?: string;
 }
 
+const KIND_LABEL: Record<AttachmentKind, string> = {
+  image: "image",
+  pdf: "PDF",
+};
+
 export function ChatInput({
   onSend,
   onStop,
@@ -42,29 +47,30 @@ export function ChatInput({
     }
   }, [input]);
 
-  const handleSubmit = () => {
-    const canSubmit = (input.trim() || attachments.length > 0) && !isLoading && !disabled;
-    if (canSubmit) {
-      onSend(input.trim(), attachments.length > 0 ? attachments : undefined);
-      setInput("");
-      setAttachments([]);
-      setError(null);
+  // Shared attachment ingestion for the picker, drag-drop and clipboard paste.
+  // Validates each file against the model's accepted kinds and reports the
+  // first rejection as an inline error above the input.
+  const addFiles = async (files: File[]) => {
+    if (files.length === 0) return;
+
+    if (acceptedKinds.length === 0) {
+      setError("This model doesn't support attachments.");
+      return;
     }
-  };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit();
-    }
-  };
-
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
+    const supported = acceptedKinds.map((k) => KIND_LABEL[k]).join(" or ");
     const errors: string[] = [];
-    for (const file of Array.from(files)) {
+
+    for (const file of files) {
+      const kind = kindForMediaType(file.type);
+      if (!kind) {
+        errors.push(`"${file.name}" is not a supported file type.`);
+        continue;
+      }
+      if (!acceptedKinds.includes(kind)) {
+        errors.push(`This model only supports ${supported} attachments.`);
+        continue;
+      }
       const result = validateAttachmentFile(file);
       if (!result.ok) {
         errors.push(result.error!);
@@ -88,10 +94,50 @@ export function ChatInput({
     }
 
     setError(errors.length > 0 ? errors[0] : null);
+  };
 
+  const handleSubmit = () => {
+    const canSubmit = (input.trim() || attachments.length > 0) && !isLoading && !disabled;
+    if (canSubmit) {
+      onSend(input.trim(), attachments.length > 0 ? attachments : undefined);
+      setInput("");
+      setAttachments([]);
+      setError(null);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    await addFiles(files);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+  };
+
+  // Insert pasted image/file data as an attachment; let plain-text pastes fall
+  // through to the textarea unchanged.
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    const files: File[] = [];
+    for (const item of Array.from(items)) {
+      if (item.kind === "file") {
+        const file = item.getAsFile();
+        if (file) files.push(file);
+      }
+    }
+    if (files.length === 0) return;
+
+    e.preventDefault();
+    void addFiles(files);
   };
 
   const handleRemoveAttachment = (index: number) => {
@@ -170,6 +216,7 @@ export function ChatInput({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
               placeholder="Ask anything..."
               disabled={disabled}
               rows={1}

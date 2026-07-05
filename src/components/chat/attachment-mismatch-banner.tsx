@@ -54,7 +54,7 @@ export function AttachmentMismatchBanner({
     : "the selected model can't process";
 
   return (
-    <div className="mb-2 flex items-start gap-2 rounded-xl border border-[var(--outline-variant)]/30 bg-[var(--surface-container-high)]/60 px-3 py-2 text-sm text-[var(--on-surface-variant)]">
+    <div className="mb-2 flex items-start gap-2 rounded-2xl border border-[var(--outline-variant)]/30 bg-[var(--chat-input-bg)] px-3 py-2 text-sm text-[var(--on-surface-variant)] backdrop-blur-xl">
       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--tertiary)]" />
       <p className="flex-1 leading-relaxed">
         This conversation has{" "}

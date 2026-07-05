@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useChat } from "@ai-sdk/react";
 import type { ChatTransport, UIMessage } from "ai";
 import { Sidebar } from "@/components/sidebar/sidebar";
 import { ChatMessages } from "@/components/chat/chat-messages";
 import { ChatInput } from "@/components/chat/chat-input";
 import { AttachmentMismatchBanner } from "@/components/chat/attachment-mismatch-banner";
+import { X } from "lucide-react";
 import { ModelSelector } from "@/components/chat/model-selector";
 import { AssistantSelector } from "@/components/chat/assistant-selector";
 import { TopAppBar } from "@/components/layout/top-app-bar";
@@ -159,6 +160,19 @@ function ChatLayoutInner({
   const isLoading = chat.status === "submitted" || chat.status === "streaming";
   const chatError = chat.error;
 
+  // The error banner reflects the *current* request's state (gated on
+  // status === 'error' below), so it hides the moment a new request starts.
+  // Changing the request context (conversation or model) must also dismiss a
+  // stale error from the previous attempt, since status does not change on
+  // navigation or model selection.
+  const clearErrorRef = useRef(chat.clearError);
+  useEffect(() => {
+    clearErrorRef.current = chat.clearError;
+  });
+  useEffect(() => {
+    clearErrorRef.current();
+  }, [currentConversationId, selectedModelId]);
+
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--surface)]">
       <Sidebar
@@ -211,12 +225,20 @@ function ChatLayoutInner({
 
         <footer className="pointer-events-none sticky bottom-0 z-30 pb-6 mt-auto">
           <div className="pointer-events-auto mx-auto max-w-4xl px-6 md:px-12">
-            {chatError && (
-              <div className="mb-2 flex items-start gap-2 rounded-xl border border-[var(--destructive)]/30 bg-[var(--destructive)]/10 px-3 py-2 text-sm text-[var(--on-surface)]">
+            {chat.status === "error" && chatError && (
+              <div className="mb-2 flex items-start gap-2 rounded-2xl border border-[var(--destructive)]/50 bg-[var(--chat-input-bg)] px-3 py-2 text-sm text-[var(--on-surface)] backdrop-blur-xl">
                 <span className="font-medium">Request failed:</span>
                 <span className="flex-1 break-words text-[var(--on-surface-variant)]">
                   {chatError.message}
                 </span>
+                <button
+                  type="button"
+                  onClick={() => chat.clearError()}
+                  className="shrink-0 rounded-md p-1 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-highest)]"
+                  aria-label="Dismiss error"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
               </div>
             )}
             <AttachmentMismatchBanner
