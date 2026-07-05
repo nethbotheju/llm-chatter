@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { UIMessage, FileUIPart } from "ai";
-import { Copy, Pencil, Check, X, FileText, ExternalLink } from "lucide-react";
+import { Copy, Pencil, Check, X, FileText, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
 import { ThinkingBlock } from "./thinking-block";
 import { ToolInvocationBlock } from "./tool-invocation-block";
@@ -10,6 +10,7 @@ import { TypingDots } from "./typing-dots";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { kindForMediaType } from "@/lib/models";
+import { cn } from "@/lib/utils";
 
 interface ChatMessageProps {
   message: UIMessage;
@@ -43,6 +44,14 @@ export function ChatMessage({
     : [];
   const [editContent, setEditContent] = useState(userText);
   const [isEditing, setIsEditing] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (!editTextareaRef.current) return;
+    editTextareaRef.current.style.height = "auto";
+    editTextareaRef.current.style.height = `${editTextareaRef.current.scrollHeight}px`;
+  }, [editContent]);
 
   const handleCopy = async (text: string) => {
     await navigator.clipboard.writeText(text);
@@ -63,6 +72,8 @@ export function ChatMessage({
   };
 
   if (isUser) {
+    const canCollapse = userText.length > 240;
+
     return (
       <div className="flex flex-col items-end gap-3">
         {userFileParts.length > 0 && !isEditing && (
@@ -99,29 +110,60 @@ export function ChatMessage({
           </div>
         )}
         {isEditing ? (
-          <div className="w-full max-w-[85%] space-y-2">
+          <div className="w-full max-w-[85%] rounded-3xl bg-[var(--surface-container-highest)]/60 px-5 py-3">
             <Textarea
+              ref={editTextareaRef}
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
-              className="min-h-[100px] border-[var(--outline-variant)]/20 bg-[var(--surface-container-highest)]/60 text-[var(--on-surface)]"
+              className="min-h-[80px] resize-none border-none bg-transparent p-0 text-base leading-relaxed text-[var(--on-surface)] focus-visible:ring-0 focus-visible:ring-offset-0"
               autoFocus
             />
-            <div className="flex gap-2">
-              <Button size="sm" onClick={handleSaveEdit} className="bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90">
-                <Check className="mr-1 h-4 w-4" />
-                Save & Regenerate
-              </Button>
-              <Button size="sm" variant="ghost" onClick={handleCancelEdit} className="text-[var(--on-surface-variant)]">
+            <div className="mt-2 flex justify-end gap-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleCancelEdit}
+                className="text-[var(--on-surface-variant)]"
+              >
                 <X className="mr-1 h-4 w-4" />
                 Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSaveEdit}
+                className="bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90"
+              >
+                <Check className="mr-1 h-4 w-4" />
+                Save
               </Button>
             </div>
           </div>
         ) : (
           userText && (
             <div className="group relative max-w-[85%]">
-              <div className="rounded-3xl border border-[var(--outline-variant)]/10 bg-[var(--surface-container-highest)]/60 px-6 py-4 text-base leading-relaxed text-[var(--on-surface)]">
-                {userText}
+              <div className="flex flex-col rounded-3xl bg-[var(--surface-container-highest)]/60 px-5 py-2.5 text-base leading-relaxed text-[var(--on-surface)]">
+                <div
+                  className={cn(
+                    "break-words",
+                    !isExpanded && canCollapse && "line-clamp-3",
+                  )}
+                >
+                  {userText}
+                </div>
+                {canCollapse && (
+                  <button
+                    type="button"
+                    onClick={() => setIsExpanded((v) => !v)}
+                    className="mt-1 ml-auto flex cursor-pointer items-center justify-center rounded-full bg-[var(--surface-container-high)] p-1 text-[var(--on-surface-variant)] transition-colors hover:bg-[var(--surface-container-highest)] hover:text-[var(--on-surface)]"
+                    aria-label={isExpanded ? "Show less" : "Show more"}
+                  >
+                    {isExpanded ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </button>
+                )}
               </div>
               <div className="absolute -bottom-8 right-0 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                 {onEdit && (
