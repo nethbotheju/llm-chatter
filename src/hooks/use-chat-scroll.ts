@@ -56,8 +56,12 @@ export function useChatScroll({
     // fire from genuine input — never from programmatic scrollTop changes or
     // DOM growth — so this is the one reliable "user wants to read up" signal.
     let lastTouchY = 0;
+    const hasOverflow = () => {
+      const el = scrollRef.current;
+      return !!el && el.scrollHeight - el.clientHeight > 0;
+    };
     const onWheel = (e: WheelEvent) => {
-      if (e.deltaY < 0) disengage();
+      if (e.deltaY < 0 && hasOverflow()) disengage();
     };
     const onTouchStart = (e: TouchEvent) => {
       lastTouchY = e.touches[0]?.clientY ?? 0;
@@ -66,7 +70,7 @@ export function useChatScroll({
       const y = e.touches[0]?.clientY ?? 0;
       // Finger moving down drags earlier content into view (scrolling toward
       // the top) → user wants to read up, so stop following.
-      if (y > lastTouchY) disengage();
+      if (y > lastTouchY && hasOverflow()) disengage();
       lastTouchY = y;
     };
     const onKeyDown = (e: KeyboardEvent) => {
@@ -79,7 +83,7 @@ export function useChatScroll({
       ) {
         return;
       }
-      if (SCROLL_UP_KEYS.has(e.key)) disengage();
+      if (SCROLL_UP_KEYS.has(e.key) && hasOverflow()) disengage();
     };
 
     el.addEventListener("scroll", measure, { passive: true });
