@@ -214,6 +214,14 @@ code {
   scrollbar-width: none;  /* Firefox */
 }
 
+/* Prevent the browser from auto-scrolling a scroll container to keep a
+   focused element (e.g. the sticky chat textarea) in view when its size
+   changes. Without this, typing in the input while scrolled up in history
+   pulls the view back to the bottom on every height change. */
+.overflow-anchor-none {
+  overflow-anchor: none;
+}
+
 /* ── App bar ── */
 .app-bar {
   background-color: var(--app-bar-bg);
