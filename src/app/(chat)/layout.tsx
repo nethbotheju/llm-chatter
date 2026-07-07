@@ -6,6 +6,7 @@ import type { ChatTransport, UIMessage } from "ai";
 import { Sidebar } from "@/components/sidebar/sidebar";
 import { ChatMessages } from "@/components/chat/chat-messages";
 import { ChatInput } from "@/components/chat/chat-input";
+import { ScrollToLatestButton } from "@/components/chat/scroll-to-latest-button";
 import { AttachmentMismatchBanner } from "@/components/chat/attachment-mismatch-banner";
 import { X, AlertCircle } from "lucide-react";
 import { ModelSelector } from "@/components/chat/model-selector";
@@ -29,6 +30,7 @@ import {
   useKeyboardShortcuts,
   useSidebarState,
   useCatalogSync,
+  useChatScroll,
 } from "@/hooks";
 import { toUIConversation } from "@/types";
 import { isElectron } from "@/lib/runtime";
@@ -66,6 +68,7 @@ function ChatLayoutInner({
 }) {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
 
   const {
     models,
@@ -158,6 +161,13 @@ function ChatLayoutInner({
 
   const modelName = selectedModel?.name || null;
   const isLoading = chat.status === "submitted" || chat.status === "streaming";
+
+  const { isAtBottom, scrollToBottom } = useChatScroll({
+    scrollRef: mainRef,
+    messages: chat.messages,
+    conversationId: currentConversationId,
+    isStreaming: isLoading,
+  });
   const chatError = chat.error;
 
   // The error banner reflects the *current* request's state (gated on
@@ -185,7 +195,7 @@ function ChatLayoutInner({
         onToggleCollapse={toggleSidebar}
       />
 
-      <main className={`relative flex flex-1 flex-col h-screen overflow-y-auto overflow-x-hidden overscroll-none custom-scrollbar scroll-smooth scroll-pb-28 transition-[margin] duration-300 ease-in-out ${effectiveCollapsed ? "ml-16" : "ml-[280px]"}`}>
+      <main ref={mainRef} className={`relative flex flex-1 flex-col h-screen overflow-y-auto overflow-x-hidden overscroll-none custom-scrollbar scroll-pb-28 transition-[margin] duration-300 ease-in-out ${effectiveCollapsed ? "ml-16" : "ml-[280px]"}`}>
         <TopAppBar
           assistantName={currentAssistant?.name || null}
           modelName={modelName}
@@ -247,14 +257,20 @@ function ChatLayoutInner({
               acceptedKinds={acceptedAttachmentKinds}
               modelName={modelName}
             />
-            <ChatInput
-              onSend={handleSendMessage}
-              onStop={handleStop}
-              isLoading={isLoading}
-              disabled={models.length === 0 || !currentAssistant}
-              acceptedKinds={acceptedAttachmentKinds}
-              acceptedMimeAccept={acceptedMimeAccept}
-            />
+            <div className="relative">
+              <ScrollToLatestButton
+                visible={!isAtBottom && chat.messages.length > 0}
+                onClick={() => scrollToBottom("smooth")}
+              />
+              <ChatInput
+                onSend={handleSendMessage}
+                onStop={handleStop}
+                isLoading={isLoading}
+                disabled={models.length === 0 || !currentAssistant}
+                acceptedKinds={acceptedAttachmentKinds}
+                acceptedMimeAccept={acceptedMimeAccept}
+              />
+            </div>
           </div>
         </footer>
       </main>
