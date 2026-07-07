@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import type { UIMessage } from "ai";
 import { ChatMessage } from "./chat-message";
 
@@ -12,12 +11,6 @@ interface ChatMessagesProps {
 }
 
 export function ChatMessages({ messages, isLoading, onEditMessage, modelName }: ChatMessagesProps) {
-  const bottomRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
   if (messages.length === 0) {
     return null;
   }
@@ -36,7 +29,6 @@ export function ChatMessages({ messages, isLoading, onEditMessage, modelName }: 
             />
           ))}
         </div>
-        <div ref={bottomRef} className="h-4" />
       </div>
     </div>
   );
