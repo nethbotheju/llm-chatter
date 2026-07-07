@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import type { FileUIPart } from "ai";
 import { ArrowUp, Square, Plus, Mic, X, FileText } from "lucide-react";
 import {
@@ -40,12 +40,70 @@ export function ChatInput({
 
   const attachmentsEnabled = acceptedKinds.length > 0;
 
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+  // Auto-resize the textarea while preserving the scroll position of every
+  // scrollable ancestor. Without this, Chromium (and therefore the Electron
+  // desktop build) scrolls the focused textarea into view as it grows, yanking
+  // the user back to the bottom of the history when they had scrolled up to
+  // read older messages.
+  useLayoutEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const scrollableAncestors: HTMLElement[] = [];
+    let el: HTMLElement | null = textarea.parentElement;
+    while (el) {
+      const style = window.getComputedStyle(el);
+      if (/(auto|scroll|overlay)/.test(style.overflowY + style.overflow)) {
+        scrollableAncestors.push(el);
+      }
+      el = el.parentElement;
     }
+
+    const scrollTops = scrollableAncestors.map((ancestor) => ancestor.scrollTop);
+
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+
+    scrollableAncestors.forEach((ancestor, i) => {
+      ancestor.scrollTop = scrollTops[i];
+    });
   }, [input]);
+
+  // Electron's Chromium aggressively scrolls a focused textarea into view on
+  // every keystroke, even when the textarea height does not change. Capture the
+  // scroll position on each input event and restore it in the next frame so
+  // typing while reading older messages does not pull the view back down.
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const scrollableAncestors: HTMLElement[] = [];
+    let el: HTMLElement | null = textarea.parentElement;
+    while (el) {
+      const style = window.getComputedStyle(el);
+      if (/(auto|scroll|overlay)/.test(style.overflowY + style.overflow)) {
+        scrollableAncestors.push(el);
+      }
+      el = el.parentElement;
+    }
+
+    let rafId: number | null = null;
+    const onBeforeInput = () => {
+      const scrollTops = scrollableAncestors.map((ancestor) => ancestor.scrollTop);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        scrollableAncestors.forEach((ancestor, i) => {
+          ancestor.scrollTop = scrollTops[i];
+        });
+      });
+    };
+
+    textarea.addEventListener("beforeinput", onBeforeInput);
+    return () => {
+      textarea.removeEventListener("beforeinput", onBeforeInput);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
+  }, []);
 
   // Shared attachment ingestion for the picker, drag-drop and clipboard paste.
   // Validates each file against the model's accepted kinds and reports the
