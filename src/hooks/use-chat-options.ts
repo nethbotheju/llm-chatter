@@ -35,5 +35,8 @@ export function useChatOptions(
     }
   }, [fetchConversations]);
 
-  return useMemo(() => ({ transport, onFinish }), [transport, onFinish]);
+  return useMemo(
+    () => ({ transport, onFinish, experimental_throttle: 50 }),
+    [transport, onFinish],
+  );
 }
