@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 import type { UIMessage, FileUIPart } from "ai";
 import { Copy, Pencil, Check, X, FileText, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
-import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
+import { MemoizedMarkdown } from "@/components/markdown/memoized-markdown";
 import { ThinkingBlock } from "./thinking-block";
 import { ToolInvocationBlock } from "./tool-invocation-block";
 import { TypingDots } from "./typing-dots";
@@ -26,7 +26,7 @@ function getUserText(message: UIMessage): string {
     .join("");
 }
 
-export function ChatMessage({
+function ChatMessageBase({
   message,
   isStreaming,
   modelName,
@@ -229,7 +229,7 @@ export function ChatMessage({
                 case "text":
                   return part.text ? (
                     <div key={index}>
-                      <MarkdownRenderer content={part.text} />
+                      <MemoizedMarkdown content={part.text} />
                     </div>
                   ) : null;
                 case "reasoning":
@@ -283,3 +283,5 @@ export function ChatMessage({
     </div>
   );
 }
+
+export const ChatMessage = memo(ChatMessageBase);

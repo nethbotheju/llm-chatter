@@ -2,7 +2,7 @@
 
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
+import { MemoizedMarkdown } from "@/components/markdown/memoized-markdown";
 import {
   classifyInput,
   extractMcpResult,
@@ -163,7 +163,7 @@ export function WebFetchContent({ input, output }: { input?: unknown; output?: u
       </div>
       {content ? (
         <div className="custom-scrollbar max-h-72 overflow-y-auto rounded-md bg-[var(--surface-container-low)]/40 p-2">
-          <MarkdownRenderer content={content} compact />
+          <MemoizedMarkdown content={content} compact />
         </div>
       ) : (
         <p className="text-xs text-[var(--on-surface-variant)]/60 animate-pulse">Reading…</p>
