@@ -39,6 +39,8 @@ release/
 *.pfx
 *.p12
 *.cer
+.package-bak.json
+.api-bak
 
 # Generated
 electron/db/generated/

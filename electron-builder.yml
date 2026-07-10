@@ -16,7 +16,10 @@ files:
   - "!**/.{editorconfig,eslintrc*,prettierrc*,gitignore,travis.yml,nycrc}"
   - "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.idea,.vscode,.next,target}"
 
-asar: false
+asar: true
+asarUnpack:
+  - "**/*.node"
+  - "out/**"
 
 # macOS
 mac:
