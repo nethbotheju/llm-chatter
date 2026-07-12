@@ -10,6 +10,7 @@ directories:
 files:
   - dist-electron/**/*
   - out/**/*
+  - drizzle/**/*
   - package.json
   - "!**/node_modules/*/{CHANGELOG.md,README.md,readme.md,*.map,*.ts,*.d.ts,*.spec.*}"
   - "!**/node_modules/.bin"
@@ -20,6 +21,7 @@ asar: true
 asarUnpack:
   - "**/*.node"
   - "out/**"
+  - "drizzle/**"
 
 # macOS
 mac:
