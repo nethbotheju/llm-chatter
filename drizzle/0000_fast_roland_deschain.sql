@@ -1,10 +1,10 @@
-CREATE TABLE `AppConfig` (
+CREATE TABLE IF NOT EXISTS `AppConfig` (
 	`key` text PRIMARY KEY NOT NULL,
 	`value` text NOT NULL,
 	`updatedAt` text NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE `Assistant` (
+CREATE TABLE IF NOT EXISTS `Assistant` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
 	`image` text,
@@ -17,7 +17,7 @@ CREATE TABLE `Assistant` (
 	`updatedAt` text NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE `Conversation` (
+CREATE TABLE IF NOT EXISTS `Conversation` (
 	`id` text PRIMARY KEY NOT NULL,
 	`title` text,
 	`assistantId` text NOT NULL,
@@ -26,9 +26,9 @@ CREATE TABLE `Conversation` (
 	FOREIGN KEY (`assistantId`) REFERENCES `Assistant`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
-CREATE INDEX `Conversation_assistantId_idx` ON `Conversation` (`assistantId`);--> statement-breakpoint
-CREATE INDEX `Conversation_createdAt_idx` ON `Conversation` (`createdAt`);--> statement-breakpoint
-CREATE TABLE `McpServer` (
+CREATE INDEX IF NOT EXISTS `Conversation_assistantId_idx` ON `Conversation` (`assistantId`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `Conversation_createdAt_idx` ON `Conversation` (`createdAt`);--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS `McpServer` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
 	`slug` text NOT NULL,
@@ -45,8 +45,8 @@ CREATE TABLE `McpServer` (
 	`updatedAt` text NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `McpServer_slug_unique` ON `McpServer` (`slug`);--> statement-breakpoint
-CREATE TABLE `Message` (
+CREATE UNIQUE INDEX IF NOT EXISTS `McpServer_slug_unique` ON `McpServer` (`slug`);--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS `Message` (
 	`id` text PRIMARY KEY NOT NULL,
 	`conversationId` text NOT NULL,
 	`role` text NOT NULL,
@@ -56,9 +56,9 @@ CREATE TABLE `Message` (
 	FOREIGN KEY (`conversationId`) REFERENCES `Conversation`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE INDEX `Message_conversationId_idx` ON `Message` (`conversationId`);--> statement-breakpoint
-CREATE INDEX `Message_createdAt_idx` ON `Message` (`createdAt`);--> statement-breakpoint
-CREATE TABLE `Model` (
+CREATE INDEX IF NOT EXISTS `Message_conversationId_idx` ON `Message` (`conversationId`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `Message_createdAt_idx` ON `Message` (`createdAt`);--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS `Model` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
 	`providerId` text NOT NULL,
@@ -71,8 +71,8 @@ CREATE TABLE `Model` (
 	FOREIGN KEY (`providerId`) REFERENCES `Provider`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `Model_providerId_name_key` ON `Model` (`providerId`,`name`);--> statement-breakpoint
-CREATE TABLE `Provider` (
+CREATE UNIQUE INDEX IF NOT EXISTS `Model_providerId_name_key` ON `Model` (`providerId`,`name`);--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS `Provider` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
 	`type` text NOT NULL,
@@ -85,4 +85,4 @@ CREATE TABLE `Provider` (
 	`updatedAt` text NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `Provider_catalogId_unique` ON `Provider` (`catalogId`);
+CREATE UNIQUE INDEX IF NOT EXISTS `Provider_catalogId_unique` ON `Provider` (`catalogId`);
