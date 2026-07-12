@@ -1,15 +1,16 @@
 import { ipcMain } from "electron";
-import { getPrisma } from "../db/client";
+import { getDb } from "../db/client";
+import { messages, conversations, models, assistants, providers } from "../../src/lib/db/schema";
 import { seedDatabase } from "../db/seed";
 
 export function registerResetIpc() {
   ipcMain.handle("reset:data", async () => {
-    const prisma = getPrisma();
-    await prisma.message.deleteMany();
-    await prisma.conversation.deleteMany();
-    await prisma.model.deleteMany();
-    await prisma.assistant.deleteMany();
-    await prisma.provider.deleteMany();
+    const db = getDb();
+    await db.delete(messages);
+    await db.delete(conversations);
+    await db.delete(models);
+    await db.delete(assistants);
+    await db.delete(providers);
     await seedDatabase();
   });
 }

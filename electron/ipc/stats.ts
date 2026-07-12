@@ -1,13 +1,18 @@
 import { ipcMain } from "electron";
-import { getPrisma } from "../db/client";
+import { getDb } from "../db/client";
+import { conversations, messages } from "../../src/lib/db/schema";
+import { count } from "drizzle-orm";
 
 export function registerStatsIpc() {
   ipcMain.handle("stats:get", async () => {
-    const prisma = getPrisma();
-    const [conversations, messages] = await Promise.all([
-      prisma.conversation.count(),
-      prisma.message.count(),
+    const db = getDb();
+    const [conversationsResult, messagesResult] = await Promise.all([
+      db.select({ value: count() }).from(conversations).get(),
+      db.select({ value: count() }).from(messages).get(),
     ]);
-    return { conversations, messages };
+    return {
+      conversations: conversationsResult?.value ?? 0,
+      messages: messagesResult?.value ?? 0,
+    };
   });
 }

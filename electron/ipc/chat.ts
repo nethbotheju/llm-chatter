@@ -2,7 +2,9 @@ import { ipcMain, utilityProcess, BrowserWindow, app } from "electron";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
-import { getPrisma } from "../db/client";
+import { getDb } from "../db/client";
+import { models, providers, conversations, assistants, messages, mcpServers } from "../../src/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { decrypt, encrypt } from "../db/encryption";
 import { nanoid } from "nanoid";
 import {
@@ -10,6 +12,7 @@ import {
   persistAssistantMessage,
   type ChatConfigStore,
   type ChatPersistenceStore,
+  type ChatToolStore,
   type ResolvedToolSource,
 } from "../chat-runtime";
 import { type ConfigCipher } from "../../src/lib/builtin-tools";
@@ -33,12 +36,26 @@ export function registerChatIpc(getMainWindow: () => BrowserWindow | null) {
       _e,
       input: { modelId: string; conversationId?: string | null },
     ) => {
-      const prisma = getPrisma();
+      const db = getDb();
       const store: ChatConfigStore = {
-        findModelWithProvider: (id) =>
-          prisma.model.findUnique({ where: { id }, include: { provider: true } }),
-        findConversationWithAssistant: (id) =>
-          prisma.conversation.findUnique({ where: { id }, include: { assistant: true } }),
+        findModelWithProvider: async (id) => {
+          const modelRow = await db.select().from(models).where(eq(models.id, id)).get();
+          if (!modelRow) return null;
+          const providerRow = await db.select().from(providers).where(eq(providers.id, modelRow.providerId)).get();
+          return {
+            ...modelRow,
+            provider: providerRow || null,
+          };
+        },
+        findConversationWithAssistant: async (id) => {
+          const conversationRow = await db.select().from(conversations).where(eq(conversations.id, id)).get();
+          if (!conversationRow) return null;
+          const assistantRow = await db.select().from(assistants).where(eq(assistants.id, conversationRow.assistantId)).get();
+          return {
+            ...conversationRow,
+            assistant: assistantRow || null,
+          };
+        },
         decrypt,
       };
       return resolveChatConfig(input, store);
@@ -62,29 +79,30 @@ export function registerChatIpc(getMainWindow: () => BrowserWindow | null) {
     const conversationId = payload.conversationId ?? null;
     const messageId = nanoid();
 
-    const prisma = getPrisma();
+    const db = getDb();
     const persistenceStore: ChatPersistenceStore = {
       upsertAssistantMessage: async (rec) => {
-        await prisma.message.upsert({
-          where: { id: rec.id },
-          create: {
+        await db.insert(messages)
+          .values({
             id: rec.id,
             conversationId: rec.conversationId,
             role: "assistant",
             parts: rec.parts,
-            metadata: rec.metadata,
-          },
-          update: {
-            parts: rec.parts,
-            metadata: rec.metadata,
-          },
-        });
+            metadata: rec.metadata || null,
+            createdAt: new Date().toISOString(),
+          })
+          .onConflictDoUpdate({
+            target: messages.id,
+            set: {
+              parts: rec.parts,
+              metadata: rec.metadata || null,
+            }
+          });
       },
       touchConversation: async (id) => {
-        await prisma.conversation.update({
-          where: { id },
-          data: { updatedAt: new Date() },
-        });
+        await db.update(conversations)
+          .set({ updatedAt: new Date().toISOString() })
+          .where(eq(conversations.id, id));
       },
     };
 
@@ -98,7 +116,7 @@ export function registerChatIpc(getMainWindow: () => BrowserWindow | null) {
     if (payload.modelSupportsTools) {
       try {
         const cipher: ConfigCipher = { encrypt, decrypt };
-        const rows = await prisma.mcpServer.findMany({ where: { enabled: true } });
+        const rows = await db.select().from(mcpServers).where(eq(mcpServers.enabled, true));
         toolSources = rows.map((r) => toResolvedToolSource(r, cipher));
       } catch (error) {
         console.error("Failed to resolve tool sources:", error);

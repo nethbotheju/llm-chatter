@@ -1,4 +1,6 @@
-import { PrismaClient } from "./generated";
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import * as schema from "../../src/lib/db/schema";
 import { join } from "node:path";
 import { existsSync, mkdirSync } from "node:fs";
 import { app } from "electron";
@@ -9,17 +11,18 @@ export function getDataDir(): string {
   return dir;
 }
 
-let prismaInstance: PrismaClient | null = null;
+let dbInstance: ReturnType<typeof drizzle> | null = null;
 
-export function getPrisma(): PrismaClient {
-  if (!prismaInstance) {
+export function getDb() {
+  if (!dbInstance) {
     const dataDir = getDataDir();
     const dbPath = join(dataDir, "llm-chatter.db");
-    const url = `file:${dbPath}`;
-
-    prismaInstance = new PrismaClient({
-      datasources: { db: { url } },
-    });
+    const sqlite = new Database(dbPath);
+    sqlite.pragma("journal_mode = WAL");
+    sqlite.pragma("foreign_keys = ON");
+    dbInstance = drizzle(sqlite, { schema });
   }
-  return prismaInstance;
+  return dbInstance;
 }
+
+export type DbClient = ReturnType<typeof drizzle>;

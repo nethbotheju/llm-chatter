@@ -15,6 +15,8 @@ const RUNTIME_DEPS = [
   "@ai-sdk/openai",
   "@mozilla/readability",
   "ai",
+  "better-sqlite3",
+  "drizzle-orm",
   "electron-updater",
   "jsdom",
   "nanoid",

@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db/client";
+import { db } from "@/lib/db/client";
+import { messages, conversations, models, assistants, providers } from "@/lib/db/schema";
 
 export async function POST() {
   try {
     // Delete all data in correct order (respecting foreign keys)
-    await prisma.message.deleteMany();
-    await prisma.conversation.deleteMany();
-    await prisma.model.deleteMany();
-    await prisma.assistant.deleteMany();
-    await prisma.provider.deleteMany();
+    await db.delete(messages);
+    await db.delete(conversations);
+    await db.delete(models);
+    await db.delete(assistants);
+    await db.delete(providers);
 
     return NextResponse.json({ success: true });
   } catch (error) {

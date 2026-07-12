@@ -9,6 +9,8 @@ out
 # Database
 *.db
 *.db-journal
+*.db-shm
+*.db-wal
 prisma/dev.db
 
 # Catalog cache (runtime-fetched from models.dev, written to repo root in web/dev mode)
@@ -22,6 +24,7 @@ prisma/dev.db
 # IDE
 .idea
 .vscode
+.claude
 *.swp
 *.swo
 

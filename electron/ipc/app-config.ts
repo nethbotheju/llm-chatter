@@ -1,10 +1,12 @@
 import { ipcMain } from "electron";
-import { getPrisma } from "../db/client";
+import { getDb } from "../db/client";
+import { appConfig } from "../../src/lib/db/schema";
+import { eq } from "drizzle-orm";
 
 export function registerAppConfigIpc() {
   ipcMain.handle("appConfig:getAll", async () => {
-    const prisma = getPrisma();
-    const rows = await prisma.appConfig.findMany();
+    const db = getDb();
+    const rows = await db.select().from(appConfig);
     const map: Record<string, unknown> = {};
     for (const row of rows) {
       try {
@@ -19,17 +21,26 @@ export function registerAppConfigIpc() {
   ipcMain.handle(
     "appConfig:set",
     async (_e, input: { key: string; value: unknown }) => {
-      const prisma = getPrisma();
-      await prisma.appConfig.upsert({
-        where: { key: input.key },
-        create: { key: input.key, value: JSON.stringify(input.value) },
-        update: { value: JSON.stringify(input.value) },
-      });
+      const db = getDb();
+      const now = new Date().toISOString();
+      await db.insert(appConfig)
+        .values({
+          key: input.key,
+          value: JSON.stringify(input.value),
+          updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: appConfig.key,
+          set: {
+            value: JSON.stringify(input.value),
+            updatedAt: now,
+          },
+        });
     },
   );
 
   ipcMain.handle("appConfig:remove", async (_e, key: string) => {
-    const prisma = getPrisma();
-    await prisma.appConfig.deleteMany({ where: { key } });
+    const db = getDb();
+    await db.delete(appConfig).where(eq(appConfig.key, key));
   });
 }

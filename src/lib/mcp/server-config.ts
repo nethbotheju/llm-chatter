@@ -33,8 +33,8 @@ export interface McpServerRow {
   config: string | null;
   enabled: boolean;
   isBuiltin: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
 export interface McpServerCreateData {
@@ -232,8 +232,8 @@ export function toMcpServerDTO(row: McpServerRow): McpServerDTO {
     config,
     enabled: row.enabled,
     isBuiltin: row.isBuiltin,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
+    createdAt: typeof row.createdAt === "string" ? row.createdAt : row.createdAt.toISOString(),
+    updatedAt: typeof row.updatedAt === "string" ? row.updatedAt : row.updatedAt.toISOString(),
   };
 }
 

@@ -1,8 +1,9 @@
 import { NextRequest } from "next/server";
 import { nanoid } from "nanoid";
-import { prisma } from "@/lib/db/client";
-import { decrypt } from "@/lib/ai/encryption";
-import { encrypt } from "@/lib/ai/encryption";
+import { db } from "@/lib/db/client";
+import { models, providers, conversations, assistants, messages, mcpServers } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import { decrypt, encrypt } from "@/lib/ai/encryption";
 import {
   streamChatRuntime,
   resolveChatConfig,
@@ -20,7 +21,7 @@ export const maxDuration = 60;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { messages, modelId, conversationId } = body;
+    const { messages: chatMessages, modelId, conversationId } = body;
 
     if (!modelId) {
       return new Response(JSON.stringify({ error: "Model ID is required" }), {
@@ -30,42 +31,57 @@ export async function POST(request: NextRequest) {
     }
 
     const webStore: ChatConfigStore = {
-      findModelWithProvider: (id) =>
-        prisma.model.findUnique({ where: { id }, include: { provider: true } }),
-      findConversationWithAssistant: (id) =>
-        prisma.conversation.findUnique({ where: { id }, include: { assistant: true } }),
+      findModelWithProvider: async (id) => {
+        const modelRow = await db.select().from(models).where(eq(models.id, id)).get();
+        if (!modelRow) return null;
+        const providerRow = await db.select().from(providers).where(eq(providers.id, modelRow.providerId)).get();
+        return {
+          ...modelRow,
+          provider: providerRow || null,
+        };
+      },
+      findConversationWithAssistant: async (id) => {
+        const conversationRow = await db.select().from(conversations).where(eq(conversations.id, id)).get();
+        if (!conversationRow) return null;
+        const assistantRow = await db.select().from(assistants).where(eq(assistants.id, conversationRow.assistantId)).get();
+        return {
+          ...conversationRow,
+          assistant: assistantRow || null,
+        };
+      },
       decrypt,
     };
 
     const webPersistenceStore: ChatPersistenceStore = {
       upsertAssistantMessage: async (rec) => {
-        await prisma.message.upsert({
-          where: { id: rec.id },
-          create: {
+        await db.insert(messages)
+          .values({
             id: rec.id,
             conversationId: rec.conversationId,
             role: "assistant",
             parts: rec.parts,
-            metadata: rec.metadata,
-          },
-          update: {
-            parts: rec.parts,
-            metadata: rec.metadata,
-          },
-        });
+            metadata: rec.metadata || null,
+            createdAt: new Date().toISOString(),
+          })
+          .onConflictDoUpdate({
+            target: messages.id,
+            set: {
+              parts: rec.parts,
+              metadata: rec.metadata || null,
+            }
+          });
       },
-      touchConversation: async (conversationId) => {
-        await prisma.conversation.update({
-          where: { id: conversationId },
-          data: { updatedAt: new Date() },
-        });
+      touchConversation: async (convoId) => {
+        await db.update(conversations)
+          .set({ updatedAt: new Date().toISOString() })
+          .where(eq(conversations.id, convoId));
       },
     };
 
     const cipher: ConfigCipher = { encrypt, decrypt };
     const webToolStore: ChatToolStore = {
       listEnabledToolSources: async () => {
-        const rows = await prisma.mcpServer.findMany({ where: { enabled: true } });
+        const rows = await db.select().from(mcpServers).where(eq(mcpServers.enabled, true));
         return rows.map((r) => toResolvedToolSource(r, cipher));
       },
     };
@@ -84,7 +100,7 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await streamChatRuntime({
-      messages,
+      messages: chatMessages,
       model: config.model,
       provider: config.provider,
       assistantConfig: config.assistantConfig,

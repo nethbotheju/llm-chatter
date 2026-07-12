@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db/client";
+import { db } from "@/lib/db/client";
+import { messages, conversations } from "@/lib/db/schema";
+import { like, desc, inArray } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
   const query = req.nextUrl.searchParams.get("q");
@@ -9,29 +11,32 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const messages = await prisma.message.findMany({
-      where: {
-        parts: {
-          contains: query,
-        },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 50,
-    });
+    const matchedMessages = await db.select()
+      .from(messages)
+      .where(like(messages.parts, `%${query}%`))
+      .orderBy(desc(messages.createdAt))
+      .limit(50);
 
-    const conversationIds = [...new Set(messages.map((m) => m.conversationId))];
-    const conversations = await prisma.conversation.findMany({
-      where: { id: { in: conversationIds } },
-      select: { id: true, title: true },
-    });
-    const convMap = new Map(conversations.map((c) => [c.id, c]));
+    if (matchedMessages.length === 0) {
+      return NextResponse.json({ results: [] });
+    }
 
-    const results = messages.map((msg) => ({
+    const conversationIds = [...new Set(matchedMessages.map((m) => m.conversationId))];
+    const matchingConversations = await db.select({
+      id: conversations.id,
+      title: conversations.title,
+    })
+    .from(conversations)
+    .where(inArray(conversations.id, conversationIds));
+
+    const convMap = new Map(matchingConversations.map((c) => [c.id, c]));
+
+    const results = matchedMessages.map((msg) => ({
       conversationId: msg.conversationId,
       conversationTitle: convMap.get(msg.conversationId)?.title || "Untitled",
       messageId: msg.id,
       snippet: getSnippet(msg.parts, query, 150),
-      createdAt: msg.createdAt.toISOString(),
+      createdAt: typeof msg.createdAt === "string" ? msg.createdAt : new Date(msg.createdAt).toISOString(),
     }));
 
     return NextResponse.json({ results });
