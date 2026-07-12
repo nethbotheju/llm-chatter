@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import { nanoid } from "nanoid";
-import { prisma } from "@/lib/db/client";
+import { db } from "@/lib/db/client";
+import { mcpServers } from "@/lib/db/schema";
+import { eq, desc, asc } from "drizzle-orm";
 import { encrypt, decrypt } from "@/lib/ai/encryption";
 import {
   type ConfigCipher,
@@ -12,15 +14,12 @@ import {
   buildCreateData,
   buildUpdateData,
   toMcpServerDTO,
-  toResolvedToolSource,
 } from "@/lib/mcp/server-config";
 
 const cipher: ConfigCipher = { encrypt, decrypt };
 
 export async function GET() {
-  const rows = await prisma.mcpServer.findMany({
-    orderBy: [{ isBuiltin: "desc" }, { createdAt: "asc" }],
-  });
+  const rows = await db.select().from(mcpServers).orderBy(desc(mcpServers.isBuiltin), asc(mcpServers.createdAt));
   return Response.json(rows.map(toMcpServerDTO));
 }
 
@@ -39,14 +38,19 @@ export async function POST(request: NextRequest) {
     const baseSlug = slugify(input.name);
     let slug = baseSlug;
     let suffix = 1;
-    while (await prisma.mcpServer.findUnique({ where: { slug } })) {
+    while (await db.select().from(mcpServers).where(eq(mcpServers.slug, slug)).get()) {
       suffix += 1;
       slug = `${baseSlug}-${suffix}`;
     }
 
-    const created = await prisma.mcpServer.create({
-      data: { id: nanoid(), ...buildCreateData(input, slug, cipher) },
-    });
+    const now = new Date().toISOString();
+    const created = await db.insert(mcpServers).values({
+      id: nanoid(),
+      ...buildCreateData(input, slug, cipher),
+      createdAt: now,
+      updatedAt: now,
+    }).returning().get();
+
     return Response.json(toMcpServerDTO(created));
   } catch (error) {
     console.error("MCP server create error:", error);
@@ -68,7 +72,7 @@ export async function PATCH(request: NextRequest) {
       });
     }
 
-    const existing = await prisma.mcpServer.findUnique({ where: { id } });
+    const existing = await db.select().from(mcpServers).where(eq(mcpServers.id, id)).get();
     if (!existing) {
       return new Response(JSON.stringify({ error: "MCP server not found" }), {
         status: 404,
@@ -77,7 +81,15 @@ export async function PATCH(request: NextRequest) {
     }
 
     const data = buildUpdateData(existing, input, cipher);
-    const updated = await prisma.mcpServer.update({ where: { id }, data });
+    const updated = await db.update(mcpServers)
+      .set({
+        ...data,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(mcpServers.id, id))
+      .returning()
+      .get();
+
     return Response.json(toMcpServerDTO(updated));
   } catch (error) {
     console.error("MCP server update error:", error);
@@ -98,7 +110,7 @@ export async function DELETE(request: NextRequest) {
       });
     }
 
-    const existing = await prisma.mcpServer.findUnique({ where: { id } });
+    const existing = await db.select().from(mcpServers).where(eq(mcpServers.id, id)).get();
     if (!existing) {
       return new Response(JSON.stringify({ error: "MCP server not found" }), {
         status: 404,
@@ -112,7 +124,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    await prisma.mcpServer.delete({ where: { id } });
+    await db.delete(mcpServers).where(eq(mcpServers.id, id));
     return new Response(null, { status: 204 });
   } catch (error) {
     console.error("MCP server delete error:", error);

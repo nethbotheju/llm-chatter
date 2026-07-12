@@ -1,7 +1,9 @@
 import { ipcMain } from "electron";
 import { join } from "node:path";
 import { nanoid } from "nanoid";
-import { getPrisma, getDataDir } from "../db/client";
+import { getDb, getDataDir } from "../db/client";
+import { providers, models } from "../../src/lib/db/schema";
+import { eq, isNotNull } from "drizzle-orm";
 import { encrypt } from "../db/encryption";
 import {
   fetchCatalogBlob,
@@ -21,22 +23,35 @@ function getCatalogDir(): string {
 }
 
 function createStore(): CatalogStore {
-  const prisma = getPrisma();
+  const db = getDb();
   return {
     encrypt,
-    findImportedProviders: () =>
-      prisma.provider.findMany({
-        where: { catalogId: { not: null } },
-        select: { id: true, catalogId: true, lastSyncedAt: true },
-      }),
-    findProviderByCatalogId: (catalogId) =>
-      prisma.provider.findUnique({
-        where: { catalogId },
-        select: { id: true },
-      }),
-    createProvider: ({ catalogId, name, type, baseUrl, apiKeyEncrypted }) =>
-      prisma.provider.create({
-        data: {
+    findImportedProviders: async () => {
+      const rows = await db.select({
+        id: providers.id,
+        catalogId: providers.catalogId,
+        lastSyncedAt: providers.lastSyncedAt,
+      })
+      .from(providers)
+      .where(isNotNull(providers.catalogId));
+
+      return rows.map((r) => ({
+        id: r.id,
+        catalogId: r.catalogId,
+        lastSyncedAt: r.lastSyncedAt ? new Date(r.lastSyncedAt) : null,
+      }));
+    },
+    findProviderByCatalogId: async (catalogId) => {
+      const row = await db.select({ id: providers.id })
+        .from(providers)
+        .where(eq(providers.catalogId, catalogId))
+        .get();
+      return row || null;
+    },
+    createProvider: async ({ catalogId, name, type, baseUrl, apiKeyEncrypted }) => {
+      const now = new Date().toISOString();
+      const row = await db.insert(providers)
+        .values({
           id: nanoid(),
           catalogId,
           name,
@@ -44,29 +59,39 @@ function createStore(): CatalogStore {
           baseUrl,
           apiKeyEncrypted,
           enabled: true,
-        },
-        select: { id: true },
-      }),
-    touchProviderApiKey: (providerId, apiKeyEncrypted) =>
-      prisma.provider.update({
-        where: { id: providerId },
-        data: { apiKeyEncrypted },
-      }),
-    findModelsByProvider: (providerId) =>
-      prisma.model.findMany({
-        where: { providerId },
-        select: { id: true, catalogModelId: true, enabled: true },
-      }),
-    createModel: ({
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning({ id: providers.id })
+        .get();
+      return row;
+    },
+    touchProviderApiKey: async (providerId, apiKeyEncrypted) => {
+      await db.update(providers)
+        .set({ apiKeyEncrypted, updatedAt: new Date().toISOString() })
+        .where(eq(providers.id, providerId));
+    },
+    findModelsByProvider: async (providerId) => {
+      const rows = await db.select({
+        id: models.id,
+        catalogModelId: models.catalogModelId,
+        enabled: models.enabled,
+      })
+      .from(models)
+      .where(eq(models.providerId, providerId));
+      return rows;
+    },
+    createModel: async ({
       providerId,
       name,
       catalogModelId,
       capabilities,
       metadata,
       enabled,
-    }) =>
-      prisma.model.create({
-        data: {
+    }) => {
+      const now = new Date().toISOString();
+      await db.insert(models)
+        .values({
           id: nanoid(),
           providerId,
           name,
@@ -74,29 +99,34 @@ function createStore(): CatalogStore {
           capabilities,
           metadata,
           enabled,
-        },
-      }),
-    updateSyncedModel: ({ modelId, capabilities, metadata }) =>
-      prisma.model.update({
-        where: { id: modelId },
-        data: { capabilities, metadata },
-      }),
-    disableModel: (modelId) =>
-      prisma.model.update({ where: { id: modelId }, data: { enabled: false } }),
-    touchProviderLastSynced: (providerId) =>
-      prisma.provider.update({
-        where: { id: providerId },
-        data: { lastSyncedAt: new Date() },
-      }),
+          createdAt: now,
+          updatedAt: now,
+        });
+    },
+    updateSyncedModel: async ({ modelId, capabilities, metadata }) => {
+      await db.update(models)
+        .set({ capabilities, metadata, updatedAt: new Date().toISOString() })
+        .where(eq(models.id, modelId));
+    },
+    disableModel: async (modelId) => {
+      await db.update(models)
+        .set({ enabled: false, updatedAt: new Date().toISOString() })
+        .where(eq(models.id, modelId));
+    },
+    touchProviderLastSynced: async (providerId) => {
+      await db.update(providers)
+        .set({ lastSyncedAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
+        .where(eq(providers.id, providerId));
+    },
   };
 }
 
 export function registerCatalogIpc() {
   ipcMain.handle("catalog:listProviders", async (_e, query?: string) => {
-    const providers = await getProvidersList(getCatalogDir());
+    const providersList = await getProvidersList(getCatalogDir());
     const q = query?.trim().toLowerCase();
-    if (!q) return providers;
-    return providers.filter(
+    if (!q) return providersList;
+    return providersList.filter(
       (p) =>
         p.name.toLowerCase().includes(q) || p.catalogId.toLowerCase().includes(q),
     );

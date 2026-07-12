@@ -1,18 +1,22 @@
 import { ipcMain } from "electron";
-import { getPrisma } from "../db/client";
+import { getDb } from "../db/client";
+import { assistants } from "../../src/lib/db/schema";
+import { eq, desc, not, count } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export function registerAssistantsIpc() {
   ipcMain.handle("assistants:getAll", async () => {
-    const prisma = getPrisma();
-    return prisma.assistant.findMany({
-      orderBy: { isDefault: "desc" },
-    });
+    const db = getDb();
+    return db.select().from(assistants).orderBy(desc(assistants.isDefault));
   });
 
   ipcMain.handle("assistants:get", async (_e, id: string) => {
-    const prisma = getPrisma();
-    return prisma.assistant.findUniqueOrThrow({ where: { id } });
+    const db = getDb();
+    const assistant = await db.select().from(assistants).where(eq(assistants.id, id)).get();
+    if (!assistant) {
+      throw new Error(`Assistant not found: ${id}`);
+    }
+    return assistant;
   });
 
   ipcMain.handle("assistants:create", async (_e, input: {
@@ -23,27 +27,27 @@ export function registerAssistantsIpc() {
     isDefault?: boolean;
     enabled?: boolean;
   }) => {
-    const prisma = getPrisma();
+    const db = getDb();
     const isDefault = input.isDefault ?? false;
 
     if (isDefault) {
-      await prisma.assistant.updateMany({
-        where: { isDefault: true },
-        data: { isDefault: false },
-      });
+      await db.update(assistants)
+        .set({ isDefault: false, updatedAt: new Date().toISOString() })
+        .where(eq(assistants.isDefault, true));
     }
 
-    return prisma.assistant.create({
-      data: {
-        id: nanoid(),
-        name: input.name,
-        systemPrompt: input.systemPrompt,
-        temperature: input.temperature ?? 0.7,
-        topP: input.topP ?? 1.0,
-        isDefault,
-        enabled: input.enabled ?? true,
-      },
-    });
+    const now = new Date().toISOString();
+    return db.insert(assistants).values({
+      id: nanoid(),
+      name: input.name,
+      systemPrompt: input.systemPrompt,
+      temperature: input.temperature ?? 0.7,
+      topP: input.topP ?? 1.0,
+      isDefault,
+      enabled: input.enabled ?? true,
+      createdAt: now,
+      updatedAt: now,
+    }).returning().get();
   });
 
   ipcMain.handle("assistants:update", async (_e, input: {
@@ -56,16 +60,22 @@ export function registerAssistantsIpc() {
     enabled?: boolean;
     image?: string | null;
   }) => {
-    const prisma = getPrisma();
+    const db = getDb();
 
-    if (input.isDefault === true) {
-      await prisma.assistant.updateMany({
-        where: { isDefault: true },
-        data: { isDefault: false },
-      });
+    const existing = await db.select().from(assistants).where(eq(assistants.id, input.id)).get();
+    if (!existing) {
+      throw new Error(`Assistant not found: ${input.id}`);
     }
 
-    const data: Record<string, unknown> = {};
+    if (input.isDefault === true && !existing.isDefault) {
+      await db.update(assistants)
+        .set({ isDefault: false, updatedAt: new Date().toISOString() })
+        .where(eq(assistants.isDefault, true));
+    }
+
+    const data: Record<string, unknown> = {
+      updatedAt: new Date().toISOString()
+    };
     if (input.name !== undefined) data.name = input.name;
     if (input.systemPrompt !== undefined) data.systemPrompt = input.systemPrompt;
     if (input.temperature !== undefined) data.temperature = input.temperature;
@@ -74,34 +84,36 @@ export function registerAssistantsIpc() {
     if (input.enabled !== undefined) data.enabled = input.enabled;
     if (input.image !== undefined) data.image = input.image;
 
-    return prisma.assistant.update({
-      where: { id: input.id },
-      data,
-    });
+    return db.update(assistants)
+      .set(data)
+      .where(eq(assistants.id, input.id))
+      .returning()
+      .get();
   });
 
   ipcMain.handle("assistants:delete", async (_e, id: string) => {
-    const prisma = getPrisma();
+    const db = getDb();
 
-    const count = await prisma.assistant.count();
-    if (count <= 1) {
+    const countResult = await db.select({ value: count() }).from(assistants).get();
+    const assistantCount = countResult?.value ?? 0;
+    if (assistantCount <= 1) {
       throw new Error("Cannot delete the last assistant");
     }
 
-    const assistant = await prisma.assistant.findUniqueOrThrow({ where: { id } });
+    const assistant = await db.select().from(assistants).where(eq(assistants.id, id)).get();
+    if (!assistant) {
+      throw new Error(`Assistant not found: ${id}`);
+    }
 
     if (assistant.isDefault) {
-      const nextDefault = await prisma.assistant.findFirst({
-        where: { id: { not: id } },
-      });
+      const nextDefault = await db.select().from(assistants).where(not(eq(assistants.id, id))).get();
       if (nextDefault) {
-        await prisma.assistant.update({
-          where: { id: nextDefault.id },
-          data: { isDefault: true },
-        });
+        await db.update(assistants)
+          .set({ isDefault: true, updatedAt: new Date().toISOString() })
+          .where(eq(assistants.id, nextDefault.id));
       }
     }
 
-    await prisma.assistant.delete({ where: { id } });
+    await db.delete(assistants).where(eq(assistants.id, id));
   });
 }

@@ -1,5 +1,7 @@
 import { ipcMain } from "electron";
-import { getPrisma } from "../db/client";
+import { getDb } from "../db/client";
+import { providers, models } from "../../src/lib/db/schema";
+import { eq, asc } from "drizzle-orm";
 import { encrypt } from "../db/encryption";
 import { nanoid } from "nanoid";
 
@@ -10,8 +12,8 @@ interface SanitizedProvider {
   baseUrl: string | null;
   hasApiKey: boolean;
   enabled: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }
 
 function sanitize(p: {
@@ -21,8 +23,8 @@ function sanitize(p: {
   baseUrl: string | null;
   apiKeyEncrypted: string | null;
   enabled: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }): SanitizedProvider {
   const { apiKeyEncrypted, ...rest } = p;
   return { ...rest, hasApiKey: !!apiKeyEncrypted };
@@ -120,12 +122,16 @@ async function validateProviderApiKey(input: {
 
 export function registerProvidersIpc() {
   ipcMain.handle("providers:getAll", async () => {
-    const prisma = getPrisma();
-    const providers = await prisma.provider.findMany({
-      include: { models: true },
-      orderBy: { name: "asc" },
-    });
-    return providers.map(sanitize);
+    const db = getDb();
+    const allProviders = await db.select().from(providers).orderBy(asc(providers.name));
+    const allModels = await db.select().from(models);
+
+    const providersWithModels = allProviders.map(p => ({
+      ...p,
+      models: allModels.filter(m => m.providerId === p.id)
+    }));
+
+    return providersWithModels.map(sanitize);
   });
 
   ipcMain.handle("providers:create", async (_e, input: {
@@ -135,17 +141,19 @@ export function registerProvidersIpc() {
     apiKey?: string;
     enabled?: boolean;
   }) => {
-    const prisma = getPrisma();
-    const provider = await prisma.provider.create({
-      data: {
-        id: nanoid(),
-        name: input.name,
-        type: input.type,
-        baseUrl: input.baseUrl || null,
-        apiKeyEncrypted: input.apiKey ? encrypt(input.apiKey) : null,
-        enabled: input.enabled ?? true,
-      },
-    });
+    const db = getDb();
+    const now = new Date().toISOString();
+    const provider = await db.insert(providers).values({
+      id: nanoid(),
+      name: input.name,
+      type: input.type,
+      baseUrl: input.baseUrl || null,
+      apiKeyEncrypted: input.apiKey ? encrypt(input.apiKey) : null,
+      enabled: input.enabled ?? true,
+      createdAt: now,
+      updatedAt: now,
+    }).returning().get();
+
     return sanitize(provider);
   });
 
@@ -157,8 +165,10 @@ export function registerProvidersIpc() {
     apiKey?: string;
     enabled?: boolean;
   }) => {
-    const prisma = getPrisma();
-    const data: Record<string, unknown> = {};
+    const db = getDb();
+    const data: Record<string, unknown> = {
+      updatedAt: new Date().toISOString()
+    };
     if (input.name !== undefined) data.name = input.name;
     if (input.type !== undefined) data.type = input.type;
     if (input.baseUrl !== undefined) data.baseUrl = input.baseUrl || null;
@@ -167,16 +177,18 @@ export function registerProvidersIpc() {
     }
     if (input.enabled !== undefined) data.enabled = input.enabled;
 
-    const provider = await prisma.provider.update({
-      where: { id: input.id },
-      data,
-    });
+    const provider = await db.update(providers)
+      .set(data)
+      .where(eq(providers.id, input.id))
+      .returning()
+      .get();
+
     return sanitize(provider);
   });
 
   ipcMain.handle("providers:delete", async (_e, id: string) => {
-    const prisma = getPrisma();
-    await prisma.provider.delete({ where: { id } });
+    const db = getDb();
+    await db.delete(providers).where(eq(providers.id, id));
   });
 
   ipcMain.handle("providers:validate", async (_e, input: {

@@ -1,5 +1,7 @@
 import { ipcMain } from "electron";
-import { getPrisma } from "../db/client";
+import { getDb } from "../db/client";
+import { messages, conversations } from "../../src/lib/db/schema";
+import { eq, desc, like, inArray } from "drizzle-orm";
 
 function getSnippet(content: string, query: string, length = 150): string {
   const lowerContent = content.toLowerCase();
@@ -26,22 +28,34 @@ export function registerSearchIpc() {
   ipcMain.handle("search:messages", async (_e, query: string) => {
     if (query.length < 2) return [];
 
-    const prisma = getPrisma();
-    const messages = await prisma.message.findMany({
-      where: { parts: { contains: query } },
-      include: {
-        conversation: { select: { id: true, title: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 50,
-    });
+    const db = getDb();
+    const matchedMessages = await db.select()
+      .from(messages)
+      .where(like(messages.parts, `%${query}%`))
+      .orderBy(desc(messages.createdAt))
+      .limit(50);
 
-    return messages.map((msg) => ({
-      messageId: msg.id,
-      snippet: getSnippet(msg.parts, query),
-      createdAt: msg.createdAt.toISOString(),
-      conversationId: msg.conversation.id,
-      conversationTitle: msg.conversation.title || "Untitled",
-    }));
+    if (matchedMessages.length === 0) return [];
+
+    const conversationIds = [...new Set(matchedMessages.map((m) => m.conversationId))];
+    const matchingConversations = await db.select({
+      id: conversations.id,
+      title: conversations.title,
+    })
+    .from(conversations)
+    .where(inArray(conversations.id, conversationIds));
+
+    const convMap = new Map(matchingConversations.map((c) => [c.id, c]));
+
+    return matchedMessages.map((msg) => {
+      const convo = convMap.get(msg.conversationId);
+      return {
+        messageId: msg.id,
+        snippet: getSnippet(msg.parts, query),
+        createdAt: typeof msg.createdAt === "string" ? msg.createdAt : new Date(msg.createdAt).toISOString(),
+        conversationId: msg.conversationId,
+        conversationTitle: convo?.title || "Untitled",
+      };
+    });
   });
 }

@@ -1,8 +1,20 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import type { Provider } from "@prisma/client";
 import { decrypt } from "./encryption";
+
+export interface Provider {
+  id: string;
+  name: string;
+  type: string;
+  baseUrl: string | null;
+  apiKeyEncrypted: string | null;
+  catalogId: string | null;
+  lastSyncedAt: string | null;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export function getProviderClient(provider: Provider) {
   const apiKey = provider.apiKeyEncrypted 

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db/client";
+import { db } from "@/lib/db/client";
+import { models, providers } from "@/lib/db/schema";
+import { and, eq, asc } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export async function GET(request: NextRequest) {
@@ -7,33 +9,45 @@ export async function GET(request: NextRequest) {
   const providerId = searchParams.get("providerId");
   const includeDisabled = searchParams.get("all") === "true";
 
-  const where: { enabled?: boolean; providerId?: string; provider?: { enabled: boolean } } = {};
+  const conditions = [];
   
   if (providerId) {
-    where.providerId = providerId;
+    conditions.push(eq(models.providerId, providerId));
   }
   
   if (!includeDisabled) {
-    where.enabled = true;
-    where.provider = { enabled: true };
+    conditions.push(eq(models.enabled, true));
+    conditions.push(eq(providers.enabled, true));
   }
 
-  const models = await prisma.model.findMany({
-    where,
-    include: {
-      provider: {
-        select: {
-          id: true,
-          name: true,
-          type: true,
-          enabled: true,
-        },
-      },
-    },
-    orderBy: [{ provider: { name: "asc" } }, { name: "asc" }],
-  });
+  let query = db.select({
+    id: models.id,
+    name: models.name,
+    providerId: models.providerId,
+    capabilities: models.capabilities,
+    catalogModelId: models.catalogModelId,
+    metadata: models.metadata,
+    enabled: models.enabled,
+    createdAt: models.createdAt,
+    updatedAt: models.updatedAt,
+    provider: {
+      id: providers.id,
+      name: providers.name,
+      type: providers.type,
+      enabled: providers.enabled,
+    }
+  })
+  .from(models)
+  .innerJoin(providers, eq(models.providerId, providers.id));
 
-  return NextResponse.json(models);
+  if (conditions.length > 0) {
+    query.where(and(...conditions));
+  }
+
+  query.orderBy(asc(providers.name), asc(models.name));
+
+  const result = await query;
+  return NextResponse.json(result);
 }
 
 export async function POST(request: NextRequest) {
@@ -49,11 +63,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if model already exists for this provider
-    const existing = await prisma.model.findUnique({
-      where: {
-        providerId_name: { providerId, name },
-      },
-    });
+    const existing = await db.select().from(models)
+      .where(and(eq(models.providerId, providerId), eq(models.name, name)))
+      .get();
 
     if (existing) {
       return NextResponse.json(
@@ -62,26 +74,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const model = await prisma.model.create({
-      data: {
-        id: nanoid(),
-        name,
-        providerId,
-        capabilities: JSON.stringify(capabilities || ["chat"]),
-        metadata: metadata ?? null,
-        enabled: enabled ?? true,
-      },
-      include: {
-        provider: {
-          select: {
-            id: true,
-            name: true,
-            type: true,
-            enabled: true,
-          },
-        },
-      },
-    });
+    const now = new Date().toISOString();
+    const createdModel = await db.insert(models).values({
+      id: nanoid(),
+      name,
+      providerId,
+      capabilities: JSON.stringify(capabilities || ["chat"]),
+      metadata: metadata ?? null,
+      enabled: enabled ?? true,
+      createdAt: now,
+      updatedAt: now,
+    }).returning().get();
+
+    const providerObj = await db.select({
+      id: providers.id,
+      name: providers.name,
+      type: providers.type,
+      enabled: providers.enabled,
+    }).from(providers).where(eq(providers.id, providerId)).get();
+
+    const model = {
+      ...createdModel,
+      provider: providerObj,
+    };
 
     return NextResponse.json(model);
   } catch (error) {
@@ -102,7 +117,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Model ID is required" }, { status: 400 });
     }
 
-    const existingModel = await prisma.model.findUnique({ where: { id } });
+    const existingModel = await db.select().from(models).where(eq(models.id, id)).get();
     if (!existingModel) {
       return NextResponse.json({ error: "Model not found" }, { status: 404 });
     }
@@ -112,7 +127,10 @@ export async function PATCH(request: NextRequest) {
       capabilities?: string;
       metadata?: string | null;
       enabled?: boolean;
-    } = {};
+      updatedAt: string;
+    } = {
+      updatedAt: new Date().toISOString(),
+    };
 
     if (name !== undefined) updateData.name = name;
     if (capabilities !== undefined) {
@@ -121,20 +139,23 @@ export async function PATCH(request: NextRequest) {
     if (metadata !== undefined) updateData.metadata = metadata;
     if (enabled !== undefined) updateData.enabled = enabled;
 
-    const model = await prisma.model.update({
-      where: { id },
-      data: updateData,
-      include: {
-        provider: {
-          select: {
-            id: true,
-            name: true,
-            type: true,
-            enabled: true,
-          },
-        },
-      },
-    });
+    const updatedModel = await db.update(models)
+      .set(updateData)
+      .where(eq(models.id, id))
+      .returning()
+      .get();
+
+    const providerObj = await db.select({
+      id: providers.id,
+      name: providers.name,
+      type: providers.type,
+      enabled: providers.enabled,
+    }).from(providers).where(eq(providers.id, updatedModel.providerId)).get();
+
+    const model = {
+      ...updatedModel,
+      provider: providerObj,
+    };
 
     return NextResponse.json(model);
   } catch (error) {
@@ -155,7 +176,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Model ID is required" }, { status: 400 });
     }
 
-    await prisma.model.delete({ where: { id } });
+    await db.delete(models).where(eq(models.id, id));
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -1,16 +1,18 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db/client";
+import { db } from "@/lib/db/client";
+import { conversations, messages } from "@/lib/db/schema";
+import { count } from "drizzle-orm";
 
 export async function GET() {
   try {
-    const [conversations, messages] = await Promise.all([
-      prisma.conversation.count(),
-      prisma.message.count(),
+    const [conversationsResult, messagesResult] = await Promise.all([
+      db.select({ value: count() }).from(conversations).get(),
+      db.select({ value: count() }).from(messages).get(),
     ]);
 
     return NextResponse.json({
-      conversations,
-      messages,
+      conversations: conversationsResult?.value ?? 0,
+      messages: messagesResult?.value ?? 0,
     });
   } catch (error) {
     console.error("Stats error:", error);

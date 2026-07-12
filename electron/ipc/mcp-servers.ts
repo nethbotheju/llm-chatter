@@ -1,5 +1,7 @@
 import { ipcMain } from "electron";
-import { getPrisma } from "../db/client";
+import { getDb } from "../db/client";
+import { mcpServers } from "../../src/lib/db/schema";
+import { eq, desc, asc } from "drizzle-orm";
 import { encrypt, decrypt } from "../db/encryption";
 import { nanoid } from "nanoid";
 import { type ConfigCipher } from "../../src/lib/builtin-tools";
@@ -21,10 +23,8 @@ const cipher: ConfigCipher = { encrypt, decrypt };
 
 export function registerMcpServersIpc() {
   ipcMain.handle("mcpServers:getAll", async () => {
-    const prisma = getPrisma();
-    const rows = await prisma.mcpServer.findMany({
-      orderBy: [{ isBuiltin: "desc" }, { createdAt: "asc" }],
-    });
+    const db = getDb();
+    const rows = await db.select().from(mcpServers).orderBy(desc(mcpServers.isBuiltin), asc(mcpServers.createdAt));
     return rows.map(toMcpServerDTO);
   });
 
@@ -32,37 +32,50 @@ export function registerMcpServersIpc() {
     const error = validateUserTransport(input);
     if (error) throw new Error(error);
 
-    const prisma = getPrisma();
+    const db = getDb();
     const baseSlug = slugify(input.name);
     let slug = baseSlug;
     let suffix = 1;
-    while (await prisma.mcpServer.findUnique({ where: { slug } })) {
+    while (await db.select().from(mcpServers).where(eq(mcpServers.slug, slug)).get()) {
       suffix += 1;
       slug = `${baseSlug}-${suffix}`;
     }
 
-    const created = await prisma.mcpServer.create({
-      data: { id: nanoid(), ...buildCreateData(input, slug, cipher) },
-    });
+    const now = new Date().toISOString();
+    const created = await db.insert(mcpServers).values({
+      id: nanoid(),
+      ...buildCreateData(input, slug, cipher),
+      createdAt: now,
+      updatedAt: now,
+    }).returning().get();
+
     return toMcpServerDTO(created);
   });
 
   ipcMain.handle("mcpServers:update", async (_e, input: UpdateMcpServerInput) => {
-    const prisma = getPrisma();
-    const existing = await prisma.mcpServer.findUnique({ where: { id: input.id } });
+    const db = getDb();
+    const existing = await db.select().from(mcpServers).where(eq(mcpServers.id, input.id)).get();
     if (!existing) throw new Error("MCP server not found");
 
     const data = buildUpdateData(existing, input, cipher);
-    const updated = await prisma.mcpServer.update({ where: { id: input.id }, data });
+    const updated = await db.update(mcpServers)
+      .set({
+        ...data,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(mcpServers.id, input.id))
+      .returning()
+      .get();
+
     return toMcpServerDTO(updated);
   });
 
   ipcMain.handle("mcpServers:delete", async (_e, id: string) => {
-    const prisma = getPrisma();
-    const existing = await prisma.mcpServer.findUnique({ where: { id } });
+    const db = getDb();
+    const existing = await db.select().from(mcpServers).where(eq(mcpServers.id, id)).get();
     if (!existing) throw new Error("MCP server not found");
     if (existing.isBuiltin) throw new Error("Built-in servers cannot be deleted");
-    await prisma.mcpServer.delete({ where: { id } });
+    await db.delete(mcpServers).where(eq(mcpServers.id, id));
   });
 
   ipcMain.handle("mcpServers:discover", async (_e, input: DiscoverMcpToolsInput) => {

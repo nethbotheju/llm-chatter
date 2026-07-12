@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db/client";
+import { db } from "@/lib/db/client";
+import { providers, models } from "@/lib/db/schema";
+import { asc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { encrypt } from "@/lib/ai/encryption";
 
@@ -15,14 +17,15 @@ function sanitizeProvider(provider: {
 }
 
 export async function GET() {
-  const providers = await prisma.provider.findMany({
-    include: {
-      models: true,
-    },
-    orderBy: { name: "asc" },
-  });
+  const allProviders = await db.select().from(providers).orderBy(asc(providers.name));
+  const allModels = await db.select().from(models);
+  
+  const providersWithModels = allProviders.map(p => ({
+    ...p,
+    models: allModels.filter(m => m.providerId === p.id)
+  }));
 
-  return NextResponse.json(providers.map(sanitizeProvider));
+  return NextResponse.json(providersWithModels.map(sanitizeProvider));
 }
 
 export async function POST(request: NextRequest) {
@@ -37,16 +40,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const provider = await prisma.provider.create({
-      data: {
-        id: nanoid(),
-        name,
-        type,
-        baseUrl: baseUrl || null,
-        apiKeyEncrypted: apiKey ? encrypt(apiKey) : null,
-        enabled: enabled ?? true,
-      },
-    });
+    const now = new Date().toISOString();
+    const provider = await db.insert(providers).values({
+      id: nanoid(),
+      name,
+      type,
+      baseUrl: baseUrl || null,
+      apiKeyEncrypted: apiKey ? encrypt(apiKey) : null,
+      enabled: enabled ?? true,
+      createdAt: now,
+      updatedAt: now,
+    }).returning().get();
 
     return NextResponse.json(sanitizeProvider(provider));
   } catch (error) {
@@ -67,7 +71,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Provider ID is required" }, { status: 400 });
     }
 
-    const existingProvider = await prisma.provider.findUnique({ where: { id } });
+    const existingProvider = await db.select().from(providers).where(eq(providers.id, id)).get();
     if (!existingProvider) {
       return NextResponse.json({ error: "Provider not found" }, { status: 404 });
     }
@@ -78,7 +82,10 @@ export async function PATCH(request: NextRequest) {
       baseUrl?: string | null;
       apiKeyEncrypted?: string | null;
       enabled?: boolean;
-    } = {};
+      updatedAt: string;
+    } = {
+      updatedAt: new Date().toISOString(),
+    };
 
     if (name !== undefined) updateData.name = name;
     if (type !== undefined) updateData.type = type;
@@ -88,10 +95,11 @@ export async function PATCH(request: NextRequest) {
     }
     if (enabled !== undefined) updateData.enabled = enabled;
 
-    const provider = await prisma.provider.update({
-      where: { id },
-      data: updateData,
-    });
+    const provider = await db.update(providers)
+      .set(updateData)
+      .where(eq(providers.id, id))
+      .returning()
+      .get();
 
     return NextResponse.json(sanitizeProvider(provider));
   } catch (error) {
@@ -112,7 +120,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Provider ID is required" }, { status: 400 });
     }
 
-    await prisma.provider.delete({ where: { id } });
+    await db.delete(providers).where(eq(providers.id, id));
 
     return NextResponse.json({ success: true });
   } catch (error) {

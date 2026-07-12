@@ -1,40 +1,37 @@
 import { ipcMain } from "electron";
-import { getPrisma } from "../db/client";
+import { getDb } from "../db/client";
+import { conversations, messages, assistants } from "../../src/lib/db/schema";
+import { desc, asc } from "drizzle-orm";
 
 export function registerExportIpc() {
   ipcMain.handle("export:data", async () => {
-    const prisma = getPrisma();
+    const db = getDb();
 
-    const conversations = await prisma.conversation.findMany({
-      include: {
-        assistant: { select: { name: true } },
-        messages: {
-          orderBy: { createdAt: "asc" },
-          select: {
-            role: true,
-            parts: true,
-            metadata: true,
-            createdAt: true,
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const convos = await db.select().from(conversations).orderBy(desc(conversations.createdAt));
+    const allMessages = await db.select().from(messages).orderBy(asc(messages.createdAt));
+    const allAssistants = await db.select().from(assistants);
+
+    const assistantsMap = new Map(allAssistants.map((a) => [a.id, a]));
 
     return {
       exportedAt: new Date().toISOString(),
-      conversations: conversations.map((conv) => ({
-        id: conv.id,
-        title: conv.title,
-        assistant: conv.assistant.name,
-        createdAt: conv.createdAt.toISOString(),
-        messages: conv.messages.map((msg) => ({
-          role: msg.role,
-          parts: msg.parts,
-          metadata: msg.metadata,
-          createdAt: msg.createdAt.toISOString(),
-        })),
-      })),
+      conversations: convos.map((conv) => {
+        const assistant = assistantsMap.get(conv.assistantId);
+        const convoMessages = allMessages.filter((m) => m.conversationId === conv.id);
+
+        return {
+          id: conv.id,
+          title: conv.title,
+          assistant: assistant?.name || "Unknown",
+          createdAt: typeof conv.createdAt === "string" ? conv.createdAt : new Date(conv.createdAt).toISOString(),
+          messages: convoMessages.map((msg) => ({
+            role: msg.role,
+            parts: msg.parts,
+            metadata: msg.metadata,
+            createdAt: typeof msg.createdAt === "string" ? msg.createdAt : new Date(msg.createdAt).toISOString(),
+          })),
+        };
+      }),
     };
   });
 }

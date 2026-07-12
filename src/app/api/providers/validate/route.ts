@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db/client";
+import { db } from "@/lib/db/client";
+import { providers } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { getProviderClient } from "@/lib/ai/client";
 import { generateText } from "ai";
 
@@ -15,7 +17,7 @@ export async function POST(request: NextRequest) {
 
     // If providerId is provided, fetch existing provider
     if (providerId) {
-      provider = await prisma.provider.findUnique({ where: { id: providerId } });
+      provider = await db.select().from(providers).where(eq(providers.id, providerId)).get();
       if (!provider) {
         return NextResponse.json({ error: "Provider not found" }, { status: 404 });
       }
@@ -44,8 +46,8 @@ export async function POST(request: NextRequest) {
       baseUrl: testBaseUrl || null,
       apiKeyEncrypted: null,
       enabled: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     try {

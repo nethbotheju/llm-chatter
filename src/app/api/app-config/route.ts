@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db/client";
+import { db } from "@/lib/db/client";
+import { appConfig } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { parseAppConfigSet } from "@/lib/contracts";
 
 export async function GET() {
-  const rows = await prisma.appConfig.findMany();
+  const rows = await db.select().from(appConfig);
   const map: Record<string, unknown> = {};
   for (const row of rows) {
     try {
@@ -20,11 +22,20 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { key, value } = parseAppConfigSet(body);
 
-    await prisma.appConfig.upsert({
-      where: { key },
-      create: { key, value: JSON.stringify(value) },
-      update: { value: JSON.stringify(value) },
-    });
+    const now = new Date().toISOString();
+    await db.insert(appConfig)
+      .values({
+        key,
+        value: JSON.stringify(value),
+        updatedAt: now,
+      })
+      .onConflictDoUpdate({
+        target: appConfig.key,
+        set: {
+          value: JSON.stringify(value),
+          updatedAt: now,
+        },
+      });
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -41,6 +52,6 @@ export async function DELETE(request: NextRequest) {
   if (!key) {
     return NextResponse.json({ error: "Key is required" }, { status: 400 });
   }
-  await prisma.appConfig.deleteMany({ where: { key } });
+  await db.delete(appConfig).where(eq(appConfig.key, key));
   return NextResponse.json({ success: true });
 }
