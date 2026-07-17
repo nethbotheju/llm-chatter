@@ -1,6 +1,7 @@
 # Dependencies
 node_modules
 .pnpm-store
+.turbo/
 
 # Next.js
 .next
@@ -39,6 +40,7 @@ dist
 # Electron
 dist-electron/
 release/
+apps/desktop/drizzle/
 *.pfx
 *.p12
 *.cer

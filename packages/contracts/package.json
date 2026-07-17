@@ -1,0 +1,28 @@
+{
+  "name": "@llm-chatter/contracts",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@llm-chatter/config": "workspace:*",
+    "@types/node": "^25.5.0",
+    "tsup": "^8.0.2",
+    "typescript": "^5.9.3"
+  }
+}

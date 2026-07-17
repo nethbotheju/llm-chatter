@@ -1,0 +1,8 @@
+{
+  "extends": "@llm-chatter/config/tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "lib": ["dom", "dom.iterable", "esnext"]
+  },
+  "include": ["src"]
+}

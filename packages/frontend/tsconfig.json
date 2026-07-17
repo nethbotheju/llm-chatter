@@ -1,0 +1,7 @@
+{
+  "extends": "@llm-chatter/config/tsconfig.react.json",
+  "compilerOptions": {
+    "outDir": "dist"
+  },
+  "include": ["src"]
+}

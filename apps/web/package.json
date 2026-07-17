@@ -1,0 +1,39 @@
+{
+  "name": "web",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@llm-chatter/ai-runtime": "workspace:*",
+    "@llm-chatter/contracts": "workspace:*",
+    "@llm-chatter/db": "workspace:*",
+    "@llm-chatter/services": "workspace:*",
+    "@llm-chatter/frontend": "workspace:*",
+    "ai": "^6.0.116",
+    "drizzle-orm": "^0.45.2",
+    "nanoid": "^5.1.7",
+    "next": "^16.1.7",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.5",
+    "@llm-chatter/config": "workspace:*",
+    "@tailwindcss/postcss": "^4.2.1",
+    "@tailwindcss/typography": "^0.5.16",
+    "@types/node": "^25.5.0",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "dotenv": "^16.4.7",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.1.7",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^4.2.1",
+    "typescript": "^5.9.3"
+  }
+}

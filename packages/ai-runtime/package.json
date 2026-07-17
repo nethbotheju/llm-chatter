@@ -1,0 +1,42 @@
+{
+  "name": "@llm-chatter/ai-runtime",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.58",
+    "@ai-sdk/google": "^3.0.43",
+    "@ai-sdk/mcp": "^2.0.3",
+    "@ai-sdk/openai": "^3.0.41",
+    "@llm-chatter/contracts": "workspace:*",
+    "@llm-chatter/db": "workspace:*",
+    "@mozilla/readability": "^0.6.0",
+    "ai": "^6.0.116",
+    "drizzle-orm": "^0.45.2",
+    "jsdom": "^29.1.1",
+    "nanoid": "^5.1.7",
+    "turndown": "^7.2.4",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@llm-chatter/config": "workspace:*",
+    "@types/jsdom": "^28.0.3",
+    "@types/node": "^25.5.0",
+    "@types/turndown": "^5.0.6",
+    "tsup": "^8.0.2",
+    "typescript": "^5.9.3"
+  }
+}

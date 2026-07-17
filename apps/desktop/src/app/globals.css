@@ -1,0 +1,6 @@
+@import "tailwindcss";
+@import "@llm-chatter/frontend/src/styles/globals.css";
+@plugin "@tailwindcss/typography";
+
+@source "../**/*.{js,ts,jsx,tsx}";
+@source "../../../../packages/frontend/src/**/*.{js,ts,jsx,tsx}";
