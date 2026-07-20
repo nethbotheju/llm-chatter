@@ -62,7 +62,6 @@ next-env.d.ts
 .plan
 plans
 .factory
-AGENTS.md
 .pi
 !plans/migrating-to-electron
 
