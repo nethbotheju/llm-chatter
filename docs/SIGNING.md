@@ -22,10 +22,10 @@
    | `APPLE_TEAM_ID` | Your 10-character Team ID (found in Membership details) |
 
 ### Local build
-The notarization script (`scripts/notarize.mjs`) reads these from environment variables. Either export them or put them in a `.env` file (already gitignored).
+The notarization script (`apps/desktop/scripts/notarize.mjs`) reads these from environment variables. Either export them or put them in a `.env` file (already gitignored).
 
 ```bash
-APPLE_ID=you@example.com APPLE_ID_PASSWORD=xxxx-xxxx-xxxx-xxxx APPLE_TEAM_ID=XXXXXXXXXX pnpm electron:build:mac
+APPLE_ID=you@example.com APPLE_ID_PASSWORD=xxxx-xxxx-xxxx-xxxx APPLE_TEAM_ID=XXXXXXXXXX pnpm desktop:build:mac
 ```
 
 ## Windows
@@ -54,7 +54,7 @@ APPLE_ID=you@example.com APPLE_ID_PASSWORD=xxxx-xxxx-xxxx-xxxx APPLE_TEAM_ID=XXX
 Set the environment variables before building:
 
 ```bash
-CSC_LINK=/path/to/certificate.pfx CSC_KEY_PASSWORD=your-password pnpm electron:build:win
+CSC_LINK=/path/to/certificate.pfx CSC_KEY_PASSWORD=your-password pnpm desktop:build:win
 ```
 
 ### Without a certificate (development)
