@@ -5,6 +5,9 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build (${{ matrix.os }})
@@ -29,7 +32,6 @@ jobs:
 
       - name: Build
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -48,6 +50,8 @@ jobs:
             apps/desktop/release/*.AppImage
             apps/desktop/release/*.deb
             apps/desktop/release/*.rpm
+            apps/desktop/release/latest*.yml
+            apps/desktop/release/*.blockmap
           if-no-files-found: warn
 
   publish:
@@ -57,12 +61,12 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           path: release
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.ref_name }}
           files: |
             release/**/*.dmg
             release/**/*.zip
@@ -70,6 +74,8 @@ jobs:
             release/**/*.AppImage
             release/**/*.deb
             release/**/*.rpm
+            release/**/*.yml
+            release/**/*.blockmap
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

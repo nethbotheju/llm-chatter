@@ -241,4 +241,6 @@ chat-llm-web/
 
 ## License
 
-ISC
+This project is licensed under the [MIT License](LICENSE).
+
+Copyright © 2026 nethbotheju.

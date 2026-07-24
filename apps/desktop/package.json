@@ -1,8 +1,9 @@
 {
   "name": "desktop",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "private": true,
   "author": "nethbotheju",
+  "license": "MIT",
   "description": "Multi-provider LLM chat desktop application",
   "main": "dist-electron/main/index.js",
   "scripts": {
@@ -10,11 +11,11 @@
     "build:renderer": "next build",
     "build:electron": "mkdir -p drizzle && cp -r ../../packages/db/migrations/* ./drizzle/ && electron-vite build",
     "build": "pnpm build:renderer && pnpm build:electron",
-    "package:dir": "electron-builder --dir",
-    "package:mac": "electron-builder --mac",
-    "package:win": "electron-builder --win",
-    "package:linux": "electron-builder --linux",
-    "package:dist": "electron-builder"
+    "package:dir": "electron-builder --dir --publish never",
+    "package:mac": "electron-builder --mac --publish never",
+    "package:win": "electron-builder --win --publish never",
+    "package:linux": "electron-builder --linux --publish never",
+    "package:dist": "electron-builder --publish never"
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
