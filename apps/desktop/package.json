@@ -5,6 +5,7 @@
   "author": "nethbotheju",
   "license": "MIT",
   "description": "Multi-provider LLM chat desktop application",
+  "homepage": "https://github.com/nethbotheju/llm-chatter",
   "main": "dist-electron/main/index.js",
   "scripts": {
     "dev": "mkdir -p drizzle && cp -r ../../packages/db/migrations/* ./drizzle/ && electron-vite dev",
