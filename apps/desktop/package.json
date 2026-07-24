@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "author": "nethbotheju",
+  "license": "MIT",
   "description": "Multi-provider LLM chat desktop application",
   "main": "dist-electron/main/index.js",
   "scripts": {

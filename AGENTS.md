@@ -6,7 +6,7 @@ The codebase is a **pnpm + Turborepo monorepo**: shared logic lives in `packages
 
 - **Package manager**: pnpm v10.32.1
 - **Task runner**: Turborepo (`turbo.json`)
-- **License**: ISC
+- **License**: MIT
 
 ## Repository Structure
 
