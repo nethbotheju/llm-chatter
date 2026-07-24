@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "../../utils/cn";
+import { APP_VERSION } from "../../utils/version";
 import { isElectron } from "@llm-chatter/services";
 import { ArrowLeft } from "lucide-react";
 
@@ -66,7 +67,7 @@ export default function SettingsLayout({
         {/* Footer */}
         <div className="border-t border-[var(--outline-variant)]/10 p-4">
           <p className="text-center text-[10px] font-medium text-[var(--on-surface-variant)] opacity-40">
-            llm Chatter v1.0
+            llm Chatter v{APP_VERSION}
           </p>
         </div>
       </aside>
