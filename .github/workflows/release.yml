@@ -4,47 +4,13 @@ on:
   push:
     tags:
       - "v*"
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Version to release, e.g. 0.2.0 (no leading v)"
-        required: true
+
+permissions:
+  contents: write
 
 jobs:
-  prepare:
-    name: Prepare release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    outputs:
-      version: ${{ steps.resolve.outputs.version }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Resolve version and ensure tag exists
-        id: resolve
-        env:
-          EVENT: ${{ github.event_name }}
-          INPUT_VERSION: ${{ inputs.version }}
-        run: |
-          if [ "$EVENT" = "workflow_dispatch" ]; then
-            V="${INPUT_VERSION#v}"
-            TAG="v$V"
-            if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
-              echo "Tag $TAG already exists; reusing."
-            else
-              git tag "$TAG"
-              git push origin "$TAG"
-            fi
-          else
-            V="${GITHUB_REF_NAME#v}"
-          fi
-          echo "version=$V" >> "$GITHUB_OUTPUT"
-          echo "Resolved release version: $V"
-
   build:
     name: Build (${{ matrix.os }})
-    needs: prepare
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -63,35 +29,6 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
-
-      - name: Sync version to all packages
-        shell: bash
-        env:
-          VERSION: ${{ needs.prepare.outputs.version }}
-        run: |
-          node -e '
-          const fs = require("fs");
-          const v = process.env.VERSION;
-          const files = [
-            "package.json",
-            "apps/web/package.json",
-            "apps/desktop/package.json",
-            "packages/contracts/package.json",
-            "packages/db/package.json",
-            "packages/ai-runtime/package.json",
-            "packages/services/package.json",
-            "packages/frontend/package.json",
-            "packages/config/package.json"
-          ];
-          let n = 0;
-          for (const f of files) {
-            const p = JSON.parse(fs.readFileSync(f, "utf8"));
-            p.version = v;
-            fs.writeFileSync(f, JSON.stringify(p, null, 2) + "\n");
-            n++;
-          }
-          console.log("Synced " + n + " package.json files to version " + v);
-          '
 
       - name: Build
         env:
@@ -120,16 +57,13 @@ jobs:
     name: Publish to GitHub Releases
     needs: build
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
-      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           path: release
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ needs.prepare.outputs.version }}
+          tag_name: ${{ github.ref_name }}
           files: |
             release/**/*.dmg
             release/**/*.zip
