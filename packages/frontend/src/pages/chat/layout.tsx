@@ -8,6 +8,7 @@ import { ChatMessages } from "../../components/chat/chat-messages";
 import { ChatInput } from "../../components/chat/chat-input";
 import { ScrollToLatestButton } from "../../components/chat/scroll-to-latest-button";
 import { AttachmentMismatchBanner } from "../../components/chat/attachment-mismatch-banner";
+import { APP_VERSION } from "../../utils/version";
 import { X, AlertCircle } from "lucide-react";
 import { ModelSelector } from "../../components/chat/model-selector";
 import { AssistantSelector } from "../../components/chat/assistant-selector";
@@ -290,7 +291,7 @@ function ChatLayoutInner({
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-2 text-sm text-[var(--on-surface-variant)]">
-              <p>Version 1.0.0</p>
+              <p>Version {APP_VERSION}</p>
               <p>
                 Supports OpenAI, Anthropic, Google, and compatible API providers.
               </p>

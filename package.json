@@ -1,6 +1,6 @@
 {
   "name": "llm-chatter",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "LLM Chat Application with multi-provider support",
   "private": true,
   "scripts": {
