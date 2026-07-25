@@ -5,6 +5,7 @@ export type UpdaterStatus =
   | { state: "available"; version: string }
   | { state: "downloading"; version: string; percent: number }
   | { state: "downloaded"; version: string }
+  | { state: "unsupported" }
   | { state: "error"; message: string };
 
 export interface ElectronAPI {

@@ -154,6 +154,8 @@ function describeStatus(status: UpdaterStatus): string {
       return `Downloading v${status.version}… ${status.percent}%`;
     case "downloaded":
       return `Update v${status.version} is ready to install.`;
+    case "unsupported":
+      return "Updates aren't available in this build.";
     case "error":
       return status.message;
     default:
@@ -175,6 +177,7 @@ function UpdatesCard({
     status.state === "available" ||
     status.state === "downloading";
   const isReady = status.state === "downloaded";
+  const isUnsupported = status.state === "unsupported";
   const isError = status.state === "error";
 
   return (
@@ -219,10 +222,10 @@ function UpdatesCard({
             <button
               type="button"
               onClick={onCheck}
-              disabled={isBusy}
+              disabled={isBusy || isUnsupported}
               className={cn(
                 "shrink-0 rounded-full border px-4 py-2 text-xs font-semibold transition-colors",
-                isBusy
+                isBusy || isUnsupported
                   ? "cursor-not-allowed border-[var(--outline-variant)]/20 text-[var(--on-surface-variant)] opacity-50"
                   : "border-[var(--primary)]/40 text-[var(--primary)] hover:bg-[var(--primary)]/10",
               )}

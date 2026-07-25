@@ -2,18 +2,28 @@ import { autoUpdater, type UpdateInfo } from "electron-updater";
 import { BrowserWindow } from "electron";
 import type { UpdaterStatus } from "@llm-chatter/contracts";
 
+type StickyStatus = Extract<
+  UpdaterStatus,
+  { state: "idle" | "available" | "downloading" | "downloaded" }
+>;
+
 const isDev = !!process.env.ELECTRON_RENDERER_URL;
 const STATUS_CHANNEL = "updater:status";
 
-let current: UpdaterStatus = { state: "idle" };
+let current: StickyStatus = { state: "idle" };
 let pendingVersion: string | null = null;
 let started = false;
+let isChecking = false;
 
-function broadcast(status: UpdaterStatus) {
-  current = status;
+function emit(status: UpdaterStatus) {
   for (const win of BrowserWindow.getAllWindows()) {
     win.webContents.send(STATUS_CHANNEL, status);
   }
+}
+
+function setSticky(status: StickyStatus) {
+  current = status;
+  emit(status);
 }
 
 export function getUpdaterStatus(): UpdaterStatus {
@@ -22,14 +32,15 @@ export function getUpdaterStatus(): UpdaterStatus {
 
 export function checkForUpdatesNow() {
   if (isDev) {
-    broadcast({
-      state: "error",
-      message: "Updates are not available in development builds.",
-    });
+    emit({ state: "unsupported" });
     return;
   }
+  if (isChecking) return;
+  isChecking = true;
+  emit({ state: "checking" });
   autoUpdater.checkForUpdates().catch((err: unknown) => {
-    broadcast({
+    isChecking = false;
+    emit({
       state: "error",
       message: err instanceof Error ? err.message : String(err),
     });
@@ -37,6 +48,7 @@ export function checkForUpdatesNow() {
 }
 
 export function installUpdateNow() {
+  if (current.state !== "downloaded") return;
   autoUpdater.quitAndInstall();
 }
 
@@ -48,22 +60,21 @@ export function setupAutoUpdater() {
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.disableWebInstaller = true;
 
-  autoUpdater.on("checking-for-update", () => {
-    broadcast({ state: "checking" });
-  });
-
   autoUpdater.on("update-available", (info: UpdateInfo) => {
     pendingVersion = info.version;
-    broadcast({ state: "available", version: info.version });
+    isChecking = false;
+    setSticky({ state: "available", version: info.version });
   });
 
   autoUpdater.on("update-not-available", () => {
+    isChecking = false;
     pendingVersion = null;
-    broadcast({ state: "not-available" });
+    emit({ state: "not-available" });
+    current = { state: "idle" };
   });
 
   autoUpdater.on("download-progress", (progress) => {
-    broadcast({
+    setSticky({
       state: "downloading",
       version: pendingVersion ?? "",
       percent: Math.round(progress.percent),
@@ -71,19 +82,21 @@ export function setupAutoUpdater() {
   });
 
   autoUpdater.on("update-downloaded", (info: UpdateInfo) => {
+    isChecking = false;
     pendingVersion = info.version;
-    broadcast({ state: "downloaded", version: info.version });
+    setSticky({ state: "downloaded", version: info.version });
   });
 
   autoUpdater.on("error", (err: Error) => {
-    broadcast({ state: "error", message: err.message });
+    isChecking = false;
+    console.error(`[updater] ${err.message}`);
+    emit({ state: "error", message: err.message });
+    current = { state: "idle" };
   });
 
   if (!isDev) {
     setTimeout(() => {
-      autoUpdater.checkForUpdates().catch((err) => {
-        console.error(`[updater] Auto check failed: ${err}`);
-      });
+      checkForUpdatesNow();
     }, 5000);
   }
 }

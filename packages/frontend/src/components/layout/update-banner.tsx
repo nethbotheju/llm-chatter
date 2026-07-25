@@ -6,6 +6,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Download,
+  Info,
   Loader2,
   RefreshCw,
   X,
@@ -14,6 +15,7 @@ import type { UpdaterStatus } from "@llm-chatter/contracts";
 
 const AUTO_HIDE_MS: Partial<Record<UpdaterStatus["state"], number>> = {
   "not-available": 4000,
+  unsupported: 4000,
   error: 6000,
 };
 
@@ -52,8 +54,8 @@ export function UpdateBanner() {
   const { icon, title, body } = bannerContent(status);
 
   return (
-    <div className="titlebar-no-drag fixed right-4 top-4 z-[100] w-[22rem] max-w-[calc(100vw-2rem)]">
-      <div className="glass-card flex items-start gap-3 p-4 shadow-2xl">
+    <div className="titlebar-no-drag fixed right-4 top-20 z-[100] w-[22rem] max-w-[calc(100vw-2rem)]">
+      <div className="flex items-start gap-3 rounded-2xl border border-[var(--outline-variant)]/15 bg-[var(--surface-container-high)] p-4 shadow-2xl">
         <div className="mt-0.5 shrink-0">{icon}</div>
 
         <div className="min-w-0 flex-1 space-y-1">
@@ -140,6 +142,14 @@ function bannerContent(status: UpdaterStatus): {
         ),
         title: "Couldn't check for updates",
         body: status.message,
+      };
+    case "unsupported":
+      return {
+        icon: (
+          <Info className="h-5 w-5 text-[var(--on-surface-variant)]" />
+        ),
+        title: "Updates unavailable",
+        body: "Updates aren't available in this build.",
       };
     default:
       return { icon: null, title: "" };

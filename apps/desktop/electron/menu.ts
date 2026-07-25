@@ -116,11 +116,15 @@ export function setApplicationMenu(getWindow: () => BrowserWindow | null) {
     {
       label: "Help",
       submenu: [
-        {
-          label: "Check for Updates\u2026",
-          click: () => checkForUpdatesNow(),
-        },
-        { type: "separator" },
+        ...(isMac
+          ? []
+          : [
+              {
+                label: "Check for Updates\u2026",
+                click: () => checkForUpdatesNow(),
+              },
+              { type: "separator" as const },
+            ]),
         {
           label: "About llm Chatter",
           click: () => {
