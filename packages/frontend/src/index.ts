@@ -33,6 +33,7 @@ export * from "./components/settings/tool-config-form";
 
 // Export Layout components
 export * from "./components/layout/top-app-bar";
+export * from "./components/layout/update-banner";
 
 // Export Markdown components
 export * from "./components/markdown/markdown-renderer";
@@ -62,6 +63,7 @@ export * from "./hooks/use-keyboard-shortcuts";
 export * from "./hooks/use-models";
 export * from "./hooks/use-sidebar-state";
 export * from "./hooks/use-transport";
+export * from "./hooks/use-updater";
 
 // Export Pages
 export { default as ChatLayout } from "./pages/chat/layout";

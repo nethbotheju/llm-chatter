@@ -1,4 +1,4 @@
-export type { ElectronAPI } from "./types/electron";
+export type { ElectronAPI, UpdaterStatus } from "./types/electron";
 
 export * from "./schemas";
 

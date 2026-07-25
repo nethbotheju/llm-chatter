@@ -1,3 +1,12 @@
+export type UpdaterStatus =
+  | { state: "idle" }
+  | { state: "checking" }
+  | { state: "not-available" }
+  | { state: "available"; version: string }
+  | { state: "downloading"; version: string; percent: number }
+  | { state: "downloaded"; version: string }
+  | { state: "error"; message: string };
+
 export interface ElectronAPI {
   providers: {
     getAll: () => Promise<unknown[]>;
@@ -117,6 +126,14 @@ export interface ElectronAPI {
   autoLaunch: {
     get: () => Promise<boolean>;
     set: (enabled: boolean) => Promise<boolean>;
+  };
+  updater: {
+    getStatus: () => Promise<UpdaterStatus>;
+    checkForUpdates: () => Promise<void>;
+    installUpdate: () => Promise<void>;
+    onStatus: (
+      handler: (status: UpdaterStatus) => void,
+    ) => () => void;
   };
   onShortcut: (
     name: string,
