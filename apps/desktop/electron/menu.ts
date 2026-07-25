@@ -5,6 +5,7 @@ import {
   shell,
   type MenuItemConstructorOptions,
 } from "electron";
+import { checkForUpdatesNow } from "./updater";
 
 export function setApplicationMenu(getWindow: () => BrowserWindow | null) {
   const isMac = process.platform === "darwin";
@@ -16,6 +17,11 @@ export function setApplicationMenu(getWindow: () => BrowserWindow | null) {
             label: app.name,
             submenu: [
               { role: "about" as const },
+              { type: "separator" as const },
+              {
+                label: "Check for Updates\u2026",
+                click: () => checkForUpdatesNow(),
+              },
               { type: "separator" as const },
               { role: "services" as const },
               { type: "separator" as const },
@@ -110,6 +116,15 @@ export function setApplicationMenu(getWindow: () => BrowserWindow | null) {
     {
       label: "Help",
       submenu: [
+        ...(isMac
+          ? []
+          : [
+              {
+                label: "Check for Updates\u2026",
+                click: () => checkForUpdatesNow(),
+              },
+              { type: "separator" as const },
+            ]),
         {
           label: "About llm Chatter",
           click: () => {

@@ -2,9 +2,11 @@
 
 import { useEffect, useSyncExternalStore, useState } from "react";
 import { useAppTheme } from "../../components/theme-provider";
-import { Sun, Moon, Monitor } from "lucide-react";
+import { useUpdater } from "../../hooks/use-updater";
+import { Sun, Moon, Monitor, RefreshCw } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { isElectron } from "@llm-chatter/services";
+import type { UpdaterStatus } from "@llm-chatter/contracts";
 
 const themeOptions = [
   { value: "light", label: "Light", icon: Sun },
@@ -20,6 +22,7 @@ export default function GeneralSettingsPage() {
     () => false,
   );
   const [openAtLogin, setOpenAtLogin] = useState(false);
+  const { status, checkForUpdates, installUpdate } = useUpdater();
 
   useEffect(() => {
     if (isElectron()) {
@@ -126,6 +129,121 @@ export default function GeneralSettingsPage() {
           </div>
         </div>
       )}
+
+      {/* Updates (Electron only) */}
+      {mounted && isElectron() && (
+        <UpdatesCard
+          status={status}
+          onCheck={checkForUpdates}
+          onInstall={installUpdate}
+        />
+      )}
+    </div>
+  );
+}
+
+function describeStatus(status: UpdaterStatus): string {
+  switch (status.state) {
+    case "checking":
+      return "Checking for updates…";
+    case "not-available":
+      return "You're on the latest version.";
+    case "available":
+      return `Update v${status.version} is downloading…`;
+    case "downloading":
+      return `Downloading v${status.version}… ${status.percent}%`;
+    case "downloaded":
+      return `Update v${status.version} is ready to install.`;
+    case "unsupported":
+      return "Updates aren't available in this build.";
+    case "error":
+      return status.message;
+    default:
+      return "Automatic updates are enabled.";
+  }
+}
+
+function UpdatesCard({
+  status,
+  onCheck,
+  onInstall,
+}: {
+  status: UpdaterStatus;
+  onCheck: () => void;
+  onInstall: () => void;
+}) {
+  const isBusy =
+    status.state === "checking" ||
+    status.state === "available" ||
+    status.state === "downloading";
+  const isReady = status.state === "downloaded";
+  const isUnsupported = status.state === "unsupported";
+  const isError = status.state === "error";
+
+  return (
+    <div className="glass-card p-6">
+      <div className="mb-4">
+        <h2 className="text-sm font-bold tracking-tight text-[var(--on-surface)]">
+          Updates
+        </h2>
+        <p className="text-xs text-[var(--on-surface-variant)]">
+          Keep llm Chatter up to date
+        </p>
+      </div>
+
+      <div className="space-y-4 rounded-xl bg-[var(--surface-container-high)] p-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <p className="text-sm font-medium text-[var(--on-surface)]">
+              {isReady ? "Update ready" : "Check for updates"}
+            </p>
+            <p
+              className={cn(
+                "text-xs",
+                isError
+                  ? "text-[var(--destructive)]"
+                  : "text-[var(--on-surface-variant)] opacity-70",
+              )}
+            >
+              {describeStatus(status)}
+            </p>
+          </div>
+
+          {isReady ? (
+            <button
+              type="button"
+              onClick={onInstall}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--primary)] px-4 py-2 text-xs font-semibold text-[var(--on-primary)] transition-colors hover:opacity-90"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Restart to Update
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onCheck}
+              disabled={isBusy || isUnsupported}
+              className={cn(
+                "shrink-0 rounded-full border px-4 py-2 text-xs font-semibold transition-colors",
+                isBusy || isUnsupported
+                  ? "cursor-not-allowed border-[var(--outline-variant)]/20 text-[var(--on-surface-variant)] opacity-50"
+                  : "border-[var(--primary)]/40 text-[var(--primary)] hover:bg-[var(--primary)]/10",
+              )}
+            >
+              {status.state === "checking" ? "Checking…" : "Check for Updates"}
+            </button>
+          )}
+        </div>
+
+        {status.state === "downloading" && (
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-container-highest)]">
+            <div
+              className="h-full rounded-full bg-[var(--primary)] transition-[width] duration-300"
+              style={{ width: `${status.percent}%` }}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

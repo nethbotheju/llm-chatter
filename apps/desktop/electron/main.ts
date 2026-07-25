@@ -160,9 +160,7 @@ app.whenReady().then(async () => {
   registerShortcuts(getMainWindow);
   createWindow();
 
-  if (!isDev) {
-    setupAutoUpdater(getMainWindow);
-  }
+  setupAutoUpdater();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

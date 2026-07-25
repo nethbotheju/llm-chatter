@@ -117,6 +117,20 @@ contextBridge.exposeInMainWorld("electronAPI", {
     get: () => invoke("autoLaunch:get"),
     set: (enabled: boolean) => invoke("autoLaunch:set", enabled),
   },
+  updater: {
+    getStatus: () => invoke("updater:getStatus"),
+    checkForUpdates: () => invoke("updater:check"),
+    installUpdate: () => invoke("updater:install"),
+    onStatus: (handler: (status: unknown) => void) => {
+      const channel = "updater:status";
+      const listener = (
+        _e: Electron.IpcRendererEvent,
+        status: unknown,
+      ) => handler(status);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+  },
   onShortcut: (name: string, handler: () => void) => {
     const channel = `shortcut:${name}`;
     const listener = () => handler();

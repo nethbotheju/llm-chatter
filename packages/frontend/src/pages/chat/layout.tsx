@@ -13,6 +13,7 @@ import { X, AlertCircle } from "lucide-react";
 import { ModelSelector } from "../../components/chat/model-selector";
 import { AssistantSelector } from "../../components/chat/assistant-selector";
 import { TopAppBar } from "../../components/layout/top-app-bar";
+import { UpdateBanner } from "../../components/layout/update-banner";
 import {
   Dialog,
   DialogContent,
@@ -299,6 +300,8 @@ function ChatLayoutInner({
           </DialogContent>
         </Dialog>
       )}
+
+      <UpdateBanner />
     </div>
   );
 }
