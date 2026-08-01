@@ -1,7 +1,7 @@
 // Web server-side catalog helpers: resolves the on-disk catalog directory
-// (sibling to the database) and builds a Prisma-backed CatalogStore.
+// (sibling to the database) and builds a Drizzle-backed CatalogStore.
 //
-// Electron mirrors this in electron/ipc/catalog.ts with its own Prisma client
+// Electron mirrors this in electron/ipc/catalog.ts with its own Drizzle client
 // and encryption.
 
 import { dirname, join, resolve } from "node:path";

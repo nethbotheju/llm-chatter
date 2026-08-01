@@ -1,7 +1,7 @@
 // Catalog import/sync reconciliation logic.
 //
 // Shared between web (Next API routes) and desktop (Electron IPC). Both pass
-// an injected `CatalogStore` that wraps their own Prisma client + encryption,
+// an injected `CatalogStore` that wraps their own Drizzle client + encryption,
 // following the same pattern as the chat runtime's ChatConfigStore.
 
 import { fetchCatalogBlob } from "./cache";

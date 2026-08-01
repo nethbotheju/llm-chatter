@@ -4,7 +4,8 @@ import { serializeDates } from "./serialize";
 const origHandle = ipcMain.handle.bind(ipcMain);
 
 // Wrap ipcMain.handle to auto-serialize Date objects to ISO strings.
-// Prisma returns Date instances, but the renderer's Zod schemas expect strings.
+// The catalog layer produces Date instances (e.g. lastSyncedAt); the renderer's
+// Zod schemas expect strings.
 ipcMain.handle = (channel: string, handler: (e: IpcMainInvokeEvent, ...args: unknown[]) => Promise<unknown>) => {
   origHandle(channel, async (e: IpcMainInvokeEvent, ...args: unknown[]) => {
     const result = await handler(e, ...args);
