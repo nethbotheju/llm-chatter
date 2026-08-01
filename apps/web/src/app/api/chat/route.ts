@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
       messageMetadata: () => ({
         modelName: config.model,
       }),
-      onFinish: async ({ responseMessage }: { responseMessage: any }) => {
+      onFinish: async ({ responseMessage }) => {
         if (!conversationId) return;
         try {
           await persistAssistantMessage(
