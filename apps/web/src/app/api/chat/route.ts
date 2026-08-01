@@ -9,6 +9,7 @@ import {
   resolveChatConfig,
   persistAssistantMessage,
   ChatError,
+  toChatError,
   type ChatConfigStore,
   type ChatPersistenceStore,
   type ChatToolStore,
@@ -24,9 +25,11 @@ export async function POST(request: NextRequest) {
     const { messages: chatMessages, modelId, conversationId } = body;
 
     if (!modelId) {
-      return new Response(JSON.stringify({ error: "Model ID is required" }), {
+      throw new ChatError({
+        code: "MODEL_ID_REQUIRED",
+        message: "Model ID is required",
         status: 400,
-        headers: { "Content-Type": "application/json" },
+        retryable: false,
       });
     }
 
@@ -86,18 +89,7 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    let config;
-    try {
-      config = await resolveChatConfig({ modelId, conversationId }, webStore);
-    } catch (error) {
-      if (error instanceof ChatError && error.status != null) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: error.status,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-      throw error;
-    }
+    const config = await resolveChatConfig({ modelId, conversationId }, webStore);
 
     const result = await streamChatRuntime({
       messages: chatMessages,
@@ -132,13 +124,11 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Chat API error:", error);
-    return new Response(
-      JSON.stringify({ error: "An error occurred during chat" }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    const dto = toChatError(error).toDTO();
+    console.error("[chat] request failed:", dto.code, dto.message);
+    return new Response(JSON.stringify(dto), {
+      status: dto.status ?? 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }

@@ -1,4 +1,5 @@
 import type { ChatTransport, UIMessage, UIMessageChunk } from "ai";
+import { toChatTransportError } from "./error";
 
 interface ElectronBody {
   modelId: string;
@@ -56,7 +57,7 @@ export class ElectronChatTransport implements ChatTransport<UIMessage> {
 
         const offError = chat.onError(streamId, (err: unknown) => {
           cleanup();
-          controller.error(err);
+          controller.error(toChatTransportError(err));
         });
 
         const offDone = chat.onDone(streamId, () => {
