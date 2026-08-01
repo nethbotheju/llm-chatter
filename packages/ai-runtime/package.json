@@ -21,6 +21,7 @@
     "@ai-sdk/google": "^3.0.43",
     "@ai-sdk/mcp": "^2.0.3",
     "@ai-sdk/openai": "^3.0.41",
+    "@ai-sdk/openai-compatible": "^2.0.63",
     "@llm-chatter/contracts": "workspace:*",
     "@llm-chatter/db": "workspace:*",
     "@mozilla/readability": "^0.6.0",

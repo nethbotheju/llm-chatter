@@ -33,6 +33,7 @@ export default defineConfig({
           "@llm-chatter/contracts",
           "@llm-chatter/services",
           "@ai-sdk/openai",
+          "@ai-sdk/openai-compatible",
           "@ai-sdk/anthropic",
           "@ai-sdk/google",
           "@ai-sdk/react",

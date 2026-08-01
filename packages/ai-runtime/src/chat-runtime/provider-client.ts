@@ -3,6 +3,7 @@ import { wrapLanguageModel, extractReasoningMiddleware } from "ai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import type { ChatProviderConfigDTO } from "@llm-chatter/contracts";
 import { ChatError } from "./errors";
 
@@ -20,10 +21,22 @@ export function getRuntimeModel(input: ProviderClientInput): LanguageModel {
       return createOpenAI({ apiKey: provider.apiKey, baseURL })(model);
     }
     case "openai-compatible": {
-      const baseModel = createOpenAI({ apiKey: provider.apiKey, baseURL }).chat(model);
+      if (!baseURL) {
+        throw new ChatError({
+          code: "MISSING_BASE_URL",
+          message: "OpenAI-compatible providers require a base URL",
+          status: 400,
+          retryable: false,
+        });
+      }
+      const baseModel = createOpenAICompatible({
+        name: "openai-compatible",
+        apiKey: provider.apiKey,
+        baseURL,
+      })(model);
       return wrapLanguageModel({
         model: baseModel,
-        middleware: extractReasoningMiddleware({ tagName: "thought" }),
+        middleware: extractReasoningMiddleware({ tagName: "think" }),
       });
     }
     case "anthropic": {

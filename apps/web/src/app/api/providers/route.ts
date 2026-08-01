@@ -40,6 +40,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (type === "openai-compatible" && !baseUrl?.trim()) {
+      return NextResponse.json(
+        { error: "Base URL is required for OpenAI-compatible providers" },
+        { status: 400 }
+      );
+    }
+
     const now = new Date().toISOString();
     const provider = await db.insert(providers).values({
       id: nanoid(),
@@ -69,6 +76,13 @@ export async function PATCH(request: NextRequest) {
 
     if (!id) {
       return NextResponse.json({ error: "Provider ID is required" }, { status: 400 });
+    }
+
+    if (type === "openai-compatible" && !baseUrl?.trim()) {
+      return NextResponse.json(
+        { error: "Base URL is required for OpenAI-compatible providers" },
+        { status: 400 }
+      );
     }
 
     const existingProvider = await db.select().from(providers).where(eq(providers.id, id)).get();

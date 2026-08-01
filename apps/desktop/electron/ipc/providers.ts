@@ -141,6 +141,9 @@ export function registerProvidersIpc() {
     apiKey?: string;
     enabled?: boolean;
   }) => {
+    if (input.type === "openai-compatible" && !input.baseUrl?.trim()) {
+      throw new Error("Base URL is required for OpenAI-compatible providers");
+    }
     const db = getDb();
     const now = new Date().toISOString();
     const provider = await db.insert(providers).values({
@@ -165,6 +168,9 @@ export function registerProvidersIpc() {
     apiKey?: string;
     enabled?: boolean;
   }) => {
+    if (input.type === "openai-compatible" && !input.baseUrl?.trim()) {
+      throw new Error("Base URL is required for OpenAI-compatible providers");
+    }
     const db = getDb();
     const data: Record<string, unknown> = {
       updatedAt: new Date().toISOString()
