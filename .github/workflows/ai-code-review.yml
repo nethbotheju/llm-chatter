@@ -28,3 +28,4 @@ jobs:
           model: minimax-m3
           base-url: 'http://opencode.ai/zen/go/v1'
           api-key: ${{ secrets.AI_CODE_REVIEW_LLM_API_KEY }}
+          review-mode: agent
