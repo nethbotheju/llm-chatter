@@ -70,7 +70,7 @@ process.parentPort.on("message", (e: { data: unknown }) => {
         generateMessageId: () => messageId,
         messageMetadata: () => ({ modelName: model }),
         sendReasoning: true,
-        onFinish: ({ responseMessage }: { responseMessage: any }) => {
+        onFinish: ({ responseMessage }) => {
           finalMessage = responseMessage;
         },
       });

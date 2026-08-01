@@ -8,7 +8,6 @@ export * from "./chat-runtime/types";
 
 // Export Encryption/Decryption utils
 export * from "./ai/encryption";
-export * from "./ai/client";
 export * from "./ai/types";
 
 // Export Catalog Syncing helpers

@@ -11,7 +11,7 @@ import { MAX_TOOL_STEPS } from "./types";
 export async function streamChatRuntime(
   input: ChatRuntimeInput,
   options?: { signal?: AbortSignal },
-): Promise<any> {
+): Promise<ReturnType<typeof streamText>> {
   const {
     messages,
     model: modelName,
