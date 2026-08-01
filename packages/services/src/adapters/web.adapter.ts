@@ -75,6 +75,7 @@ async function assertOk(res: Response): Promise<void> {
 class WebProviderService implements IProviderService {
   async getAll(): Promise<Provider[]> {
     const res = await fetch("/api/providers");
+    await assertOk(res);
     const data = await res.json();
     return data.map(parseProvider);
   }
@@ -84,6 +85,7 @@ class WebProviderService implements IProviderService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
+    await assertOk(res);
     return parseProvider(await res.json());
   }
   async update(input: UpdateProviderInput): Promise<Provider> {
@@ -92,10 +94,12 @@ class WebProviderService implements IProviderService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
+    await assertOk(res);
     return parseProvider(await res.json());
   }
   async delete(id: string): Promise<void> {
-    await fetch(`/api/providers?id=${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/providers?id=${id}`, { method: "DELETE" });
+    await assertOk(res);
   }
   async validate(input: ValidateProviderInput): Promise<{ valid: boolean; error?: string }> {
     const res = await fetch("/api/providers/validate", {
@@ -103,6 +107,7 @@ class WebProviderService implements IProviderService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
+    await assertOk(res);
     return res.json();
   }
 }
@@ -113,6 +118,7 @@ class WebModelService implements IModelService {
     if (providerId) params.set("providerId", providerId);
     if (includeDisabled) params.set("all", "true");
     const res = await fetch(`/api/models?${params}`);
+    await assertOk(res);
     const data = await res.json();
     return data.map(parseModel);
   }
@@ -122,10 +128,7 @@ class WebModelService implements IModelService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
-    if (!res.ok) {
-      const data = await res.json();
-      throw new Error(data.error || "Failed to create model");
-    }
+    await assertOk(res);
     return parseModel(await res.json());
   }
   async update(input: UpdateModelInput): Promise<Model> {
@@ -134,25 +137,25 @@ class WebModelService implements IModelService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
-    if (!res.ok) {
-      const data = await res.json();
-      throw new Error(data.error || "Failed to update model");
-    }
+    await assertOk(res);
     return parseModel(await res.json());
   }
   async delete(id: string): Promise<void> {
-    await fetch(`/api/models?id=${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/models?id=${id}`, { method: "DELETE" });
+    await assertOk(res);
   }
 }
 
 class WebAssistantService implements IAssistantService {
   async getAll(): Promise<Assistant[]> {
     const res = await fetch("/api/assistants");
+    await assertOk(res);
     const data = await res.json();
     return data.map(parseAssistant);
   }
   async get(id: string): Promise<Assistant> {
     const res = await fetch(`/api/assistants?id=${id}`);
+    await assertOk(res);
     return parseAssistant(await res.json());
   }
   async create(input: CreateAssistantInput): Promise<Assistant> {
@@ -161,6 +164,7 @@ class WebAssistantService implements IAssistantService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
+    await assertOk(res);
     return parseAssistant(await res.json());
   }
   async update(input: UpdateAssistantInput): Promise<Assistant> {
@@ -169,20 +173,24 @@ class WebAssistantService implements IAssistantService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
+    await assertOk(res);
     return parseAssistant(await res.json());
   }
   async delete(id: string): Promise<void> {
-    await fetch(`/api/assistants?id=${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/assistants?id=${id}`, { method: "DELETE" });
+    await assertOk(res);
   }
 }
 
 class WebConversationService implements IConversationService {
   async getAll(): Promise<ConversationWithCount[]> {
     const res = await fetch("/api/conversations");
+    await assertOk(res);
     return parseConversationsWithCount(await res.json());
   }
   async get(id: string): Promise<ConversationDetail> {
     const res = await fetch(`/api/conversations?id=${id}`);
+    await assertOk(res);
     return parseConversationDetail(await res.json());
   }
   async create(input: CreateConversationInput): Promise<ConversationDetail> {
@@ -191,6 +199,7 @@ class WebConversationService implements IConversationService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
+    await assertOk(res);
     return parseConversationDetail(await res.json());
   }
   async update(id: string, title: string): Promise<ConversationDetail> {
@@ -199,19 +208,24 @@ class WebConversationService implements IConversationService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, title }),
     });
+    await assertOk(res);
     return parseConversationDetail(await res.json());
   }
   async delete(id: string): Promise<void> {
-    await fetch(`/api/conversations?id=${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/conversations?id=${id}`, { method: "DELETE" });
+    await assertOk(res);
   }
   async deleteAll(): Promise<void> {
-    await fetch("/api/conversations?all=true", { method: "DELETE" });
+    const res = await fetch("/api/conversations?all=true", { method: "DELETE" });
+    await assertOk(res);
   }
 }
 
 class WebMessageService implements IMessageService {
   async get(conversationId: string): Promise<Message[]> {
-    const conv = await fetch(`/api/conversations?id=${conversationId}`).then((r) => r.json());
+    const res = await fetch(`/api/conversations?id=${conversationId}`);
+    await assertOk(res);
+    const conv = await res.json();
     return parseMessages(conv.messages || []);
   }
   async create(conversationId: string, role: string, parts: string, metadata?: string): Promise<Message> {
@@ -220,25 +234,29 @@ class WebMessageService implements IMessageService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ role, parts, metadata }),
     });
+    await assertOk(res);
     return parseMessage(await res.json());
   }
   async update(conversationId: string, messageId: string, parts: string): Promise<void> {
-    await fetch(`/api/conversations/${conversationId}/messages`, {
+    const res = await fetch(`/api/conversations/${conversationId}/messages`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ messageId, parts }),
     });
+    await assertOk(res);
   }
   async delete(conversationId: string, messageId: string): Promise<void> {
-    await fetch(`/api/conversations/${conversationId}/messages?messageId=${messageId}`, {
+    const res = await fetch(`/api/conversations/${conversationId}/messages?messageId=${messageId}`, {
       method: "DELETE",
     });
+    await assertOk(res);
   }
 }
 
 class WebSearchService implements ISearchService {
   async search(query: string): Promise<SearchResult[]> {
     const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+    await assertOk(res);
     const data = await res.json();
     return parseSearchResults(data.results || []);
   }
@@ -247,6 +265,7 @@ class WebSearchService implements ISearchService {
 class WebExportService implements IExportService {
   async export(): Promise<ExportData> {
     const res = await fetch("/api/export");
+    await assertOk(res);
     return parseExportData(await res.json());
   }
 }
@@ -254,13 +273,15 @@ class WebExportService implements IExportService {
 class WebStatsService implements IStatsService {
   async get(): Promise<Stats> {
     const res = await fetch("/api/stats");
+    await assertOk(res);
     return parseStats(await res.json());
   }
 }
 
 class WebResetService implements IResetService {
   async reset(): Promise<void> {
-    await fetch("/api/reset", { method: "POST" });
+    const res = await fetch("/api/reset", { method: "POST" });
+    await assertOk(res);
   }
 }
 
@@ -269,6 +290,7 @@ class WebProviderCatalogService implements IProviderCatalogService {
     const params = new URLSearchParams();
     if (query) params.set("q", query);
     const res = await fetch(`/api/catalog/providers?${params}`);
+    await assertOk(res);
     const data = await res.json();
     return parseProviderCatalogItems(data);
   }
@@ -276,6 +298,7 @@ class WebProviderCatalogService implements IProviderCatalogService {
     const res = await fetch(
       `/api/catalog/providers/${encodeURIComponent(catalogProviderId)}/models`,
     );
+    await assertOk(res);
     const data = await res.json();
     return parseModelCatalogItems(data);
   }
@@ -285,10 +308,7 @@ class WebProviderCatalogService implements IProviderCatalogService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
-    if (!res.ok) {
-      const data = await res.json();
-      throw new Error(data.error || "Failed to import provider");
-    }
+    await assertOk(res);
     return parseCatalogImportResult(await res.json());
   }
   async syncProvider(providerId: string): Promise<CatalogSyncResult> {
@@ -297,10 +317,7 @@ class WebProviderCatalogService implements IProviderCatalogService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ providerId }),
     });
-    if (!res.ok) {
-      const data = await res.json();
-      throw new Error(data.error || "Failed to sync provider");
-    }
+    await assertOk(res);
     return parseCatalogSyncResult(await res.json());
   }
   async syncAll(): Promise<CatalogSyncResult[]> {
@@ -309,10 +326,7 @@ class WebProviderCatalogService implements IProviderCatalogService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ all: true }),
     });
-    if (!res.ok) {
-      const data = await res.json();
-      throw new Error(data.error || "Failed to sync providers");
-    }
+    await assertOk(res);
     return (await res.json()) as CatalogSyncResult[];
   }
 }
@@ -359,6 +373,7 @@ class WebMcpServerService implements IMcpServerService {
 class WebAppConfigService implements IAppConfigService {
   async getAll(): Promise<Record<string, unknown>> {
     const res = await fetch("/api/app-config");
+    await assertOk(res);
     return (await res.json()) as Record<string, unknown>;
   }
   async get<T = unknown>(key: string): Promise<T | null> {
@@ -366,16 +381,18 @@ class WebAppConfigService implements IAppConfigService {
     return (all[key] as T) ?? null;
   }
   async set(key: string, value: unknown): Promise<void> {
-    await fetch("/api/app-config", {
+    const res = await fetch("/api/app-config", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ key, value }),
     });
+    await assertOk(res);
   }
   async remove(key: string): Promise<void> {
-    await fetch(`/api/app-config?key=${encodeURIComponent(key)}`, {
+    const res = await fetch(`/api/app-config?key=${encodeURIComponent(key)}`, {
       method: "DELETE",
     });
+    await assertOk(res);
   }
 }
 
